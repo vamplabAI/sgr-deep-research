@@ -1,422 +1,267 @@
+# SGR Research Agent - Two-Phase Architecture
 
-https://github.com/user-attachments/assets/72488ce1-99f5-4819-8c63-11b9ba1522ce
-# SGR Research Agent - Schema-Guided Reasoning с Адаптивным Планированием
+A sophisticated research agent that combines **Schema-Guided Reasoning (SGR)** with **OpenAI Function Calls** to create a natural, interpretable, and powerful research workflow.
 
-> 🧠 **Интеллектуальный исследовательский агент** с адаптивным планированием и автоматическим цитированием
+## 🧠 Core Innovation: Two-Phase Approach
 
-[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
-[![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4-green.svg)](https://openai.com)
-[![Tavily](https://img.shields.io/badge/Tavily-Search-orange.svg)](https://tavily.com)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+Traditional agents either use pure function calls (losing reasoning transparency) or structured output with local execution (missing natural LLM behavior). This agent combines the best of both worlds:
 
-## 🧠 Обзор системы
+### Phase 1: Reasoning (SGR)
+- **Reasoning as a Tool** - `generate_reasoning` function call
+- Controlled via `tool_choice="generate_reasoning"` 
+- **Structured Output** for explicit reasoning analysis
+- Model explains **what** to do and **why**
+- Pure analytical thinking without tool execution
+- Full transparency into decision-making process
 
-SGR Research Agent - это интеллектуальный исследовательский агент, основанный на принципах Schema-Guided Reasoning (SGR) с возможностями адаптивного планирования. Система предназначена для проведения глубоких исследований с автоматическим управлением цитированием и многоязычной поддержкой.
+### Phase 2: Action (Function Calls)
+- **Native OpenAI Function Calls** with `tool_choice="auto"`
+- Model naturally chooses appropriate tools based on reasoning
+- Preserves LLM's natural conversation flow
+- No disruption to chat template or message structure
 
-**📄 [Посмотрите пример готового отчета →](example_report.md)**
+## 🏗️ Architecture Benefits
 
-## 🔄 Схема работы системы
+### ✅ Natural LLM Behavior
+- **Both phases use native OpenAI function calling**
+- Phase 1: `tool_choice="generate_reasoning"` - forced reasoning
+- Phase 2: `tool_choice="auto"` - natural tool selection
+- Maintains proper chat message flow throughout
+- Model decides tool usage naturally within OpenAI's framework
+- No artificial constraints on LLM behavior
+
+### ✅ Complete Interpretability
+- Every decision is explicitly reasoned
+- Clear explanation of **why** each action is taken
+- Transparent thought process at each step
+- Easy debugging and understanding
+
+### ✅ Adaptive Planning
+- Real-time adaptation based on new information
+- Context-aware decision making
+- Anti-cycling mechanisms to prevent loops
+- Dynamic re-planning when needed
+
+### ✅ Clean Architecture
+- Modular design with clear separation of concerns
+- Easy to extend and modify
+- Type-safe with Pydantic models
+- Comprehensive configuration system
+
+## 📁 Project Structure
+
+```
+├── sgr_agent.py          # 🎯 Main orchestration engine
+├── models.py             # 📊 Pydantic models for type safety
+├── tool_schemas.py       # 🛠️ OpenAI function schemas  
+├── executors.py          # ⚡ Tool execution logic
+├── prompts.yaml          # 💬 System prompts configuration
+├── config.yaml.example   # ⚙️ Configuration template
+└── requirements.txt      # 📦 Python dependencies
+```
+
+## 🔄 Workflow Deep Dive
 
 ```mermaid
-flowchart TD
-    A["👤 Пользователь вводит запрос"] --> B{🤔 Запрос неясен?}
-    
-    B -->|Да| C["❓ Clarification<br/>Запрос уточнений"]
-    C --> D["💬 Ответ пользователя"]
-    D --> E["📋 GeneratePlan<br/>Создание плана"]
-    
-    B -->|Нет| E
-    
-    E --> F["🔍 WebSearch<br/>Поиск информации"]
-    F --> G{📊 Данные противоречат плану?}
-    
-    G -->|Да| H["🔄 AdaptPlan<br/>Адаптация плана"]
-    H --> I{💾 Достаточно данных?}
-    
-    G -->|Нет| I
-    I -->|Нет| F
-    I -->|Да| J["📄 CreateReport<br/>Создание отчета с цитатами"]
-    
-    J --> K["✅ ReportCompletion<br/>Завершение"]
-    K --> L["💾 Сохранение в MD файл"]
-    
-    style C fill:#ffeb3b
-    style H fill:#ff9800
-    style J fill:#4caf50
-    style K fill:#2196f3
+graph TD
+    A[User Query] --> B[Phase 1: SGR Analysis]
+    B --> C[Structured Output Call]
+    C --> D[ReasoningStep Model]
+    D --> E{Validation}
+    E -->|Pass| F[Phase 2: Tool Execution]
+    E -->|Fail| B
+    F --> G[Function Calls Auto]
+    G --> H[Local Tool Execution]
+    H --> I[Update Context]
+    I --> J{Task Complete?}
+    J -->|No| B
+    J -->|Yes| K[Generate Report]
+    K --> L[Task Completion]
 ```
 
-## 🚀 Быстрый старт
+### Phase 1: Schema-Guided Reasoning as a Tool
+```python
+# Reasoning is implemented as a proper OpenAI function call
+completion = client.chat.completions.create(
+    tools=ALL_TOOLS,
+    tool_choice={"type": "function", "function": {"name": "generate_reasoning"}},
+    messages=conversation_history
+)
 
+# Inside generate_reasoning tool - Structured Output call
+class ReasoningStep(BaseModel):
+    reasoning_steps: List[str]           # Step-by-step analysis
+    current_situation: str               # Current state assessment  
+    next_action: Literal["search", "clarify", "report", "complete"]
+    action_reasoning: str                # Why this action is needed
+    task_completed: bool                 # Completion status
+    # ... additional fields for progress tracking
+```
+
+**Key Innovation**: Reasoning is a **tool call**, not a separate API call:
+- Model naturally calls `generate_reasoning` function
+- Function internally uses Structured Output for analysis
+- Returns structured reasoning to conversation history
+- Maintains proper OpenAI message flow: assistant → tool → user
+- No breaks in chat template or conversation structure
+
+### Phase 2: Natural Function Calling
+After reasoning, the model naturally calls appropriate tools:
+```python
+# Model decides which tools to call based on reasoning
+completion = client.chat.completions.create(
+    tools=ALL_TOOLS,
+    tool_choice="auto",  # Let model decide naturally
+    messages=conversation_history
+)
+```
+
+Available tools:
+- `generate_reasoning`: Analyze situation and plan next action (Phase 1)
+- `web_search`: Research information with Tavily
+- `clarification`: Ask user for clarification
+- `create_report`: Generate comprehensive research report
+- `report_completion`: Mark task as finished
+
+**Note**: `generate_reasoning` is controlled via `tool_choice`, while other tools are selected naturally by the model via `tool_choice="auto"`.
+
+## 🚀 Quick Start
+
+### 1. Install Dependencies
 ```bash
-# 1. Клонируйте репозиторий
-git clone https://github.com/vakovalskii/sgr-deep-research.git
-cd sgr-deep-research
-
-# 2. Установите зависимости
 pip install -r requirements.txt
-
-# 3. Настройте конфигурацию
-cp config.yaml.example config.yaml
-# Отредактируйте config.yaml, добавив ваши API ключи
-
-# 4. Запустите агента
-python3 sgr-deep-research.py
 ```
 
-### 🎯 Ключевые особенности
-
-- **🤔 Clarification-First подход**: Приоритет уточнений при любой неопределенности
-- **🔄 Адаптивное планирование**: Автоматическая корректировка плана при обнаружении противоречий
-- **📎 Автоматическое цитирование**: Управление источниками и нумерацией ссылок
-- **🌍 Многоязычность**: Поддержка русского и английского языков
-- **🛡️ Анти-цикличность**: Защита от бесконечных циклов уточнений
-- **📊 Структурированные отчеты**: Детальные отчеты с цитатами в формате Markdown
-
-## 🏗️ Архитектура системы
-
-### Основные компоненты
-
-1. **SGR Schemas** - Структурированные схемы для каждого типа действий
-2. **NextStep Engine** - Ядро адаптивного планирования
-3. **Dispatch System** - Система выполнения команд
-4. **Context Management** - Управление состоянием и контекстом
-5. **Multi-language Support** - Поддержка множественных языков
-
-### SGR Схемы (Pydantic Models)
-
-#### 🤔 Clarification
-```python
-class Clarification(BaseModel):
-    tool: Literal["clarification"]
-    reasoning: str                    # Обоснование необходимости уточнения
-    unclear_terms: List[str]          # Неясные термины
-    questions: List[str]              # 3-5 уточняющих вопросов
-    assumptions: List[str]            # Возможные интерпретации
+### 2. Configure API Keys
+```bash
+export OPENAI_API_KEY="your-openai-key"
+export TAVILY_API_KEY="your-tavily-key"
 ```
 
-#### 📋 GeneratePlan
-```python
-class GeneratePlan(BaseModel):
-    tool: Literal["generate_plan"]
-    reasoning: str                    # Обоснование подхода к исследованию
-    research_goal: str                # Основная цель исследования
-    planned_steps: List[str]          # 3-4 запланированных шага
-    search_strategies: List[str]      # Стратегии поиска информации
-```
-
-#### 🔍 WebSearch
-```python
-class WebSearch(BaseModel):
-    tool: Literal["web_search"]
-    reasoning: str                    # Обоснование необходимости поиска
-    query: str                        # Поисковый запрос (на языке пользователя)
-    max_results: int = 10             # Максимальное количество результатов
-    plan_adapted: bool = False        # Поиск после адаптации плана
-```
-
-#### 🔄 AdaptPlan
-```python
-class AdaptPlan(BaseModel):
-    tool: Literal["adapt_plan"]
-    reasoning: str                    # Обоснование необходимости адаптации
-    original_goal: str                # Исходная цель исследования
-    new_goal: str                     # Обновленная цель
-    plan_changes: List[str]           # Конкретные изменения в плане
-    next_steps: List[str]             # Обновленные оставшиеся шаги
-```
-
-#### 📄 CreateReport
-```python
-class CreateReport(BaseModel):
-    tool: Literal["create_report"]
-    reasoning: str                    # Обоснование готовности к созданию отчета
-    title: str                        # Заголовок отчета
-    content: str                      # Детальное содержание (800+ слов) с цитатами
-    confidence: Literal["high", "medium", "low"]  # Уровень уверенности
-```
-
-#### ✅ ReportCompletion
-```python
-class ReportCompletion(BaseModel):
-    tool: Literal["report_completion"]
-    reasoning: str                    # Обоснование завершения исследования
-    completed_steps: List[str]        # Сводка выполненных шагов
-    status: Literal["completed", "failed"]  # Статус завершения
-```
-
-### 🧠 NextStep - Ядро SGR
-
-Центральная схема, определяющая следующий шаг в процессе исследования:
-
-```python
-class NextStep(BaseModel):
-    # Анализ и оценка состояния
-    current_situation: str            # Анализ текущей ситуации
-    plan_status: str                  # Статус выполнения плана
-    
-    # Логика адаптивного планирования
-    new_data_conflicts_plan: bool     # Конфликтуют ли новые данные с планом
-    
-    # Отслеживание прогресса
-    searches_done: int                # Количество выполненных поисков
-    enough_data: bool                 # Достаточно ли данных для отчета
-    
-    # Планирование следующих шагов
-    remaining_steps: List[str]        # 1-3 оставшихся шага
-    task_completed: bool              # Завершена ли исследовательская задача
-    
-    # Маршрутизация инструментов с приоритетом уточнений
-    function: Union[
-        Clarification,      # ПЕРВЫЙ ПРИОРИТЕТ: При неопределенности
-        GeneratePlan,       # ВТОРОЙ: Когда запрос ясен
-        WebSearch,          # Основной инструмент исследования
-        AdaptPlan,          # При конфликте данных с планом
-        CreateReport,       # При достаточном количестве данных
-        ReportCompletion    # Завершение задачи
-    ]
-```
-
-## 🔄 Алгоритм работы
-
-### Приоритеты выбора действий
-
-1. **🤔 Clarification** (ВЫСШИЙ ПРИОРИТЕТ)
-   - При любой неопределенности в запросе
-   - Неизвестные термины, акронимы, аббревиатуры
-   - Неоднозначные запросы с множественными интерпретациями
-   - Отсутствие контекста для специализированных областей
-
-2. **📋 GeneratePlan**
-   - Когда план не существует и запрос ясен
-   - После получения уточнений от пользователя
-
-3. **🔄 AdaptPlan**
-   - Когда новые данные противоречат текущему плану
-   - При обнаружении неточностей в первоначальных предположениях
-
-4. **🔍 WebSearch**
-   - Когда нужна дополнительная информация
-   - Обычно 2-3 поиска на исследование
-
-5. **📄 CreateReport**
-   - При достаточном количестве данных (2+ поиска)
-   - Когда собрана информация для полного анализа
-
-6. **✅ ReportCompletion**
-   - После создания отчета
-   - Финализация исследования
-
-### Механизмы защиты
-
-#### 🛡️ Анти-цикличность
-- Максимум 1 запрос уточнения на сессию
-- Флаг `clarification_used` предотвращает повторные уточнения
-- Принудительное продолжение при попытке циклирования
-
-#### 🔄 Адаптивность
-- Активное изменение плана при обнаружении новых данных
-- Отслеживание конфликтов между планом и фактами
-- Гибкая корректировка целей исследования
-
-## 📊 Управление контекстом
-
-### Структура контекста
-```python
-CONTEXT = {
-    "plan": None,                    # Текущий план исследования
-    "searches": [],                  # История поисков
-    "sources": {},                   # Источники: url -> citation_number
-    "citation_counter": 0,           # Счетчик цитат
-    "clarification_used": False      # Флаг использования уточнения
-}
-```
-
-### Автоматическое цитирование
-- Каждый источник получает уникальный номер
-- Автоматическое форматирование ссылок в отчете
-- Сохранение метаданных источников (заголовок, URL)
-
-## 🌍 Многоязычная поддержка
-
-Система автоматически адаптируется к языку пользователя через системный промпт:
-
-- **Автоматическое определение языка**: LLM сам определяет язык запроса пользователя
-- **Поисковые запросы**: Выполняются на том же языке, что и запрос пользователя  
-- **Отчеты**: Создаются полностью на языке пользователя
-- **Уточнения**: Задаются на языке исходного запроса
-
-Никаких дополнительных настроек не требуется - просто пишите на удобном вам языке!
-
-## 📄 Пример отчета
-
-Полный пример сгенерированного отчета доступен в файле [`example_report.md`](example_report.md). Этот отчет демонстрирует:
-
-- **Структурированный анализ** с четкими разделами
-- **Автоматическое цитирование** всех источников
-- **Многоязычность** (отчет на русском языке)
-- **Техническую глубину** с конкретными примерами
-- **Качественные выводы** на основе найденной информации
-- **Правильную интеграцию цитат** внутри предложений
-
-Отчет был создан по запросу "SGR в LLM" и показывает, как система обрабатывает неоднозначные запросы, проводит исследование и формирует структурированные выводы.
-
-## ⚙️ Конфигурация
-
-### Файл config.yaml
+Or create `config.yaml`:
 ```yaml
 openai:
-  api_key: "your-openai-api-key"
-  base_url: "https://api.openai.com/v1"  # Опционально
+  api_key: "your-openai-key"
   model: "gpt-4o-mini"
-  max_tokens: 8000
-  temperature: 0.4
+  temperature: 0.3
 
 tavily:
-  api_key: "your-tavily-api-key"
-
-search:
-  max_results: 10
+  api_key: "your-tavily-key"
 
 execution:
-  max_steps: 6
-  reports_dir: "reports"
+  max_rounds: 8
+  max_searches_total: 6
 ```
 
-### Переменные окружения
-- `OPENAI_API_KEY` - Ключ API OpenAI
-- `OPENAI_BASE_URL` - Базовый URL (опционально)
-- `OPENAI_MODEL` - Модель для использования
-- `TAVILY_API_KEY` - Ключ API Tavily
-- `MAX_TOKENS` - Максимальное количество токенов
-- `TEMPERATURE` - Температура генерации
-- `MAX_SEARCH_RESULTS` - Максимальное количество результатов поиска
-- `MAX_EXECUTION_STEPS` - Максимальное количество шагов выполнения
-- `REPORTS_DIRECTORY` - Директория для сохранения отчетов
-
-## 🚀 Установка и запуск
-
-### Требования
+### 3. Run the Agent
 ```bash
-# Установка всех зависимостей из файла
-pip install -r requirements.txt
-
-# Или установка вручную
-pip install openai tavily-python pydantic rich pyyaml
+python sgr_agent.py
 ```
 
-### Файлы проекта
-- `sgr-deep-research.py` - Основная версия SGR Research Agent (production-ready)
-- `config.yaml.example` - Шаблон конфигурации
-- `requirements.txt` - Список зависимостей Python
-- `example_report.md` - Пример сгенерированного отчета
-- `README.md` - Документация проекта
-- `.gitignore` - Исключения для Git (включая config.yaml)
-- `reports/` - Директория для сохранения отчетов
-
-### Настройка
-1. Скопируйте `config.yaml.example` в `config.yaml` и заполните API ключи
-2. Или установите переменные окружения
-3. Убедитесь, что директория `reports` существует
-
-### Запуск
-```bash
-python3 sgr-deep-research.py
+### 4. Example Usage
 ```
+🔍 Enter research task: Analyze BMW M6 reliability and pricing trends
 
-## 📝 Примеры использования
+🧠 Reasoning Analysis
+┌─────────────────┬────────────────────────────────────────┐
+│ Current         │ User wants BMW M6 analysis             │
+│ Next action     │ search                                 │  
+│ Action reasoning│ Need pricing and reliability data      │
+└─────────────────┴────────────────────────────────────────┘
 
-### Пример 1: Исследование с уточнением
-```
-🔍 Enter research task: SGR в LLM
-
-🤔 CLARIFICATION NEEDED
-💭 Reason: Аббревиатура "SGR" может иметь множественные интерпретации...
-
-CLARIFYING QUESTIONS:
-   1. Что означает аббревиатура "SGR" в контексте вашего запроса?
-   2. Какой аспект применения SGR в LLM вас интересует больше всего?
+🔎 Search: 'BMW M6 reliability reviews 2024'
+   1. [1] BMW M6 Long-term Review — motortrend.com
+   2. [2] M6 Reliability Issues — bmwblog.com
    ...
-
-💬 Your clarification response: Schema-Guided Reasoning - методология структурированного рассуждения в больших языковых моделях
 ```
 
-### Пример 2: Прямое исследование
+## 🎯 Why This Architecture Works
+
+### 1. **Preserves LLM Nature**
+Unlike pure structured output approaches, this preserves the LLM's natural conversational flow. The model can think, reason, and then act naturally.
+
+### 2. **No Chat Template Disruption**
+**Both phases use OpenAI's native function calling interface**:
+- Phase 1: Reasoning via `tool_choice="generate_reasoning"` 
+- Phase 2: Actions via `tool_choice="auto"`
+- Conversation history remains clean and proper
+- Natural assistant → tool → user message flow
+- No artificial API calls or conversation breaks
+- Maintains intended chat template structure throughout
+
+### 3. **Complete Transparency**
+Every decision is reasoned explicitly. You can see exactly why the model chose each action, making debugging and improvement straightforward.
+
+### 4. **Adaptive Behavior**
+The model can change its plan based on new information, handle unexpected results, and adapt its strategy dynamically.
+
+### 5. **Type Safety**
+Pydantic models ensure data integrity throughout the pipeline, catching errors early and providing clear interfaces.
+
+## 🔧 Configuration
+
+### Environment Variables
+- `OPENAI_API_KEY`: Your OpenAI API key
+- `TAVILY_API_KEY`: Your Tavily search API key  
+- `OPENAI_MODEL`: Model to use (default: gpt-4o-mini)
+- `MAX_ROUNDS`: Maximum research rounds (default: 8)
+- `MAX_SEARCHES_TOTAL`: Maximum searches per session (default: 6)
+
+### Advanced Configuration
+Edit `prompts.yaml` to customize system prompts:
+```yaml
+structured_output_reasoning:
+  template: |
+    You are a reasoning module...
+    # Customize reasoning instructions
+
+outer_system:
+  template: |
+    You are an expert researcher...
+    # Customize main system prompt
 ```
-🔍 Enter research task: Analyze the latest developments in transformer architecture optimization
 
-📋 Research Plan Created:
-🎯 Goal: Analyze recent developments in transformer architecture optimization
-📝 Steps: 4
-   1. Search for recent papers on transformer optimization
-   2. Investigate new architectural improvements
-   3. Analyze performance benchmarks
-   4. Synthesize findings into comprehensive report
+## 🧪 Example Research Session
+
+```
+User: "Research Tesla Model S vs BMW i7 electric luxury sedans"
+
+Round 1 - Reasoning + Action
+├── 🧠 Analysis: Need pricing and specs comparison
+├── 🔍 Search: "Tesla Model S 2024 price specifications"
+└── 📊 Results: 10 sources found
+
+Round 2 - Reasoning + Action  
+├── 🧠 Analysis: Have Tesla data, need BMW i7 info
+├── 🔍 Search: "BMW i7 2024 electric sedan review price"
+└── 📊 Results: 8 sources found
+
+Round 3 - Reasoning + Action
+├── 🧠 Analysis: Sufficient data for comparison report
+├── 📄 Report: "Tesla Model S vs BMW i7 Comparison"
+└── ✅ Completion: Task finished successfully
+
+📊 Session Stats: 2 searches | 18 sources | 1 report generated
 ```
 
-## 📊 Структура отчетов
+## 🤝 Contributing
 
-Отчеты сохраняются в формате Markdown с следующей структурой:
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes with type hints and tests
+4. Update documentation as needed
+5. Submit a pull request
 
-```markdown
-# Заголовок отчета
+## 📝 License
 
-*Created: 2024-08-26 12:34:56*
+MIT License - see LICENSE file for details.
 
-## Executive Summary
-Краткое изложение основных выводов...
+## 🔗 Related Work
 
-## Technical Analysis
-Детальный технический анализ с интегрированными цитатами. SGR помогает LLM создавать структурированные выводы [1], улучшая качество рассуждений [2]...
+- [OpenAI Function Calling](https://platform.openai.com/docs/guides/function-calling)
+- [Pydantic Models](https://docs.pydantic.dev/)
+- [Tavily Search API](https://tavily.com/)
 
-## Key Findings
-Ключевые находки исследования...
+---
 
-## Conclusions
-Выводы и рекомендации...
-
-## Источники
-[1] Название статьи - https://example.com/article1
-[2] Другой источник - https://example.com/article2
-[3] Третий источник - https://example.com/article3
-```
-
-
-
-## 🔧 Техническая реализация
-
-### Основные зависимости
-- **OpenAI**: Взаимодействие с языковыми моделями
-- **Tavily**: Веб-поиск с фокусом на достоверность
-- **Pydantic**: Валидация схем и структурированные ответы
-- **Rich**: Красивый консольный интерфейс
-- **PyYAML**: Обработка конфигурационных файлов
-
-### Архитектурные принципы
-- **Schema-First**: Все действия определяются через Pydantic схемы
-- **Functional Programming**: Избегание классов, функциональный подход
-- **Immutable Context**: Контекст изменяется только через определенные функции
-- **Error Resilience**: Graceful обработка ошибок API и сети
-- **Logging**: Подробное логирование всех операций
-
-## 🎯 Преимущества SGR подхода
-
-1. **Структурированность**: Каждое действие четко определено схемой
-2. **Предсказуемость**: Ясная логика выбора следующего шага
-3. **Адаптивность**: Способность изменять план на основе новых данных
-4. **Прозрачность**: Все решения обоснованы и логируются
-5. **Масштабируемость**: Легко добавлять новые типы действий
-6. **Надежность**: Встроенные механизмы защиты от циклов
-
-## 🔮 Возможности расширения
-
-- **Новые источники данных**: Интеграция с базами данных, API
-- **Дополнительные языки**: Расширение многоязычной поддержки
-- **Специализированные схемы**: Схемы для конкретных доменов
-- **Веб-интерфейс**: GUI для более удобного взаимодействия
-- **Коллаборативность**: Поддержка совместной работы
-- **Экспорт**: Различные форматы отчетов (PDF, DOCX, HTML)
-
-## 📄 Лицензия
-
-Этот проект распространяется под лицензией MIT.
+*Built with ❤️ for transparent, powerful AI research automation*
