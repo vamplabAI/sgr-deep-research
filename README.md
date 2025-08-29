@@ -177,7 +177,9 @@ graph TD
 ```bash
 pip install -r requirements.txt
 ```
+
 or
+
 ```bash
 pip install uv
 uv sync
