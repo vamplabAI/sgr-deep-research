@@ -389,7 +389,7 @@ def exec_structured_output_reasoning_api(messages: List[Dict[str, Any]], task: s
             "reasoning_steps": ["API error occurred"],
             "next_action": "simple_answer",
             "action_reasoning": "Cannot perform full reasoning due to API issues",
-            "remaining_steps": ["provide_simple_answer"],
+            "next_steps": ["provide_simple_answer"],
             "searches_done": 0,
             "enough_data": False,
             "task_completed": True  # Mark as completed to avoid infinite loop

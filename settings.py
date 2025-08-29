@@ -61,7 +61,7 @@ class YamlConfigSettingsSource(PydanticBaseSettingsSource):
             if "model" in o:
                 result["openai_model"] = o.get("model", "gpt-4o-mini")
             if "proxy" in o:
-               result["openai_proxy"] = o.get("proxy", "")
+                result["openai_proxy"] = o.get("proxy", "")
             if "max_tokens" in o:
                 result["max_tokens"] = int(o.get("max_tokens", 6000))
             if "temperature" in o:
@@ -98,6 +98,7 @@ class AppSettings(BaseSettings):
     openai_api_key: str = ""
     openai_base_url: str = ""
     openai_model: str = "gpt-4o-mini"
+    openai_proxy: str = ""
     max_tokens: int = 6000
     temperature: float = 0.3
 
