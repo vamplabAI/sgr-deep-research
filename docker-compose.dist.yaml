@@ -12,5 +12,5 @@ services:
       OPENAI_API_KEY: your-openai-api-key-here
       TAVILY_API_KEY: your-tavily-api-key-here
     ports:
-      - "8000:8000"
+      - "8080:8080"
     <<: *shared-logs
