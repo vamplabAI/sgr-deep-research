@@ -1,5 +1,11 @@
 # SGR Research Agent - Neural Deep Agent
 
+
+
+https://github.com/user-attachments/assets/ceea9fc7-2d1c-486c-b9df-6b8b43f7d84b
+
+
+
 A sophisticated AI research agent that combines **Schema-Guided Reasoning (SGR)** with **OpenAI Function Calls** to create a natural, interpretable, and powerful research workflow with **persistent context memory**.
 
 ## 🧠 Core Innovation: Two-Phase Architecture + Context Memory
