@@ -221,7 +221,7 @@ structured_output_reasoning:
     - next_action: What should be done next (from available actions above)
     - action_reasoning: WHY this action is needed now
     - task_completed: Boolean completion status
-    - remaining_steps: What still needs to be done (0-3 items)
+    - next_steps: What should be done next (0-3 items)
 
     EXAMPLE OUTPUT FORMAT:
 
@@ -235,7 +235,7 @@ structured_output_reasoning:
       "next_action": "search",
       "action_reasoning": "Нужно найти актуальную информацию по запросу",
       "task_completed": false,
-      "remaining_steps": ["Поиск данных", "Анализ результатов"]
+      "next_steps": ["Поиск данных", "Анализ результатов"]
     }
 
     CONTEXT CONTINUATION REQUEST (e.g., "цены по годам" after BMW topic):
@@ -248,5 +248,5 @@ structured_output_reasoning:
       "next_action": "search",
       "action_reasoning": "Объединяю текущий запрос 'цены по годам' с предыдущим контекстом BMW для поиска",
       "task_completed": false,
-      "remaining_steps": ["Поиск цен BMW по годам", "Анализ данных"]
+      "next_steps": ["Поиск цен BMW по годам", "Анализ данных"]
     }

@@ -8,7 +8,6 @@ SGR Research Agent - Clean Architecture
 """
 
 import json
-import os
 import yaml
 import asyncio
 from typing import Any, Dict, List
@@ -37,6 +36,7 @@ from models import (
     GetCurrentDatetimeStep,
 )
 from tool_schemas import get_all_tools, make_tool_choice_generate_reasoning
+from settings import CONFIG as SETTINGS_CONFIG
 from executors import get_executors
 
 
@@ -46,64 +46,8 @@ from executors import get_executors
 
 
 def load_config() -> Dict[str, Any]:
-    """Load configuration from environment and config file."""
-    cfg = {
-        "openai_api_key": os.getenv("OPENAI_API_KEY", ""),
-        "openai_base_url": os.getenv("OPENAI_BASE_URL", ""),
-        "openai_model": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
-        "max_tokens": int(os.getenv("MAX_TOKENS", "6000")),
-        "temperature": float(os.getenv("TEMPERATURE", "0.3")),
-        "tavily_api_key": os.getenv("TAVILY_API_KEY", ""),
-        "max_search_results": int(os.getenv("MAX_SEARCH_RESULTS", "10")),
-        "max_rounds": int(os.getenv("MAX_ROUNDS", "8")),
-        "reports_directory": os.getenv("REPORTS_DIRECTORY", "reports"),
-        "max_searches_total": int(os.getenv("MAX_SEARCHES_TOTAL", "6")),
-        "so_temperature": float(os.getenv("SO_TEMPERATURE", "0.1")),
-    }
-
-    if os.path.exists("config.yaml"):
-        try:
-            with open("config.yaml", "r", encoding="utf-8") as f:
-                y = yaml.safe_load(f) or {}
-
-            # Update from YAML config
-            if "openai" in y:
-                oc = y["openai"]
-                cfg.update(
-                    {
-                        k: oc.get(k.split("_", 1)[1], v)
-                        for k, v in cfg.items()
-                        if k.startswith("openai_")
-                    }
-                )
-
-            if "tavily" in y:
-                cfg["tavily_api_key"] = y["tavily"].get(
-                    "api_key", cfg["tavily_api_key"]
-                )
-
-            if "search" in y:
-                cfg["max_search_results"] = y["search"].get(
-                    "max_results", cfg["max_search_results"]
-                )
-
-            if "execution" in y:
-                ex = y["execution"]
-                cfg.update(
-                    {
-                        "max_rounds": ex.get("max_rounds", cfg["max_rounds"]),
-                        "reports_directory": ex.get(
-                            "reports_dir", cfg["reports_directory"]
-                        ),
-                        "max_searches_total": ex.get(
-                            "max_searches_total", cfg["max_searches_total"]
-                        ),
-                    }
-                )
-        except Exception as e:
-            print(f"[yellow]Warning: could not load config.yaml: {e}[/yellow]")
-
-    return cfg
+    """Legacy shim: return dict view of Pydantic settings."""
+    return SETTINGS_CONFIG
 
 
 def load_prompts() -> Dict[str, Any]:
@@ -228,9 +172,11 @@ def update_global_context(
             task_summary = {
                 "user_request": user_requests[-1],  # Последний запрос пользователя
                 "actions_performed": [],
-                "files_created": [task_context.get("created_file_path")]
-                if task_context.get("created_file_path")
-                else [],
+                "files_created": (
+                    [task_context.get("created_file_path")]
+                    if task_context.get("created_file_path")
+                    else []
+                ),
                 "searches_done": task_context.get("searches_total", 0),
             }
 
@@ -328,7 +274,7 @@ def pretty_print_reasoning(rs: ReasoningStep) -> None:
     table.add_row("Reasoning steps", " • ".join(rs.reasoning_steps))
     table.add_row("Next action", f"[bold cyan]{rs.next_action}[/bold cyan]")
     table.add_row("Action reasoning", rs.action_reasoning)
-    table.add_row("Remaining steps", " → ".join(rs.remaining_steps))
+    table.add_row("Next steps", " → ".join(rs.next_steps))
     table.add_row("Searches done", str(rs.searches_done))
     table.add_row("Enough data", str(rs.enough_data))
     table.add_row("Task completed", str(rs.task_completed))

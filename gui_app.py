@@ -35,7 +35,10 @@ from models import (  # noqa: E402
     SimpleAnswerStep,
     GetCurrentDatetimeStep,
 )
-from tool_schemas import get_all_tools, make_tool_choice_generate_reasoning  # noqa: E402
+from tool_schemas import (  # noqa: E402
+    get_all_tools,
+    make_tool_choice_generate_reasoning,
+)
 from sgr_agent import (  # noqa: E402
     load_config,
     load_prompts,
@@ -84,8 +87,8 @@ async def display_reasoning_step(rs: ReasoningStep) -> None:
 - Enough data: {"✅" if rs.enough_data else "❌"}
 - Task completed: {"✅" if rs.task_completed else "❌"}
 
-**📝 Remaining Steps:**
-{chr(10).join([f"→ {step}" for step in rs.remaining_steps]) if rs.remaining_steps else "No remaining steps"}
+**📝 Next Steps:**
+{chr(10).join([f"→ {step}" for step in rs.next_steps]) if rs.next_steps else "No next steps"}
     """
 
     msg = cl.Message(

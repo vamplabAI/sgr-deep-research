@@ -314,12 +314,12 @@ class ReasoningStep(BaseModel):
     # Task completion
     task_completed: bool = Field(description="Is the research task finished?")
 
-    # Remaining work
-    remaining_steps: Annotated[
+    # Planned next steps
+    next_steps: Annotated[
         List[str],
         Field(
             min_length=0,
             max_length=3,
-            description="0-3 remaining steps (empty when task completed)",
+            description="0-3 next steps (empty when task completed)",
         ),
     ]
