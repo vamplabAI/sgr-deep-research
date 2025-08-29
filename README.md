@@ -176,9 +176,26 @@ execution:
 ```
 
 ### 3. Run the Agent
+
+#### Console Interface
 ```bash
 python sgr_agent.py
 ```
+
+#### Web Interface (Recommended)
+```bash
+chainlit run gui_app.py -w
+```
+
+The web interface will be available at [http://localhost:8000](http://localhost:8000)
+
+**Web Interface Features:**
+- 🌐 Beautiful chat interface
+- 📊 Real-time progress tracking
+- 📄 Formatted reports and results
+- 🎨 Visual feedback for all operations
+- 📱 Mobile-friendly design
+- 🔄 Auto-reload during development (with `-w` flag)
 
 ## 🧪 Example Sessions
 
@@ -275,6 +292,47 @@ Session 3:
 User: "Now compare with BMW i7"
 Agent: References previous Tesla research → Creates comparison
 ```
+
+## 🌐 Web Interface
+
+The project includes a modern web interface built with **Chainlit** that provides a superior user experience compared to the console version.
+
+### Features
+- **Interactive Chat** - Natural conversation flow with the AI agent
+- **Beautiful UI** - Modern, responsive design that works on all devices  
+- **Real-time Updates** - Watch the agent's reasoning and tool execution live
+- **Rich Content** - Formatted reports, code blocks, and structured data display
+- **Progress Tracking** - Visual indicators for search progress and tool execution
+- **Session Management** - Automatic context preservation between conversations
+- **Error Handling** - Graceful error display and recovery options
+
+### Running the Web Interface
+```bash
+# Install chainlit if not already installed
+pip install chainlit>=1.0.0
+
+# Start the web interface with auto-reload
+chainlit run gui_app.py -w
+
+# Interface will be available at http://localhost:8000
+```
+
+### Web Interface vs Console
+| Feature | Console | Web Interface |
+|---------|---------|---------------|
+| User Experience | Text-based | Rich, interactive |
+| Visual Feedback | Limited | Comprehensive |
+| Progress Tracking | Basic | Real-time with animations |
+| Report Display | Plain text | Formatted with syntax highlighting |
+| Mobile Support | No | Yes |
+| Multi-session | Manual | Automatic |
+| File Operations | Text output | Visual file browser |
+
+### Configuration
+The web interface automatically uses the same configuration as the console version:
+- API keys from `config.yaml` or environment variables
+- Same tool set and capabilities
+- Identical reasoning and memory systems
 
 ## 🤝 Contributing
 
