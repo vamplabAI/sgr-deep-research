@@ -366,6 +366,7 @@ python api_server.py
 ```
 
 The API server will be available at:
+
 - **API Endpoint**: http://localhost:8000/v1/chat/completions
 - **Documentation**: http://localhost:8000/docs
 - **Health Check**: http://localhost:8000/health
@@ -377,15 +378,14 @@ from openai import OpenAI
 
 # Point to local API
 client = OpenAI(
-    api_key="dummy-key",  # Not used by local API
-    base_url="http://localhost:8000/v1"
+    api_key="dummy-key", base_url="http://localhost:8000/v1"  # Not used by local API
 )
 
 # Same API calls as OpenAI
 response = client.chat.completions.create(
     model="gpt-4o-mini",
     messages=[{"role": "user", "content": "Research Python"}],
-    stream=False
+    stream=False,
 )
 ```
 

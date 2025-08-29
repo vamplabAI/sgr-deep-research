@@ -134,7 +134,9 @@ def exec_clarification(
         # In API mode, auto-complete with assumptions
         auto_response = "Auto-completed in API mode"
         if step.assumptions:
-            auto_response = step.assumptions[0] if step.assumptions else "Auto-completed"
+            auto_response = (
+                step.assumptions[0] if step.assumptions else "Auto-completed"
+            )
 
         print(f"\n[green]🔄 API Mode: Auto-completing with: {auto_response}[/green]")
 
@@ -144,7 +146,7 @@ def exec_clarification(
             "user_input": auto_response,
             "questions": step.questions,
             "assumptions_used": step.assumptions,
-            "task_completed": True
+            "task_completed": True,
         }
 
     # Wait for user response (interactive mode)
@@ -693,11 +695,13 @@ def exec_create_directory(
 
         if force_mode:
             # In API mode, auto-create directory
-            print(f"\n[green]🔄 API Mode: Auto-creating directory[/green]")
+            print("\n[green]🔄 API Mode: Auto-creating directory[/green]")
             os.makedirs(step.directory_path, exist_ok=True)
         else:
             # Interactive mode - ask user
-            print("\n[bold cyan]Do you want to create this directory? (y/n):[/bold cyan]")
+            print(
+                "\n[bold cyan]Do you want to create this directory? (y/n):[/bold cyan]"
+            )
 
             try:
                 user_response = input(">>> ").strip().lower()
@@ -722,9 +726,7 @@ def exec_create_directory(
         print(f"✅ Directory created successfully: {step.directory_path}")
 
         # Проверяем, что директория действительно создана
-        if os.path.exists(step.directory_path) and os.path.isdir(
-            step.directory_path
-        ):
+        if os.path.exists(step.directory_path) and os.path.isdir(step.directory_path):
             return {
                 "tool": "create_directory",
                 "status": "success",

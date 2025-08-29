@@ -85,6 +85,7 @@ if CONFIG["openai_base_url"]:
 # Add proxy support if configured
 if "openai_proxy" in CONFIG and CONFIG["openai_proxy"]:
     import httpx
+
     openai_kwargs["http_client"] = httpx.Client(
         follow_redirects=True,
         limits=httpx.Limits(max_connections=10),
