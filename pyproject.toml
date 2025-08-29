@@ -1,0 +1,28 @@
+[project]
+name = "sgr-deep-research"
+version = "0.1.0"
+description = "SGR Research Agent"
+authors = ["https://github.com/vakovalskii"]
+readme = "README.md"
+requires-python = ">=3.11"
+# Основные зависимости для работы системы Schema-Guided Reasoning
+dependencies = [
+    # Chainlit для веб-интерфейса
+    "chainlit>=2.7.2",
+    # OpenAI API для работы с языковыми моделями
+    "openai>=1.0.0",
+    # PyYAML для обработки конфигурационных файлов
+    "pyyaml>=6.0",
+    # Rich для красивого консольного интерфейса
+    "rich>=13.0.0",
+    # Tavily для веб-поиска с фокусом на достоверность
+    "tavily-python>=0.3.0",
+]
+
+# Дополнительные зависимости для разработки (опционально)
+[dependency-groups]
+dev = [
+    "mypy>=1.0.0",
+    "pytest>=7.0.0",
+    "ruff>=0.12.11",
+]
