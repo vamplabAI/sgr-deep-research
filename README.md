@@ -178,6 +178,13 @@ graph TD
 pip install -r requirements.txt
 ```
 
+or
+
+```bash
+pip install uv
+uv sync
+```
+
 ### 2. Configure API Keys
 
 ```bash
