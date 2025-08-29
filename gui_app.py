@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Local modules
-from models import (
+from models import (  # noqa: E402
     ReasoningStep,
     ClarificationStep,
     WebSearchStep,
@@ -35,8 +35,8 @@ from models import (
     SimpleAnswerStep,
     GetCurrentDatetimeStep,
 )
-from tool_schemas import get_all_tools, make_tool_choice_generate_reasoning
-from sgr_agent import (
+from tool_schemas import get_all_tools, make_tool_choice_generate_reasoning  # noqa: E402
+from sgr_agent import (  # noqa: E402
     load_config,
     load_prompts,
     create_fresh_context,
@@ -64,10 +64,7 @@ tavily = TavilyClient(CONFIG["tavily_api_key"])
 
 
 async def display_reasoning_step(rs: ReasoningStep) -> None:
-    """Display reasoning step beautifully"""
-
-    # Create display elements
-    elements = []
+    """Display reasoning step beautifully."""
 
     # Main information as a table
     reasoning_table = f"""
@@ -101,7 +98,7 @@ async def display_reasoning_step(rs: ReasoningStep) -> None:
 async def display_search_results(
     search_data: Dict[str, Any], context: Dict[str, Any]
 ) -> None:
-    """Display search results beautifully"""
+    """Display search results beautifully."""
 
     query = search_data.get("query", "")
     results_count = search_data.get("results_count", 0)
@@ -112,8 +109,8 @@ async def display_search_results(
     results = last_search.get("results", [])
 
     search_summary = f"""
-🔍 **Query:** `{query}`  
-📊 **Found:** {results_count} results  
+🔍 **Query:** `{query}`
+📊 **Found:** {results_count} results
 📚 **Citations:** {', '.join([f'[{c}]' for c in citations[:5]])}
     """
 
@@ -141,7 +138,7 @@ async def display_search_results(
 
 
 async def display_report_created(report_data: Dict[str, Any]) -> None:
-    """Display information about created report beautifully"""
+    """Display information about created report beautifully."""
 
     title = report_data.get("title", "Report")
     filepath = report_data.get("filepath", "")
@@ -153,9 +150,9 @@ async def display_report_created(report_data: Dict[str, Any]) -> None:
     report_info = f"""
 📄 **Report created successfully!**
 
-**📝 Title:** {title}  
-**💾 File:** `{filepath}`  
-**📊 Words:** {word_count}  
+**📝 Title:** {title}
+**💾 File:** `{filepath}`
+**📊 Words:** {word_count}
 **🎯 Confidence:** {confidence_emoji} {confidence.upper()}
 
 Report saved and ready for viewing!
@@ -167,7 +164,7 @@ Report saved and ready for viewing!
             content = f.read()
 
         elements = [cl.Text(name="report_content", content=content, display="inline")]
-    except:
+    except Exception:
         elements = []
 
     msg = cl.Message(author="📄 Report", content=report_info, elements=elements)
@@ -177,7 +174,7 @@ Report saved and ready for viewing!
 async def display_file_operation(
     operation_type: str, operation_data: Dict[str, Any]
 ) -> None:
-    """Display file operation result beautifully"""
+    """Display file operation result beautifully."""
 
     if operation_type == "read_file":
         filepath = operation_data.get("filepath", "")
@@ -187,7 +184,7 @@ async def display_file_operation(
         info = f"""
 📖 **File Read Successfully**
 
-**📁 File:** `{filepath}`  
+**📁 File:** `{filepath}`
 **📏 Size:** {size} bytes
 
 **Content Preview:**
@@ -205,7 +202,7 @@ async def display_file_operation(
         info = f"""
 📝 **File Created Successfully**
 
-**📁 File:** `{filepath}`  
+**📁 File:** `{filepath}`
 **📏 Size:** {size} bytes
 
 File has been created and is ready for use.
@@ -219,7 +216,7 @@ File has been created and is ready for use.
         info = f"""
 ✏️ **File Updated Successfully**
 
-**📁 File:** `{filepath}`  
+**📁 File:** `{filepath}`
 **🔄 Operation:** {operation}
 
 File has been updated with new content.
@@ -234,7 +231,7 @@ File has been updated with new content.
         info = f"""
 📂 **Directory Listed**
 
-**📁 Directory:** `{directory}`  
+**📁 Directory:** `{directory}`
 **📊 Items:** {len(items)} items
 
 {'Tree view:' if tree_view else 'Contents:'}
@@ -273,7 +270,7 @@ Directory has been created successfully.
 async def exec_clarification_gui(
     step: ClarificationStep, context: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Execute clarification in GUI format"""
+    """Execute clarification in GUI format."""
     context["clarification_used"] = True
 
     questions_text = "\n".join([f"{i+1}. {q}" for i, q in enumerate(step.questions)])
@@ -319,7 +316,7 @@ async def exec_clarification_gui(
 async def exec_web_search_gui(
     step: WebSearchStep, context: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Execute web search in GUI format"""
+    """Execute web search in GUI format."""
 
     query = step.query
     max_results = step.max_results or 10
@@ -375,7 +372,7 @@ async def exec_web_search_gui(
 async def exec_create_report_gui(
     step: CreateReportStep, context: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Create report in GUI format"""
+    """Create report in GUI format."""
 
     # Set flag
     context["report_created"] = True
@@ -419,7 +416,7 @@ async def exec_create_report_gui(
 async def exec_simple_answer_gui(
     step: SimpleAnswerStep, context: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Execute simple answer in GUI format"""
+    """Execute simple answer in GUI format."""
 
     answer_content = f"""
 💬 **Quick Answer**
@@ -448,7 +445,7 @@ async def exec_simple_answer_gui(
 async def exec_get_datetime_gui(
     step: GetCurrentDatetimeStep, context: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Execute get current datetime in GUI format"""
+    """Execute get current datetime in GUI format."""
 
     current_time = datetime.now()
 
@@ -457,9 +454,9 @@ async def exec_get_datetime_gui(
 
 **💭 Reasoning:** {step.reasoning}
 
-**📅 Current Date:** {current_time.strftime("%Y-%m-%d")}  
-**🕐 Current Time:** {current_time.strftime("%H:%M:%S")}  
-**🌍 Timezone:** {step.timezone}  
+**📅 Current Date:** {current_time.strftime("%Y-%m-%d")}
+**🕐 Current Time:** {current_time.strftime("%H:%M:%S")}
+**🌍 Timezone:** {step.timezone}
 **📆 Day of Week:** {current_time.strftime("%A")}
     """
 
@@ -481,7 +478,7 @@ async def exec_get_datetime_gui(
 async def exec_read_file_gui(
     step: ReadLocalFileStep, context: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Execute read local file in GUI format"""
+    """Execute read local file in GUI format."""
 
     try:
         with open(step.file_path, "r", encoding=step.encoding) as f:
@@ -519,7 +516,7 @@ async def exec_read_file_gui(
 async def exec_create_file_gui(
     step: CreateLocalFileStep, context: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Execute create local file in GUI format"""
+    """Execute create local file in GUI format."""
 
     try:
         # Check if file exists and overwrite flag
@@ -568,7 +565,7 @@ async def exec_create_file_gui(
 async def exec_update_file_gui(
     step: UpdateLocalFileStep, context: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Execute update local file in GUI format"""
+    """Execute update local file in GUI format."""
 
     try:
         # Read existing content
@@ -627,7 +624,7 @@ async def exec_update_file_gui(
 async def exec_list_directory_gui(
     step: ListDirectoryStep, context: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Execute list directory in GUI format"""
+    """Execute list directory in GUI format."""
 
     try:
         items = []
@@ -719,7 +716,7 @@ async def exec_list_directory_gui(
 async def exec_create_directory_gui(
     step: CreateDirectoryStep, context: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Execute create directory in GUI format"""
+    """Execute create directory in GUI format."""
 
     try:
         # Create directory
@@ -751,7 +748,7 @@ async def exec_create_directory_gui(
 async def exec_report_completion_gui(
     step: ReportCompletionStep, context: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Complete task in GUI format"""
+    """Complete task in GUI format."""
 
     completed_steps_text = "\n".join([f"✅ {s}" for s in step.completed_steps])
 
@@ -781,7 +778,7 @@ async def exec_report_completion_gui(
 
 
 def add_citation(context: Dict[str, Any], url: str, title: str = "") -> int:
-    """Add citation and return number"""
+    """Add citation and return number."""
     if url in context["sources"]:
         return context["sources"][url]["number"]
     context["citation_counter"] += 1
@@ -791,7 +788,7 @@ def add_citation(context: Dict[str, Any], url: str, title: str = "") -> int:
 
 
 def format_sources_block(context: Dict[str, Any]) -> str:
-    """Format sources block for report"""
+    """Format sources block for report."""
     if not context["sources"]:
         return ""
     lines = ["", "## Sources"]
@@ -878,7 +875,7 @@ async def exec_reasoning_phase_gui(
 async def exec_structured_output_reasoning_gui(
     messages: List[Dict[str, Any]], task: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Internal Structured Output call for reasoning"""
+    """Internal Structured Output call for reasoning."""
 
     schema = ReasoningStep.model_json_schema()
 
@@ -1013,7 +1010,7 @@ async def exec_action_phase_gui(
 
 
 async def execute_tool_call_gui(tool_call, context: Dict[str, Any]) -> Dict[str, Any]:
-    """Execute tool call in GUI"""
+    """Execute tool call in GUI."""
 
     tool_name = tool_call.function.name
 
@@ -1063,7 +1060,7 @@ async def execute_tool_call_gui(tool_call, context: Dict[str, Any]) -> Dict[str,
 async def continue_research_after_clarification(
     context: Dict[str, Any], message_history: List[Dict[str, Any]], original_task: str
 ) -> None:
-    """Continue research after receiving user clarification"""
+    """Continue research after receiving user clarification."""
 
     # Continue the research loop from where it was paused
     rounds = context.get("current_round", 0)
@@ -1121,7 +1118,7 @@ async def continue_research_after_clarification(
 
 @cl.on_chat_start
 async def start_chat():
-    """Chat initialization"""
+    """Chat initialization."""
 
     # Create fresh context
     context = create_fresh_context()
@@ -1134,10 +1131,10 @@ async def start_chat():
     welcome_msg = f"""
 # 🧠 SGR Research Agent - Web Interface
 
-Welcome to the intelligent research system! 
+Welcome to the intelligent research system!
 
 **🔍 Agent Capabilities:**
-- **Situation Analysis** - smart research planning  
+- **Situation Analysis** - smart research planning
 - **Web Search** - finding credible information via Tavily
 - **Clarification** - questions for better task understanding
 - **Report Creation** - detailed research reports with citations
@@ -1159,7 +1156,7 @@ Welcome to the intelligent research system!
 
 @cl.on_message
 async def handle_message(message: cl.Message):
-    """Handle user message"""
+    """Handle user message."""
 
     # Get context and history
     context = cl.user_session.get("context", create_fresh_context())

@@ -24,24 +24,24 @@ outer_system:
     - Use this context to answer questions about "what was asked before", "previous files", etc.
 
     AVAILABLE TOOLS:
-    
+
     REASONING & COMMUNICATION:
     - generate_reasoning: Analyze situation and plan next steps
     - clarification: Ask clarifying questions when request is unclear
-    
+
     RESEARCH & INFORMATION:
     - web_search: Search the internet for information
     - create_report: Generate comprehensive reports with citations
-    
+
     FILE OPERATIONS:
     - read_local_file: Read content from local files
     - create_local_file: Create new files with specified content
     - update_local_file: Modify existing files (append, prepend, replace)
-    
+
     DIRECTORY OPERATIONS:
     - list_directory: Show contents of directories (supports tree view)
     - create_directory: Create new directories (with user confirmation)
-    
+
     TASK MANAGEMENT:
     - report_completion: Mark tasks as completed
     - simple_answer: Provide quick, direct answers without formal reports
@@ -72,7 +72,7 @@ structured_output_reasoning:
     CRITICAL: Return ACTUAL DATA, NOT SCHEMA! Do not return JSON schema description.
     Return actual ReasoningStep object with real values for all fields.
 
-    IMPORTANT: You are ONLY analyzing and reasoning - NOT executing functions. 
+    IMPORTANT: You are ONLY analyzing and reasoning - NOT executing functions.
     After your analysis, another system will handle actual tool calls.
 
     LANGUAGE ADAPTATION:
@@ -89,7 +89,7 @@ structured_output_reasoning:
 
     AVAILABLE ACTIONS:
     - "search" → Need web research/information gathering
-    - "clarify" → User request is unclear/ambiguous 
+    - "clarify" → User request is unclear/ambiguous
     - "report" → Create comprehensive report/summary
     - "complete" → Task is finished
     - "read_file" → Need to read local file content
@@ -125,18 +125,18 @@ structured_output_reasoning:
     - Examples: "погода сейчас" → get_datetime → search "погода 29 августа 2024"
 
     IMPORTANT COMPLETION RULES:
-    - After simple_answer → ALWAYS next_action="complete" 
+    - After simple_answer → ALWAYS next_action="complete"
     - After report creation → next_action="complete" (unless user asks for more)
     - After successful file/directory operations → usually next_action="complete"
 
     TASK TYPE EXAMPLES:
-    
+
     File Management ("показать содержимое папки"):
     - next_action: "list_dir"
     - action_reasoning: "Нужно показать содержимое директории пользователя"
 
     Research Task ("найти информацию о Python"):
-    - next_action: "search" 
+    - next_action: "search"
     - action_reasoning: "Необходим поиск актуальной информации о Python"
 
     File Creation ("создай файл с кодом"):
@@ -148,7 +148,7 @@ structured_output_reasoning:
     - action_reasoning: "Простой вопрос требует краткого прямого ответа"
 
     Directory Tree ("покажи структуру проекта"):
-    - next_action: "list_dir" 
+    - next_action: "list_dir"
     - action_reasoning: "Нужно показать древовидную структуру директории"
 
     After Simple Answer (simple_answer_given=True):
@@ -162,7 +162,7 @@ structured_output_reasoning:
     After Clarification Used (clarification_used=True):
     - next_action: "simple_answer" OR "complete" (NEVER "clarify" again)
     - action_reasoning: "Уточнение уже было, даю лучший возможный ответ"
-    
+
     After Report Creation (report_created=True):
     - next_action: "complete"
     - action_reasoning: "Отчет создан, исследование завершено"
@@ -215,7 +215,7 @@ structured_output_reasoning:
     JSON STRUCTURE:
     - reasoning_steps: Array of analysis steps (1-4 items) in user's language
     - current_situation: Current state description in user's language
-    - plan_status: Current plan status in user's language  
+    - plan_status: Current plan status in user's language
     - searches_done: Number of completed searches
     - enough_data: Boolean if sufficient data collected
     - next_action: What should be done next (from available actions above)
@@ -224,7 +224,7 @@ structured_output_reasoning:
     - remaining_steps: What still needs to be done (0-3 items)
 
     EXAMPLE OUTPUT FORMAT:
-    
+
     NEW SEARCH REQUEST:
     {
       "reasoning_steps": ["Анализирую запрос пользователя", "Определяю необходимые действия"],
@@ -237,7 +237,7 @@ structured_output_reasoning:
       "task_completed": false,
       "remaining_steps": ["Поиск данных", "Анализ результатов"]
     }
-    
+
     CONTEXT CONTINUATION REQUEST (e.g., "цены по годам" after BMW topic):
     {
       "reasoning_steps": ["Анализирую краткий запрос", "Выявляю связь с предыдущим контекстом BMW", "Объединяю запросы для поиска"],

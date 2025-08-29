@@ -10,7 +10,7 @@ openai:
   max_tokens: 8000                     # Максимальное количество токенов
   temperature: 0.4                     # Температура генерации (0.0-1.0)
 
-# Tavily Search Configuration  
+# Tavily Search Configuration
 tavily:
   api_key: "your-tavily-api-key-here"  # Обязательно: Ваш Tavily API ключ
 

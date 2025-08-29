@@ -46,7 +46,7 @@ from executors import get_executors
 
 
 def load_config() -> Dict[str, Any]:
-    """Load configuration from environment and config file"""
+    """Load configuration from environment and config file."""
     cfg = {
         "openai_api_key": os.getenv("OPENAI_API_KEY", ""),
         "openai_base_url": os.getenv("OPENAI_BASE_URL", ""),
@@ -107,7 +107,7 @@ def load_config() -> Dict[str, Any]:
 
 
 def load_prompts() -> Dict[str, Any]:
-    """Load system prompts from prompts.yaml"""
+    """Load system prompts from prompts.yaml."""
     try:
         with open("prompts.yaml", "r", encoding="utf-8") as f:
             return yaml.safe_load(f)
@@ -149,7 +149,7 @@ executors = get_executors()
 
 
 def create_fresh_context() -> Dict[str, Any]:
-    """Create fresh research context"""
+    """Create fresh research context."""
     return {
         "searches": [],
         "sources": {},  # url -> {"number": int, "title": str, "url": str}
@@ -167,12 +167,14 @@ def create_fresh_context() -> Dict[str, Any]:
 
 
 def create_task_context(global_context: Dict[str, Any]) -> Dict[str, Any]:
-    """Create context for new task, preserving some global data"""
+    """Create context for new task, preserving some global data."""
     return {
         # Сбрасываем состояние задачи
         "searches": [],
         "sources": {},
-        "citation_counter": global_context.get("citation_counter", 0),  # Сохраняем счетчик
+        "citation_counter": global_context.get(
+            "citation_counter", 0
+        ),  # Сохраняем счетчик
         "clarification_used": False,
         "searches_total": 0,
         "report_created": False,
@@ -186,39 +188,54 @@ def create_task_context(global_context: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def update_global_context(global_context: Dict[str, Any], task_context: Dict[str, Any], messages: List[Dict[str, Any]] = None) -> None:
-    """Update global context with data from completed task"""
+def update_global_context(
+    global_context: Dict[str, Any],
+    task_context: Dict[str, Any],
+    messages: List[Dict[str, Any]] = None,
+) -> None:
+    """Update global context with data from completed task."""
     # Обновляем счетчики
     global_context["citation_counter"] = task_context.get("citation_counter", 0)
-    
+
     # Добавляем созданные файлы
-    if task_context.get("file_created", False) and task_context.get("created_file_path"):
+    if task_context.get("file_created", False) and task_context.get(
+        "created_file_path"
+    ):
         file_path = task_context["created_file_path"]
         if file_path not in global_context.get("created_files", []):
             global_context.setdefault("created_files", []).append(file_path)
-            
+
         # Если это файл знаний, добавляем в специальный список
         if "knowledge" in file_path.lower() or file_path.endswith("knowledge_today.md"):
             if file_path not in global_context.get("knowledge_files", []):
                 global_context.setdefault("knowledge_files", []).append(file_path)
-    
+
     # Создаем краткую сводку выполненной задачи для истории
     if messages:
         # Находим user запросы и assistant ответы
-        user_requests = [msg["content"] for msg in messages if msg.get("role") == "user"]
-        assistant_responses = [msg["content"] for msg in messages if msg.get("role") == "assistant" and msg.get("content")]
-        
+        user_requests = [
+            msg["content"] for msg in messages if msg.get("role") == "user"
+        ]
+
+        # assistant_responses = [
+        #     msg["content"]
+        #     for msg in messages
+        #     if msg.get("role") == "assistant" and msg.get("content")
+        # ]
+
         # Создаем сводку задачи (для user запросов)
         if user_requests:
             task_summary = {
                 "user_request": user_requests[-1],  # Последний запрос пользователя
                 "actions_performed": [],
-                "files_created": [task_context.get("created_file_path")] if task_context.get("created_file_path") else [],
+                "files_created": [task_context.get("created_file_path")]
+                if task_context.get("created_file_path")
+                else [],
                 "searches_done": task_context.get("searches_total", 0),
             }
-            
+
             # Создаем сводку выполненной задачи
-            
+
             # Определяем выполненные действия по tool calls
             tool_calls_count = 0
             for msg in messages:
@@ -228,14 +245,18 @@ def update_global_context(global_context: Dict[str, Any], task_context: Dict[str
                         tool_name = tc.get("function", {}).get("name", "")
 
                         if tool_name == "web_search":
-                            task_summary["actions_performed"].append("поиск в интернете")
+                            task_summary["actions_performed"].append(
+                                "поиск в интернете"
+                            )
                         elif tool_name == "create_local_file":
                             task_summary["actions_performed"].append("создание файла")
                         elif tool_name == "read_local_file":
                             task_summary["actions_performed"].append("чтение файла")
                         elif tool_name == "simple_answer":
-                            task_summary["actions_performed"].append("предоставление ответа")
-            
+                            task_summary["actions_performed"].append(
+                                "предоставление ответа"
+                            )
+
             global_context.setdefault("task_summaries", []).append(task_summary)
         else:
             # Нет данных для создания сводки
@@ -248,13 +269,15 @@ def update_global_context(global_context: Dict[str, Any], task_context: Dict[str
 
 
 def validate_reasoning_step(rs: ReasoningStep, context: Dict[str, Any]) -> List[str]:
-    """Validate reasoning step against context"""
+    """Validate reasoning step against context."""
     errors: List[str] = []
 
     # Anti-cycling checks - только если clarification была успешно завершена
-    if (context.get("clarification_used", False) and 
-        context.get("clarification_completed", False) and 
-        rs.next_action == "clarify"):
+    if (
+        context.get("clarification_used", False)
+        and context.get("clarification_completed", False)
+        and rs.next_action == "clarify"
+    ):
         errors.append(
             "ANTI-CYCLING: Clarification already completed; repetition is forbidden."
         )
@@ -271,7 +294,7 @@ def validate_reasoning_step(rs: ReasoningStep, context: Dict[str, Any]) -> List[
             errors.append(
                 "TASK COMPLETION: Simple answer already provided; task should be completed."
             )
-    
+
     # File creation completion check
     if context.get("file_created", False):
         if rs.next_action not in ["complete", "simple_answer"]:
@@ -295,7 +318,7 @@ def validate_reasoning_step(rs: ReasoningStep, context: Dict[str, Any]) -> List[
 
 
 def pretty_print_reasoning(rs: ReasoningStep) -> None:
-    """Display reasoning analysis in formatted table"""
+    """Display reasoning analysis in formatted table."""
     table = Table(show_header=True, header_style="bold magenta")
     table.add_column("Field")
     table.add_column("Value", overflow="fold")
@@ -314,7 +337,7 @@ def pretty_print_reasoning(rs: ReasoningStep) -> None:
 
 
 def build_dialog_snapshot(messages: List[Dict[str, Any]], limit: int = 30) -> str:
-    """Build compact dialog summary for context"""
+    """Build compact dialog summary for context."""
     tail = messages[-limit:]
     lines = []
 
@@ -409,25 +432,25 @@ def exec_reasoning_phase(
 def exec_structured_output_reasoning(
     messages: List[Dict[str, Any]], task: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Internal SO call for reasoning analysis"""
+    """Internal SO call for reasoning analysis."""
     schema = ReasoningStep.model_json_schema()
-    
+
     # Очищаем схему от лишних полей которые могут путать модель
-    if '$defs' in schema:
-        del schema['$defs']
-    if 'title' in schema:
-        del schema['title']
-    if 'description' in schema:
-        del schema['description']
-    
+    if "$defs" in schema:
+        del schema["$defs"]
+    if "title" in schema:
+        del schema["title"]
+    if "description" in schema:
+        del schema["description"]
 
     dialog_snapshot = build_dialog_snapshot(messages, limit=30)
-    
+
     # Добавляем историю предыдущих действий если есть в messages
     for msg in messages:
         content = msg.get("content") or ""
-        if (msg.get("role") == "assistant" and 
-            content.startswith("Предыдущие действия в сессии:")):
+        if msg.get("role") == "assistant" and content.startswith(
+            "Предыдущие действия в сессии:"
+        ):
             dialog_snapshot = content + "\n\n" + dialog_snapshot
             break
 
@@ -437,7 +460,7 @@ def exec_structured_output_reasoning(
         if msg.get("role") == "user" and msg.get("content"):
             last_user_message = msg.get("content")
             break
-    
+
     # Если не нашли user message, используем task как fallback
     user_request = last_user_message if last_user_message else task
 
@@ -488,9 +511,7 @@ def exec_structured_output_reasoning(
     )
 
     content = completion.choices[0].message.content or "{}"
-    
 
-    
     try:
         rs = ReasoningStep.model_validate_json(content)
     except ValidationError as ve:
@@ -512,15 +533,15 @@ def exec_structured_output_reasoning(
 
 
 def build_context_info(context: Dict[str, Any], reasoning: ReasoningStep) -> str:
-    """Build context information for action execution"""
+    """Build context information for action execution."""
     info_parts = []
-    
+
     # Последние результаты поиска
     if context.get("searches") and len(context["searches"]) > 0:
         last_search = context["searches"][-1]
-        info_parts.append(f"LAST SEARCH RESULTS:")
+        info_parts.append("LAST SEARCH RESULTS:")
         info_parts.append(f"Query: {last_search.get('query', 'N/A')}")
-        
+
         if "results" in last_search:
             info_parts.append("Found sources:")
             for i, result in enumerate(last_search["results"][:5], 1):
@@ -529,23 +550,25 @@ def build_context_info(context: Dict[str, Any], reasoning: ReasoningStep) -> str
                 content = result.get("content", "No content")[:200]
                 info_parts.append(f"{i}. {title} - {url}")
                 info_parts.append(f"   Content: {content}...")
-    
+
     # История созданных файлов
     if context.get("created_files"):
-        info_parts.append(f"\nCREATED FILES IN SESSION:")
+        info_parts.append("\nCREATED FILES IN SESSION:")
         for file_path in context["created_files"]:
             info_parts.append(f"- {file_path}")
-    
+
     # Доступные источники
     if context.get("sources"):
         info_parts.append(f"\nAVAILABLE SOURCES ({len(context['sources'])}):")
         for url, source_info in list(context["sources"].items())[:3]:
-            info_parts.append(f"[{source_info['number']}] {source_info['title']} - {url}")
-    
+            info_parts.append(
+                f"[{source_info['number']}] {source_info['title']} - {url}"
+            )
+
     # Текущая задача
     info_parts.append(f"\nCURRENT ACTION: {reasoning.next_action}")
     info_parts.append(f"REASONING: {reasoning.action_reasoning}")
-    
+
     return "\n".join(info_parts)
 
 
@@ -559,8 +582,8 @@ def exec_action_phase(
     context_info = build_context_info(context, reasoning)
     action_messages = messages + [
         {
-            "role": "user", 
-            "content": f"CONTEXT FOR ACTION:\n{context_info}\n\nExecute the planned action: {reasoning.next_action}"
+            "role": "user",
+            "content": f"CONTEXT FOR ACTION:\n{context_info}\n\nExecute the planned action: {reasoning.next_action}",
         }
     ]
 
@@ -619,7 +642,7 @@ def exec_action_phase(
 
 
 def execute_tool_call(tool_call, context: Dict[str, Any]) -> Dict[str, Any]:
-    """Execute a single tool call"""
+    """Execute a single tool call."""
     tool_name = tool_call.function.name
 
     try:
@@ -688,33 +711,35 @@ async def run_research(task: str, global_context: Dict[str, Any]) -> None:
             "content": PROMPTS["outer_system"]["template"].format(user_request=task),
         }
     ]
-    
+
     # Добавляем сводку предыдущих задач как контекст
     task_summaries = global_context.get("task_summaries", [])
 
-    
     if task_summaries:
         # Создаем сводное сообщение о предыдущих действиях
         previous_actions = []
         for summary in task_summaries[-5:]:  # Последние 5 задач
             actions = ", ".join(summary.get("actions_performed", []))
             files = ", ".join(summary.get("files_created", []))
-            summary_text = f"Запрос: '{summary.get('user_request', '')}' -> Действия: {actions}"
+            summary_text = (
+                f"Запрос: '{summary.get('user_request', '')}' -> Действия: {actions}"
+            )
             if files:
                 summary_text += f" -> Созданы файлы: {files}"
             previous_actions.append(summary_text)
-        
+
         if previous_actions:
             context_message = {
                 "role": "assistant",
-                "content": f"Предыдущие действия в сессии:\n" + "\n".join(previous_actions)
+                "content": "Предыдущие действия в сессии:\n"
+                + "\n".join(previous_actions),
             }
             messages.append(context_message)
             pass
-    
+
     # Добавляем текущий запрос пользователя
     messages.append({"role": "user", "content": task})
-    
+
     # Создаем контекст для текущей задачи, сохраняя некоторые данные из глобального
     context = create_task_context(global_context)
 
@@ -769,7 +794,7 @@ async def run_research(task: str, global_context: Dict[str, Any]) -> None:
 
 
 def main():
-    """Main CLI entry point"""
+    """Main CLI entry point."""
     print("[bold]🧠 SGR Research Agent — Two-Phase Architecture[/bold]\n")
 
     # Создаем глобальный контекст для сохранения между задачами

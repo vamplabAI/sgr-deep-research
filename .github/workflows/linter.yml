@@ -1,0 +1,22 @@
+name: Lint
+
+on:
+  - pull_request
+  - workflow_call
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: pip3 install pre-commit==4.2.0
+
+      - name: Lint
+        run: pre-commit run --all-files
