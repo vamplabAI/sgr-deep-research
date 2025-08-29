@@ -1,10 +1,6 @@
 # SGR Research Agent - Neural Deep Agent
 
-
-
 https://github.com/user-attachments/assets/ceea9fc7-2d1c-486c-b9df-6b8b43f7d84b
-
-
 
 A sophisticated AI research agent that combines **Schema-Guided Reasoning (SGR)** with **OpenAI Function Calls** to create a natural, interpretable, and powerful research workflow with **persistent context memory**.
 
@@ -13,20 +9,23 @@ A sophisticated AI research agent that combines **Schema-Guided Reasoning (SGR)*
 Traditional agents either use pure function calls (losing reasoning transparency) or structured output with local execution (missing natural LLM behavior). This agent combines the best of both worlds with **persistent memory across sessions**.
 
 ### Phase 1: Reasoning (SGR)
+
 - **Reasoning as a Tool** - `generate_reasoning` function call
-- Controlled via `tool_choice="generate_reasoning"` 
+- Controlled via `tool_choice="generate_reasoning"`
 - **Structured Output** for explicit reasoning analysis
 - Model explains **what** to do and **why**
 - Pure analytical thinking without tool execution
 - Full transparency into decision-making process
 
 ### Phase 2: Action (Function Calls)
+
 - **Native OpenAI Function Calls** with `tool_choice="auto"`
 - Model naturally chooses appropriate tools based on reasoning
 - Preserves LLM's natural conversation flow
 - No disruption to chat template or message structure
 
 ### 🔄 Context Memory System
+
 - **Task Summaries** - automatically created after each completed task
 - **Session History** - remembers previous requests and actions across tasks
 - **File Memory** - tracks created and modified files
@@ -35,29 +34,34 @@ Traditional agents either use pure function calls (losing reasoning transparency
 ## ✨ Key Features
 
 ### 🔍 **Research & Information**
+
 - **Web Search** - Internet research via Tavily API
 - **Report Generation** - Comprehensive reports with citations
 - **Date/Time Awareness** - Gets current date for time-sensitive queries
 - **Adaptive Planning** - Real-time strategy adjustment
 
 ### 📁 **File Operations**
+
 - **Read Files** - Analyze local file content
 - **Create Files** - Generate new files with specified content
 - **Update Files** - Modify existing files (append, prepend, replace)
 - **File Memory** - Remembers all created files across sessions
 
 ### 📂 **Directory Operations**
+
 - **List Directories** - Browse file structure with tree view
 - **Create Directories** - Build new folder structures
 - **Recursive Exploration** - Deep directory analysis
 
 ### 🧭 **Intelligent Communication**
+
 - **Clarification** - Asks questions when requests are unclear
 - **Simple Answers** - Quick responses without formal reports
 - **Multi-language Support** - Russian and English
 - **Context Awareness** - References previous conversations
 
 ### 🔄 **Session Memory**
+
 - **Task History** - "What did I ask before?"
 - **Action Memory** - "What files did we create?"
 - **Continuous Context** - No information loss between tasks
@@ -66,6 +70,7 @@ Traditional agents either use pure function calls (losing reasoning transparency
 ## 🏗️ Architecture Benefits
 
 ### ✅ Natural LLM Behavior
+
 - **Both phases use native OpenAI function calling**
 - Phase 1: `tool_choice="generate_reasoning"` - forced reasoning
 - Phase 2: `tool_choice="auto"` - natural tool selection
@@ -73,18 +78,21 @@ Traditional agents either use pure function calls (losing reasoning transparency
 - Model decides tool usage naturally within OpenAI's framework
 
 ### ✅ Complete Interpretability
+
 - Every decision is explicitly reasoned
 - Clear explanation of **why** each action is taken
 - Transparent thought process at each step
 - Easy debugging and understanding
 
 ### ✅ Persistent Memory
+
 - **Cross-session continuity** - remembers previous interactions
 - **Task summaries** - compact history storage
 - **File tracking** - knows what was created/modified
 - **Context integration** - seamlessly uses previous information
 
 ### ✅ Adaptive Planning
+
 - Real-time adaptation based on new information
 - Context-aware decision making
 - Anti-cycling mechanisms to prevent loops
@@ -95,7 +103,7 @@ Traditional agents either use pure function calls (losing reasoning transparency
 ```
 ├── sgr_agent.py          # 🎯 Main orchestration engine
 ├── models.py             # 📊 Pydantic models for type safety
-├── tool_schemas.py       # 🛠️ OpenAI function schemas  
+├── tool_schemas.py       # 🛠️ OpenAI function schemas
 ├── executors.py          # ⚡ Tool execution logic
 ├── prompts.yaml          # 💬 System prompts configuration
 ├── config.yaml.example   # ⚙️ Configuration template
@@ -126,41 +134,49 @@ graph TD
 ## 🛠️ Available Tools
 
 ### Reasoning & Communication
+
 - `generate_reasoning` - Analyze situation and plan next steps
 - `clarification` - Ask clarifying questions when request is unclear
 - `simple_answer` - Provide quick, direct answers
 
-### Research & Information  
+### Research & Information
+
 - `web_search` - Search the internet for information
 - `create_report` - Generate comprehensive reports with citations
 - `get_current_datetime` - Get current date and time
 
 ### File Operations
+
 - `read_local_file` - Read content from local files
 - `create_local_file` - Create new files with specified content
 - `update_local_file` - Modify existing files (append, prepend, replace)
 
 ### Directory Operations
+
 - `list_directory` - Show contents of directories (supports tree view)
 - `create_directory` - Create new directories (with user confirmation)
 
 ### Task Management
+
 - `report_completion` - Mark tasks as completed
 
 ## 🚀 Quick Start
 
 ### 1. Install Dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
 ### 2. Configure API Keys
+
 ```bash
 export OPENAI_API_KEY="your-openai-key"
 export TAVILY_API_KEY="your-tavily-key"
 ```
 
 Or create `config.yaml`:
+
 ```yaml
 openai:
   api_key: "your-openai-key"
@@ -178,11 +194,13 @@ execution:
 ### 3. Run the Agent
 
 #### Console Interface
+
 ```bash
 python sgr_agent.py
 ```
 
 #### Web Interface (Recommended)
+
 ```bash
 chainlit run gui_app.py -w
 ```
@@ -190,6 +208,7 @@ chainlit run gui_app.py -w
 The web interface will be available at [http://localhost:8000](http://localhost:8000)
 
 **Web Interface Features:**
+
 - 🌐 Beautiful chat interface
 - 📊 Real-time progress tracking
 - 📄 Formatted reports and results
@@ -200,6 +219,7 @@ The web interface will be available at [http://localhost:8000](http://localhost:
 ## 🧪 Example Sessions
 
 ### Research Session
+
 ```
 🔍 Enter research task: Find current Bitcoin price
 
@@ -210,6 +230,7 @@ The web interface will be available at [http://localhost:8000](http://localhost:
 ```
 
 ### File Operations Session
+
 ```
 🔍 Enter research task: Create a Python script for data analysis
 
@@ -219,6 +240,7 @@ The web interface will be available at [http://localhost:8000](http://localhost:
 ```
 
 ### Context Memory Session
+
 ```
 🔍 Enter research task: What did I ask before?
 
@@ -232,14 +254,17 @@ The web interface will be available at [http://localhost:8000](http://localhost:
 ## 🔧 Configuration
 
 ### Environment Variables
+
 - `OPENAI_API_KEY`: Your OpenAI API key
-- `TAVILY_API_KEY`: Your Tavily search API key  
+- `TAVILY_API_KEY`: Your Tavily search API key
 - `OPENAI_MODEL`: Model to use (default: gpt-4o)
 - `MAX_ROUNDS`: Maximum research rounds (default: 8)
 - `MAX_SEARCHES_TOTAL`: Maximum searches per session (default: 6)
 
 ### Advanced Configuration
+
 Edit `prompts.yaml` to customize system prompts:
+
 ```yaml
 structured_output_reasoning:
   template: |
@@ -255,6 +280,7 @@ outer_system:
 ## 🌟 Advanced Features
 
 ### Context Memory System
+
 The agent maintains memory across sessions through:
 
 1. **Task Summaries** - Each completed task creates a structured summary
@@ -263,16 +289,19 @@ The agent maintains memory across sessions through:
 4. **Smart Context** - Relevant history is automatically included
 
 ### Anti-Cycling Protection
+
 - Prevents repetitive clarification requests
 - Detects and breaks reasoning loops
 - Ensures forward progress on tasks
 
 ### Multilingual Support
+
 - Automatic language detection from user input
 - Consistent language usage throughout responses
 - Russian and English support
 
 ### Error Recovery
+
 - Graceful handling of API failures
 - Structured output validation with fallbacks
 - Context preservation during errors
@@ -284,7 +313,7 @@ Session 1:
 User: "Research Tesla Model S pricing"
 Agent: Creates comprehensive report → Saves to context
 
-Session 2:  
+Session 2:
 User: "What did I research before?"
 Agent: "You researched Tesla Model S pricing and created a report"
 
@@ -298,8 +327,9 @@ Agent: References previous Tesla research → Creates comparison
 The project includes a modern web interface built with **Chainlit** that provides a superior user experience compared to the console version.
 
 ### Features
+
 - **Interactive Chat** - Natural conversation flow with the AI agent
-- **Beautiful UI** - Modern, responsive design that works on all devices  
+- **Beautiful UI** - Modern, responsive design that works on all devices
 - **Real-time Updates** - Watch the agent's reasoning and tool execution live
 - **Rich Content** - Formatted reports, code blocks, and structured data display
 - **Progress Tracking** - Visual indicators for search progress and tool execution
@@ -307,6 +337,7 @@ The project includes a modern web interface built with **Chainlit** that provide
 - **Error Handling** - Graceful error display and recovery options
 
 ### Running the Web Interface
+
 ```bash
 # Install chainlit if not already installed
 pip install chainlit>=1.0.0
@@ -318,18 +349,21 @@ chainlit run gui_app.py -w
 ```
 
 ### Web Interface vs Console
-| Feature | Console | Web Interface |
-|---------|---------|---------------|
-| User Experience | Text-based | Rich, interactive |
-| Visual Feedback | Limited | Comprehensive |
-| Progress Tracking | Basic | Real-time with animations |
-| Report Display | Plain text | Formatted with syntax highlighting |
-| Mobile Support | No | Yes |
-| Multi-session | Manual | Automatic |
-| File Operations | Text output | Visual file browser |
+
+| Feature           | Console     | Web Interface                      |
+| ----------------- | ----------- | ---------------------------------- |
+| User Experience   | Text-based  | Rich, interactive                  |
+| Visual Feedback   | Limited     | Comprehensive                      |
+| Progress Tracking | Basic       | Real-time with animations          |
+| Report Display    | Plain text  | Formatted with syntax highlighting |
+| Mobile Support    | No          | Yes                                |
+| Multi-session     | Manual      | Automatic                          |
+| File Operations   | Text output | Visual file browser                |
 
 ### Configuration
+
 The web interface automatically uses the same configuration as the console version:
+
 - API keys from `config.yaml` or environment variables
 - Same tool set and capabilities
 - Identical reasoning and memory systems
@@ -352,6 +386,6 @@ MIT License - see LICENSE file for details.
 - [Pydantic Models](https://docs.pydantic.dev/)
 - [Tavily Search API](https://tavily.com/)
 
----
+______________________________________________________________________
 
 *Built with ❤️ for transparent, powerful AI research automation with persistent memory*

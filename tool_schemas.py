@@ -34,7 +34,7 @@ ALLOWED_TOOL_NAMES = [
 
 
 def tool_schema_generate_reasoning() -> Dict[str, Any]:
-    """Schema for reasoning analysis tool"""
+    """Schema for reasoning analysis tool."""
     return {
         "type": "function",
         "function": {
@@ -50,7 +50,7 @@ def tool_schema_generate_reasoning() -> Dict[str, Any]:
 
 
 def tool_schema_clarification() -> Dict[str, Any]:
-    """Schema for clarification tool"""
+    """Schema for clarification tool."""
     return {
         "type": "function",
         "function": {
@@ -93,7 +93,7 @@ def tool_schema_clarification() -> Dict[str, Any]:
 
 
 def tool_schema_web_search() -> Dict[str, Any]:
-    """Schema for web search tool"""
+    """Schema for web search tool."""
     return {
         "type": "function",
         "function": {
@@ -131,7 +131,7 @@ def tool_schema_web_search() -> Dict[str, Any]:
 
 
 def tool_schema_create_report() -> Dict[str, Any]:
-    """Schema for report creation tool"""
+    """Schema for report creation tool."""
     return {
         "type": "function",
         "function": {
@@ -176,7 +176,7 @@ def tool_schema_create_report() -> Dict[str, Any]:
 
 
 def tool_schema_report_completion() -> Dict[str, Any]:
-    """Schema for task completion tool"""
+    """Schema for task completion tool."""
     return {
         "type": "function",
         "function": {
@@ -210,7 +210,7 @@ def tool_schema_report_completion() -> Dict[str, Any]:
 
 
 def tool_schema_read_local_file() -> Dict[str, Any]:
-    """Schema for reading local files"""
+    """Schema for reading local files."""
     return {
         "type": "function",
         "function": {
@@ -241,7 +241,7 @@ def tool_schema_read_local_file() -> Dict[str, Any]:
 
 
 def tool_schema_create_local_file() -> Dict[str, Any]:
-    """Schema for creating local files"""
+    """Schema for creating local files."""
     return {
         "type": "function",
         "function": {
@@ -281,7 +281,7 @@ def tool_schema_create_local_file() -> Dict[str, Any]:
 
 
 def tool_schema_update_local_file() -> Dict[str, Any]:
-    """Schema for updating existing local files"""
+    """Schema for updating existing local files."""
     return {
         "type": "function",
         "function": {
@@ -300,7 +300,12 @@ def tool_schema_update_local_file() -> Dict[str, Any]:
                     },
                     "operation": {
                         "type": "string",
-                        "enum": ["append", "prepend", "replace_content", "replace_section"],
+                        "enum": [
+                            "append",
+                            "prepend",
+                            "replace_content",
+                            "replace_section",
+                        ],
                         "description": "Type of update operation",
                     },
                     "content": {
@@ -325,7 +330,7 @@ def tool_schema_update_local_file() -> Dict[str, Any]:
 
 
 def tool_schema_list_directory() -> Dict[str, Any]:
-    """Schema for listing directory contents"""
+    """Schema for listing directory contents."""
     return {
         "type": "function",
         "function": {
@@ -374,7 +379,7 @@ def tool_schema_list_directory() -> Dict[str, Any]:
 
 
 def tool_schema_create_directory() -> Dict[str, Any]:
-    """Schema for creating directories with user confirmation"""
+    """Schema for creating directories with user confirmation."""
     return {
         "type": "function",
         "function": {
@@ -409,7 +414,7 @@ def tool_schema_create_directory() -> Dict[str, Any]:
 
 
 def tool_schema_simple_answer() -> Dict[str, Any]:
-    """Schema for providing simple direct answers"""
+    """Schema for providing simple direct answers."""
     return {
         "type": "function",
         "function": {
@@ -440,7 +445,7 @@ def tool_schema_simple_answer() -> Dict[str, Any]:
 
 
 def tool_schema_get_current_datetime() -> Dict[str, Any]:
-    """Schema for getting current date and time"""
+    """Schema for getting current date and time."""
     return {
         "type": "function",
         "function": {
@@ -455,7 +460,13 @@ def tool_schema_get_current_datetime() -> Dict[str, Any]:
                     },
                     "format": {
                         "type": "string",
-                        "enum": ["date_only", "time_only", "datetime", "iso", "human_readable"],
+                        "enum": [
+                            "date_only",
+                            "time_only",
+                            "datetime",
+                            "iso",
+                            "human_readable",
+                        ],
                         "default": "human_readable",
                         "description": "Format for the date/time output",
                     },
@@ -478,7 +489,7 @@ def tool_schema_get_current_datetime() -> Dict[str, Any]:
 
 
 def get_all_tools() -> list[Dict[str, Any]]:
-    """Get all tool schemas"""
+    """Get all tool schemas."""
     return [
         tool_schema_clarification(),
         tool_schema_generate_reasoning(),
@@ -501,5 +512,5 @@ def get_all_tools() -> list[Dict[str, Any]]:
 
 
 def make_tool_choice_generate_reasoning() -> Dict[str, Any]:
-    """Force model to call generate_reasoning tool"""
+    """Force model to call generate_reasoning tool."""
     return {"type": "function", "function": {"name": "generate_reasoning"}}

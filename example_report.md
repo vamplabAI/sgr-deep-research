@@ -3,48 +3,59 @@
 *Created: 2025-08-28 23:41:19*
 
 ### Введение
+
 Schema-Guided Reasoning (SGR) — это метод, который используется в больших языковых моделях (LLM) для улучшения понимания и генерации текста. Он основывается на использовании схем, которые помогают моделям структурировать информацию и делать выводы на основе заданных данных. В данной статье мы рассмотрим, что такое SGR, как его использовать и какие подводные камни могут возникнуть при его применении.
 
 ### Что такое SGR?
-SGR — это подход, который позволяет языковым моделям, таким как GPT, использовать заранее определенные схемы для обработки информации. Эти схемы могут включать в себя различные структуры данных, которые помогают моделям лучше понимать контекст и генерировать более точные ответы. Например, если модель обучена на определенной схеме, она может использовать эту схему для извлечения информации из текстов и создания более структурированных ответов [1][11].
+
+SGR — это подход, который позволяет языковым моделям, таким как GPT, использовать заранее определенные схемы для обработки информации. Эти схемы могут включать в себя различные структуры данных, которые помогают моделям лучше понимать контекст и генерировать более точные ответы. Например, если модель обучена на определенной схеме, она может использовать эту схему для извлечения информации из текстов и создания более структурированных ответов \[1\]\[11\].
 
 ### Как использовать SGR в LLM?
+
 Использование SGR в LLM включает несколько этапов:
+
 1. **Определение схемы**: Необходимо выбрать или создать схему, которая будет использоваться для обработки данных. Это может быть схема, описывающая структуру данных, или схема, представляющая собой набор правил для генерации текста.
 2. **Обучение модели**: Модель должна быть обучена на основе выбранной схемы. Это включает в себя предоставление модели примеров, которые соответствуют схеме, чтобы она могла научиться правильно интерпретировать и генерировать текст.
-3. **Применение модели**: После обучения модель может использоваться для обработки новых данных, извлекая информацию на основе заданной схемы и генерируя ответы, которые соответствуют этой схеме [2][12].
+3. **Применение модели**: После обучения модель может использоваться для обработки новых данных, извлекая информацию на основе заданной схемы и генерируя ответы, которые соответствуют этой схеме \[2\]\[12\].
 
 ### Примеры использования SGR
+
 SGR может быть использован в различных областях, таких как:
+
 - **Обработка естественного языка**: Модели могут использовать схемы для извлечения информации из текстов и создания резюме.
 - **Чат-боты**: Схемы могут помочь чат-ботам лучше понимать запросы пользователей и давать более точные ответы.
-- **Анализ данных**: SGR может быть использован для структурирования данных и создания отчетов на основе анализа [3][13].
+- **Анализ данных**: SGR может быть использован для структурирования данных и создания отчетов на основе анализа \[3\]\[13\].
 
 ### Подводные камни при использовании SGR
+
 Несмотря на преимущества, использование SGR может иметь и свои недостатки:
-1. **Сложность схем**: Создание и поддержка схем может быть сложным процессом, требующим значительных усилий и ресурсов [4][14].
-2. **Ограниченная гибкость**: Модели, использующие схемы, могут быть менее гибкими в сравнении с моделями, которые не зависят от заранее определенных структур [5][15].
-3. **Проблемы с обучением**: Если схема не охватывает все возможные сценарии, это может привести к ошибкам в интерпретации данных и генерации ответов [6][16].
-4. **Необходимость в адаптации**: Схемы могут требовать регулярного обновления и адаптации к новым данным и требованиям, что может быть трудоемким процессом [7][17].
+
+1. **Сложность схем**: Создание и поддержка схем может быть сложным процессом, требующим значительных усилий и ресурсов \[4\]\[14\].
+2. **Ограниченная гибкость**: Модели, использующие схемы, могут быть менее гибкими в сравнении с моделями, которые не зависят от заранее определенных структур \[5\]\[15\].
+3. **Проблемы с обучением**: Если схема не охватывает все возможные сценарии, это может привести к ошибкам в интерпретации данных и генерации ответов \[6\]\[16\].
+4. **Необходимость в адаптации**: Схемы могут требовать регулярного обновления и адаптации к новым данным и требованиям, что может быть трудоемким процессом \[7\]\[17\].
 
 ### Заключение
+
 SGR в LLM представляет собой мощный инструмент для улучшения обработки и генерации текста. Однако, как и любой другой метод, он имеет свои подводные камни, которые необходимо учитывать при его использовании. Правильное определение схемы, обучение модели и понимание ограничений SGR помогут максимально эффективно использовать этот подход в различных приложениях.
+
 ## Sources
-- [1] Структурированная генерация в LLM / Хабр - https://habr.com/ru/companies/vk/articles/913874/
-- [2] Большая языковая модель - https://ru.wikipedia.org/wiki/%D0%91%D0%BE%D0%BB%D1%8C%D1%88%D0%B0%D1%8F_%D1%8F%D0%B7%D1%8B%D0%BA%D0%BE%D0%B2%D0%B0%D1%8F_%D0%BC%D0%BE%D0%B4%D0%B5%D0%BB%D1%8C
-- [3] Что такое большая языковая модель (LLM)? - https://www.sap.com/central-asia-caucasus/resources/what-is-large-language-model
-- [4] Учим большие языковые модели описывать продукты ... - https://habr.com/ru/companies/sberbank/articles/795617/
-- [5] В чем особенности открытых языковых моделей и как ... - https://blog.rt.ru/b2c/v-chem-osobennosti-otkrytykh-yazykovykh-modelei-i-kak-vybrat-podkhodyashuyu-dlya-konkretnykh-zadach.htm
-- [6] Promptstack Проблемы и подводные камни больших языковых моделей (LLM) - https://promptstack.pro/problems_llms
-- [7] Tbank Secrets Подводные камни при использовании LLM в бизнесе - https://secrets.tbank.ru/blogi-kompanij/pro-integraciyu-llm/
-- [8] Skillbox Гайд по LLM (большим языковым моделям) в программировании / Skillbox Media - https://skillbox.ru/media/code/ischerpyvayushchiy-gayd-po-opensorsnym-yazykovym-modelyam/
-- [9] ServerFlow Большие языковые модели (LLM): просто о сложных технологиях | Блог Serverflow - https://serverflow.ru/blog/stati/bolshie-yazykovye-modeli-llm-prosto-o-slozhnykh-tekhnologiyakh/
-- [10] Habr Всё смешалось — эксперты, модели. Как уменьшить LLM, но не проиграть в продуктивности / Хабр - https://habr.com/ru/companies/ntr/articles/794292/
-- [11] Schema-Guided Reasoning (SGR) - Rinat Abdullin - https://abdullin.com/schema-guided-reasoning/
-- [12] Schema-Guided Reasoning: A Step Towards AGI - LinkedIn - https://www.linkedin.com/posts/sergeipanov_schema-guided-reasoning-sgr-activity-7362019252767211520-daDm
-- [13] Schema-Guided Scene-Graph Reasoning based on Multi-Agent ... - https://arxiv.org/html/2502.03450v2
-- [14] New materials on Schema-Guided Reasoning (SGR) | Rinat Abdullin - https://www.linkedin.com/posts/abdullin_new-materials-on-schema-guided-reasoning-activity-7360548509156020224-ZZR7
-- [15] vakovalskii/sgr-deep-research: Schema-Guided Reasoning ... - GitHub - https://github.com/vakovalskii/sgr-deep-research
-- [16] Demo for a Schema-Guided Reasoning (Business Assistant) - https://gist.github.com/abdullin/46caec6cba361b9e8e8a00b2c48ee07c
-- [17] Schema-Guided Scene-Graph Reasoning based on Multi ... - https://arxiv.org/abs/2502.03450
-- [18] SGR Patterns - https://abdullin.com/schema-guided-reasoning/patterns
+
+- \[1\] Структурированная генерация в LLM / Хабр - https://habr.com/ru/companies/vk/articles/913874/
+- \[2\] Большая языковая модель - https://ru.wikipedia.org/wiki/%D0%91%D0%BE%D0%BB%D1%8C%D1%88%D0%B0%D1%8F_%D1%8F%D0%B7%D1%8B%D0%BA%D0%BE%D0%B2%D0%B0%D1%8F_%D0%BC%D0%BE%D0%B4%D0%B5%D0%BB%D1%8C
+- \[3\] Что такое большая языковая модель (LLM)? - https://www.sap.com/central-asia-caucasus/resources/what-is-large-language-model
+- \[4\] Учим большие языковые модели описывать продукты ... - https://habr.com/ru/companies/sberbank/articles/795617/
+- \[5\] В чем особенности открытых языковых моделей и как ... - https://blog.rt.ru/b2c/v-chem-osobennosti-otkrytykh-yazykovykh-modelei-i-kak-vybrat-podkhodyashuyu-dlya-konkretnykh-zadach.htm
+- \[6\] Promptstack Проблемы и подводные камни больших языковых моделей (LLM) - https://promptstack.pro/problems_llms
+- \[7\] Tbank Secrets Подводные камни при использовании LLM в бизнесе - https://secrets.tbank.ru/blogi-kompanij/pro-integraciyu-llm/
+- \[8\] Skillbox Гайд по LLM (большим языковым моделям) в программировании / Skillbox Media - https://skillbox.ru/media/code/ischerpyvayushchiy-gayd-po-opensorsnym-yazykovym-modelyam/
+- \[9\] ServerFlow Большие языковые модели (LLM): просто о сложных технологиях | Блог Serverflow - https://serverflow.ru/blog/stati/bolshie-yazykovye-modeli-llm-prosto-o-slozhnykh-tekhnologiyakh/
+- \[10\] Habr Всё смешалось — эксперты, модели. Как уменьшить LLM, но не проиграть в продуктивности / Хабр - https://habr.com/ru/companies/ntr/articles/794292/
+- \[11\] Schema-Guided Reasoning (SGR) - Rinat Abdullin - https://abdullin.com/schema-guided-reasoning/
+- \[12\] Schema-Guided Reasoning: A Step Towards AGI - LinkedIn - https://www.linkedin.com/posts/sergeipanov_schema-guided-reasoning-sgr-activity-7362019252767211520-daDm
+- \[13\] Schema-Guided Scene-Graph Reasoning based on Multi-Agent ... - https://arxiv.org/html/2502.03450v2
+- \[14\] New materials on Schema-Guided Reasoning (SGR) | Rinat Abdullin - https://www.linkedin.com/posts/abdullin_new-materials-on-schema-guided-reasoning-activity-7360548509156020224-ZZR7
+- \[15\] vakovalskii/sgr-deep-research: Schema-Guided Reasoning ... - GitHub - https://github.com/vakovalskii/sgr-deep-research
+- \[16\] Demo for a Schema-Guided Reasoning (Business Assistant) - https://gist.github.com/abdullin/46caec6cba361b9e8e8a00b2c48ee07c
+- \[17\] Schema-Guided Scene-Graph Reasoning based on Multi ... - https://arxiv.org/abs/2502.03450
+- \[18\] SGR Patterns - https://abdullin.com/schema-guided-reasoning/patterns
