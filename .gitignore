@@ -325,6 +325,8 @@ id_ed25519.pub
 # Временные файлы
 *.tmp
 *.temp
+.chainlit/
+chainlit.md
 
 # Пользовательские заметки
 notes.txt
