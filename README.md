@@ -11,6 +11,10 @@ https://github.com/user-attachments/assets/ceea9fc7-2d1c-486c-b9df-6b8b43f7d84b
 
 A sophisticated AI research agent that combines **Schema-Guided Reasoning (SGR)** with **OpenAI Function Calls** to create a natural, interpretable, and powerful research workflow with **persistent context memory**.
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=vakovalskii/sgr-deep-research&type=Date)](https://star-history.com/#vakovalskii/sgr-deep-research&Date)
+
 ## 🧠 Core Innovation: Two-Phase Architecture + Context Memory
 
 Traditional agents either use pure function calls (losing reasoning transparency) or structured output with local execution (missing natural LLM behavior). This agent combines the best of both worlds with **persistent memory across sessions**.
