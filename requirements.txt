@@ -9,7 +9,6 @@ tavily-python>=0.3.0
 
 # Pydantic для валидации схем и структурированных ответов
 pydantic>=2.0.0
- pydantic-settings>=2.0.0
 
 # Rich для красивого консольного интерфейса
 rich>=13.0.0
