@@ -50,6 +50,7 @@ def load_config() -> Dict[str, Any]:
     cfg = {
         "openai_api_key": os.getenv("OPENAI_API_KEY", ""),
         "openai_base_url": os.getenv("OPENAI_BASE_URL", ""),
+        "openai_proxy": os.getenv("OPENAI_PROXY", ""),
         "openai_model": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
         "max_tokens": int(os.getenv("MAX_TOKENS", "6000")),
         "temperature": float(os.getenv("TEMPERATURE", "0.3")),
@@ -76,6 +77,9 @@ def load_config() -> Dict[str, Any]:
                         if k.startswith("openai_")
                     }
                 )
+                # Handle proxy separately as it's not a standard OpenAI parameter
+                if "proxy" in oc:
+                    cfg["openai_proxy"] = oc["proxy"]
 
             if "tavily" in y:
                 cfg["tavily_api_key"] = y["tavily"].get(
@@ -137,6 +141,15 @@ if not CONFIG["tavily_api_key"]:
 openai_kwargs = {"api_key": CONFIG["openai_api_key"]}
 if CONFIG["openai_base_url"]:
     openai_kwargs["base_url"] = CONFIG["openai_base_url"]
+
+# Add proxy support if configured
+if CONFIG["openai_proxy"]:
+    import httpx
+    openai_kwargs["http_client"] = httpx.Client(
+        follow_redirects=True,
+        limits=httpx.Limits(max_connections=10),
+        proxy=CONFIG["openai_proxy"],
+    )
 
 client = OpenAI(**openai_kwargs)
 tavily = TavilyClient(CONFIG["tavily_api_key"])
