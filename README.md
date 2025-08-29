@@ -4,7 +4,6 @@
 
 https://github.com/user-attachments/assets/85335b84-1d15-482b-a699-42c88604d3f5
 
-
 ## Terminal use
 
 https://github.com/user-attachments/assets/ceea9fc7-2d1c-486c-b9df-6b8b43f7d84b
