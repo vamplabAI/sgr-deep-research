@@ -1,10 +1,10 @@
-# SGR Research Agent - Two-Phase Architecture
+# SGR Research Agent - Neural Deep Agent
 
-A sophisticated research agent that combines **Schema-Guided Reasoning (SGR)** with **OpenAI Function Calls** to create a natural, interpretable, and powerful research workflow.
+A sophisticated AI research agent that combines **Schema-Guided Reasoning (SGR)** with **OpenAI Function Calls** to create a natural, interpretable, and powerful research workflow with **persistent context memory**.
 
-## 🧠 Core Innovation: Two-Phase Approach
+## 🧠 Core Innovation: Two-Phase Architecture + Context Memory
 
-Traditional agents either use pure function calls (losing reasoning transparency) or structured output with local execution (missing natural LLM behavior). This agent combines the best of both worlds:
+Traditional agents either use pure function calls (losing reasoning transparency) or structured output with local execution (missing natural LLM behavior). This agent combines the best of both worlds with **persistent memory across sessions**.
 
 ### Phase 1: Reasoning (SGR)
 - **Reasoning as a Tool** - `generate_reasoning` function call
@@ -20,6 +20,43 @@ Traditional agents either use pure function calls (losing reasoning transparency
 - Preserves LLM's natural conversation flow
 - No disruption to chat template or message structure
 
+### 🔄 Context Memory System
+- **Task Summaries** - automatically created after each completed task
+- **Session History** - remembers previous requests and actions across tasks
+- **File Memory** - tracks created and modified files
+- **Anti-Forgetting** - context is preserved between different user queries
+
+## ✨ Key Features
+
+### 🔍 **Research & Information**
+- **Web Search** - Internet research via Tavily API
+- **Report Generation** - Comprehensive reports with citations
+- **Date/Time Awareness** - Gets current date for time-sensitive queries
+- **Adaptive Planning** - Real-time strategy adjustment
+
+### 📁 **File Operations**
+- **Read Files** - Analyze local file content
+- **Create Files** - Generate new files with specified content
+- **Update Files** - Modify existing files (append, prepend, replace)
+- **File Memory** - Remembers all created files across sessions
+
+### 📂 **Directory Operations**
+- **List Directories** - Browse file structure with tree view
+- **Create Directories** - Build new folder structures
+- **Recursive Exploration** - Deep directory analysis
+
+### 🧭 **Intelligent Communication**
+- **Clarification** - Asks questions when requests are unclear
+- **Simple Answers** - Quick responses without formal reports
+- **Multi-language Support** - Russian and English
+- **Context Awareness** - References previous conversations
+
+### 🔄 **Session Memory**
+- **Task History** - "What did I ask before?"
+- **Action Memory** - "What files did we create?"
+- **Continuous Context** - No information loss between tasks
+- **Smart Summaries** - Efficient context compression
+
 ## 🏗️ Architecture Benefits
 
 ### ✅ Natural LLM Behavior
@@ -28,7 +65,6 @@ Traditional agents either use pure function calls (losing reasoning transparency
 - Phase 2: `tool_choice="auto"` - natural tool selection
 - Maintains proper chat message flow throughout
 - Model decides tool usage naturally within OpenAI's framework
-- No artificial constraints on LLM behavior
 
 ### ✅ Complete Interpretability
 - Every decision is explicitly reasoned
@@ -36,17 +72,17 @@ Traditional agents either use pure function calls (losing reasoning transparency
 - Transparent thought process at each step
 - Easy debugging and understanding
 
+### ✅ Persistent Memory
+- **Cross-session continuity** - remembers previous interactions
+- **Task summaries** - compact history storage
+- **File tracking** - knows what was created/modified
+- **Context integration** - seamlessly uses previous information
+
 ### ✅ Adaptive Planning
 - Real-time adaptation based on new information
 - Context-aware decision making
 - Anti-cycling mechanisms to prevent loops
 - Dynamic re-planning when needed
-
-### ✅ Clean Architecture
-- Modular design with clear separation of concerns
-- Easy to extend and modify
-- Type-safe with Pydantic models
-- Comprehensive configuration system
 
 ## 📁 Project Structure
 
@@ -64,66 +100,46 @@ Traditional agents either use pure function calls (losing reasoning transparency
 
 ```mermaid
 graph TD
-    A[User Query] --> B[Phase 1: SGR Analysis]
-    B --> C[Structured Output Call]
-    C --> D[ReasoningStep Model]
-    D --> E{Validation}
-    E -->|Pass| F[Phase 2: Tool Execution]
-    E -->|Fail| B
-    F --> G[Function Calls Auto]
-    G --> H[Local Tool Execution]
-    H --> I[Update Context]
-    I --> J{Task Complete?}
-    J -->|No| B
-    J -->|Yes| K[Generate Report]
-    K --> L[Task Completion]
+    A[User Query] --> B[Load Previous Context]
+    B --> C[Phase 1: SGR Analysis]
+    C --> D[Structured Output Call]
+    D --> E[ReasoningStep Model]
+    E --> F{Validation}
+    F -->|Pass| G[Phase 2: Tool Execution]
+    F -->|Fail| C
+    G --> H[Function Calls Auto]
+    H --> I[Local Tool Execution]
+    I --> J[Update Context]
+    J --> K{Task Complete?}
+    K -->|No| C
+    K -->|Yes| L[Create Task Summary]
+    L --> M[Save to Global Context]
+    M --> N[Task Completion]
 ```
 
-### Phase 1: Schema-Guided Reasoning as a Tool
-```python
-# Reasoning is implemented as a proper OpenAI function call
-completion = client.chat.completions.create(
-    tools=ALL_TOOLS,
-    tool_choice={"type": "function", "function": {"name": "generate_reasoning"}},
-    messages=conversation_history
-)
+## 🛠️ Available Tools
 
-# Inside generate_reasoning tool - Structured Output call
-class ReasoningStep(BaseModel):
-    reasoning_steps: List[str]           # Step-by-step analysis
-    current_situation: str               # Current state assessment  
-    next_action: Literal["search", "clarify", "report", "complete"]
-    action_reasoning: str                # Why this action is needed
-    task_completed: bool                 # Completion status
-    # ... additional fields for progress tracking
-```
+### Reasoning & Communication
+- `generate_reasoning` - Analyze situation and plan next steps
+- `clarification` - Ask clarifying questions when request is unclear
+- `simple_answer` - Provide quick, direct answers
 
-**Key Innovation**: Reasoning is a **tool call**, not a separate API call:
-- Model naturally calls `generate_reasoning` function
-- Function internally uses Structured Output for analysis
-- Returns structured reasoning to conversation history
-- Maintains proper OpenAI message flow: assistant → tool → user
-- No breaks in chat template or conversation structure
+### Research & Information  
+- `web_search` - Search the internet for information
+- `create_report` - Generate comprehensive reports with citations
+- `get_current_datetime` - Get current date and time
 
-### Phase 2: Natural Function Calling
-After reasoning, the model naturally calls appropriate tools:
-```python
-# Model decides which tools to call based on reasoning
-completion = client.chat.completions.create(
-    tools=ALL_TOOLS,
-    tool_choice="auto",  # Let model decide naturally
-    messages=conversation_history
-)
-```
+### File Operations
+- `read_local_file` - Read content from local files
+- `create_local_file` - Create new files with specified content
+- `update_local_file` - Modify existing files (append, prepend, replace)
 
-Available tools:
-- `generate_reasoning`: Analyze situation and plan next action (Phase 1)
-- `web_search`: Research information with Tavily
-- `clarification`: Ask user for clarification
-- `create_report`: Generate comprehensive research report
-- `report_completion`: Mark task as finished
+### Directory Operations
+- `list_directory` - Show contents of directories (supports tree view)
+- `create_directory` - Create new directories (with user confirmation)
 
-**Note**: `generate_reasoning` is controlled via `tool_choice`, while other tools are selected naturally by the model via `tool_choice="auto"`.
+### Task Management
+- `report_completion` - Mark tasks as completed
 
 ## 🚀 Quick Start
 
@@ -142,7 +158,7 @@ Or create `config.yaml`:
 ```yaml
 openai:
   api_key: "your-openai-key"
-  model: "gpt-4o-mini"
+  model: "gpt-4o"
   temperature: 0.3
 
 tavily:
@@ -158,52 +174,44 @@ execution:
 python sgr_agent.py
 ```
 
-### 4. Example Usage
+## 🧪 Example Sessions
+
+### Research Session
 ```
-🔍 Enter research task: Analyze BMW M6 reliability and pricing trends
+🔍 Enter research task: Find current Bitcoin price
 
-🧠 Reasoning Analysis
-┌─────────────────┬────────────────────────────────────────┐
-│ Current         │ User wants BMW M6 analysis             │
-│ Next action     │ search                                 │  
-│ Action reasoning│ Need pricing and reliability data      │
-└─────────────────┴────────────────────────────────────────┘
-
-🔎 Search: 'BMW M6 reliability reviews 2024'
-   1. [1] BMW M6 Long-term Review — motortrend.com
-   2. [2] M6 Reliability Issues — bmwblog.com
-   ...
+🧠 Analysis: Need current date for accurate pricing
+🕒 Getting current date: 2025-08-29
+🔎 Search: 'Bitcoin price 29 August 2025'
+💬 Answer: Bitcoin is trading at $166,912 (projected)
 ```
 
-## 🎯 Why This Architecture Works
+### File Operations Session
+```
+🔍 Enter research task: Create a Python script for data analysis
 
-### 1. **Preserves LLM Nature**
-Unlike pure structured output approaches, this preserves the LLM's natural conversational flow. The model can think, reason, and then act naturally.
+🧠 Analysis: User wants Python script creation
+📝 Creating file: data_analysis.py
+✅ File created with data processing functions
+```
 
-### 2. **No Chat Template Disruption**
-**Both phases use OpenAI's native function calling interface**:
-- Phase 1: Reasoning via `tool_choice="generate_reasoning"` 
-- Phase 2: Actions via `tool_choice="auto"`
-- Conversation history remains clean and proper
-- Natural assistant → tool → user message flow
-- No artificial API calls or conversation breaks
-- Maintains intended chat template structure throughout
+### Context Memory Session
+```
+🔍 Enter research task: What did I ask before?
 
-### 3. **Complete Transparency**
-Every decision is reasoned explicitly. You can see exactly why the model chose each action, making debugging and improvement straightforward.
-
-### 4. **Adaptive Behavior**
-The model can change its plan based on new information, handle unexpected results, and adapt its strategy dynamically.
-
-### 5. **Type Safety**
-Pydantic models ensure data integrity throughout the pipeline, catching errors early and providing clear interfaces.
+🧠 Analysis: Checking previous session history
+📋 Previous actions:
+   - Request: 'Find Bitcoin price' → Actions: web search, simple answer
+   - Request: 'Create Python script' → Actions: file creation
+💬 Answer: You previously asked about Bitcoin price and Python script creation
+```
 
 ## 🔧 Configuration
 
 ### Environment Variables
 - `OPENAI_API_KEY`: Your OpenAI API key
 - `TAVILY_API_KEY`: Your Tavily search API key  
-- `OPENAI_MODEL`: Model to use (default: gpt-4o-mini)
+- `OPENAI_MODEL`: Model to use (default: gpt-4o)
 - `MAX_ROUNDS`: Maximum research rounds (default: 8)
 - `MAX_SEARCHES_TOTAL`: Maximum searches per session (default: 6)
 
@@ -221,27 +229,45 @@ outer_system:
     # Customize main system prompt
 ```
 
+## 🌟 Advanced Features
+
+### Context Memory System
+The agent maintains memory across sessions through:
+
+1. **Task Summaries** - Each completed task creates a structured summary
+2. **History Integration** - Previous actions are loaded into new conversations
+3. **File Tracking** - All created/modified files are remembered
+4. **Smart Context** - Relevant history is automatically included
+
+### Anti-Cycling Protection
+- Prevents repetitive clarification requests
+- Detects and breaks reasoning loops
+- Ensures forward progress on tasks
+
+### Multilingual Support
+- Automatic language detection from user input
+- Consistent language usage throughout responses
+- Russian and English support
+
+### Error Recovery
+- Graceful handling of API failures
+- Structured output validation with fallbacks
+- Context preservation during errors
+
 ## 🧪 Example Research Session
 
 ```
-User: "Research Tesla Model S vs BMW i7 electric luxury sedans"
+Session 1:
+User: "Research Tesla Model S pricing"
+Agent: Creates comprehensive report → Saves to context
 
-Round 1 - Reasoning + Action
-├── 🧠 Analysis: Need pricing and specs comparison
-├── 🔍 Search: "Tesla Model S 2024 price specifications"
-└── 📊 Results: 10 sources found
+Session 2:  
+User: "What did I research before?"
+Agent: "You researched Tesla Model S pricing and created a report"
 
-Round 2 - Reasoning + Action  
-├── 🧠 Analysis: Have Tesla data, need BMW i7 info
-├── 🔍 Search: "BMW i7 2024 electric sedan review price"
-└── 📊 Results: 8 sources found
-
-Round 3 - Reasoning + Action
-├── 🧠 Analysis: Sufficient data for comparison report
-├── 📄 Report: "Tesla Model S vs BMW i7 Comparison"
-└── ✅ Completion: Task finished successfully
-
-📊 Session Stats: 2 searches | 18 sources | 1 report generated
+Session 3:
+User: "Now compare with BMW i7"
+Agent: References previous Tesla research → Creates comparison
 ```
 
 ## 🤝 Contributing
@@ -264,4 +290,4 @@ MIT License - see LICENSE file for details.
 
 ---
 
-*Built with ❤️ for transparent, powerful AI research automation*
+*Built with ❤️ for transparent, powerful AI research automation with persistent memory*

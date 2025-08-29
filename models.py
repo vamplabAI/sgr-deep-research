@@ -129,6 +129,82 @@ class ReportCompletionStep(BaseModel):
     status: Literal["completed", "failed"] = Field(description="Task completion status")
 
 
+class ReadLocalFileStep(BaseModel):
+    """Read content from a local file for analysis or research"""
+
+    tool: Literal["read_local_file"]
+    reasoning: str = Field(description="Why this file needs to be read and how it relates to research")
+    file_path: str = Field(description="Path to the file to read (relative or absolute)")
+    encoding: str = Field(default="utf-8", description="File encoding")
+
+
+class CreateLocalFileStep(BaseModel):
+    """Create a new local file with specified content"""
+
+    tool: Literal["create_local_file"]
+    reasoning: str = Field(description="Why this file needs to be created and its purpose")
+    file_path: str = Field(description="Path where the file should be created (relative or absolute)")
+    content: str = Field(description="Content to write to the file")
+    encoding: str = Field(default="utf-8", description="File encoding")
+    overwrite: bool = Field(default=False, description="Whether to overwrite if file exists")
+
+
+class UpdateLocalFileStep(BaseModel):
+    """Update content in an existing local file"""
+
+    tool: Literal["update_local_file"]
+    reasoning: str = Field(description="Why this file needs to be updated and what changes are needed")
+    file_path: str = Field(description="Path to the file to update")
+    operation: Literal["append", "prepend", "replace_content", "replace_section"] = Field(
+        description="Type of update operation"
+    )
+    content: str = Field(description="Content to add or replacement content")
+    search_text: str = Field(default="", description="Text to search for (required for replace_section operation)")
+    encoding: str = Field(default="utf-8", description="File encoding")
+
+
+class ListDirectoryStep(BaseModel):
+    """List contents of a directory (files and subdirectories)"""
+
+    tool: Literal["list_directory"]
+    reasoning: str = Field(description="Why this directory listing is needed for the research")
+    directory_path: str = Field(default=".", description="Path to the directory to list")
+    show_hidden: bool = Field(default=False, description="Whether to show hidden files and directories")
+    recursive: bool = Field(default=False, description="Whether to list subdirectories recursively")
+    max_depth: int = Field(default=1, description="Maximum depth for recursive listing (1-5)")
+    tree_view: bool = Field(default=False, description="Display results in tree format with visual hierarchy")
+
+
+class CreateDirectoryStep(BaseModel):
+    """Create a new directory with user confirmation"""
+
+    tool: Literal["create_directory"]
+    reasoning: str = Field(description="Why this directory needs to be created and its purpose")
+    directory_path: str = Field(description="Path where the directory should be created")
+    create_parents: bool = Field(default=True, description="Whether to create parent directories if they don't exist")
+    description: str = Field(description="Brief description of what this directory will contain")
+
+
+class SimpleAnswerStep(BaseModel):
+    """Provide a direct, concise answer without creating a formal report"""
+
+    tool: Literal["simple_answer"]
+    reasoning: str = Field(description="Why a simple answer is appropriate for this request")
+    answer: str = Field(description="Direct, concise answer to the user's question")
+    additional_info: str = Field(default="", description="Optional additional context or helpful information")
+
+
+class GetCurrentDatetimeStep(BaseModel):
+    """Get current date and time in various formats"""
+
+    tool: Literal["get_current_datetime"]
+    reasoning: str = Field(description="Why current date/time is needed for the task")
+    format: Literal["date_only", "time_only", "datetime", "iso", "human_readable"] = Field(
+        default="human_readable", description="Format for the date/time output"
+    )
+    timezone: str = Field(default="Europe/Moscow", description="Timezone for the result")
+
+
 # Union type for all function steps
 FunctionStep = Annotated[
     Union[
@@ -136,6 +212,13 @@ FunctionStep = Annotated[
         WebSearchStep,
         CreateReportStep,
         ReportCompletionStep,
+        ReadLocalFileStep,
+        CreateLocalFileStep,
+        UpdateLocalFileStep,
+        ListDirectoryStep,
+        CreateDirectoryStep,
+        SimpleAnswerStep,
+        GetCurrentDatetimeStep,
     ],
     Field(discriminator="tool"),
 ]
@@ -170,7 +253,7 @@ class ReasoningStep(BaseModel):
     enough_data: bool = Field(default=False, description="Sufficient data for report?")
 
     # Next action decision
-    next_action: Literal["search", "clarify", "report", "complete"] = Field(
+    next_action: Literal["search", "clarify", "report", "complete", "read_file", "create_file", "update_file", "list_dir", "create_dir", "simple_answer", "get_datetime"] = Field(
         description="What should be done next"
     )
     action_reasoning: str = Field(description="Why this specific action is needed now")

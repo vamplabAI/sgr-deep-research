@@ -18,6 +18,12 @@ from models import (
     WebSearchStep,
     CreateReportStep,
     ReportCompletionStep,
+    ReadLocalFileStep,
+    CreateLocalFileStep,
+    UpdateLocalFileStep,
+    ListDirectoryStep,
+    CreateDirectoryStep,
+    SimpleAnswerStep,
 )
 
 # Инициализация консоли
@@ -53,6 +59,46 @@ def format_sources_block(context: Dict[str, Any]) -> str:
         else:
             lines.append(f"- [{n}] {url}")
     return "\n".join(lines)
+
+
+def _print_tree_structure(items: list, base_path: str) -> None:
+    """Print items in tree structure format"""
+    # Группируем элементы по директориям
+    tree_dict = {}
+    
+    for item in items:
+        path_parts = item["name"].split(os.sep) if item["name"] != "." else [""]
+        current_dict = tree_dict
+        
+        for i, part in enumerate(path_parts):
+            if part not in current_dict:
+                current_dict[part] = {"type": "directory", "children": {}, "size": None}
+            
+            if i == len(path_parts) - 1:  # Последняя часть пути
+                current_dict[part]["type"] = item["type"]
+                current_dict[part]["size"] = item.get("size")
+            
+            current_dict = current_dict[part]["children"]
+    
+    def _print_tree_recursive(tree_dict: dict, prefix: str = "", is_last: bool = True):
+        items_list = list(tree_dict.items())
+        for i, (name, data) in enumerate(items_list):
+            is_last_item = i == len(items_list) - 1
+            
+            # Определяем символы для отображения
+            current_prefix = "└── " if is_last_item else "├── "
+            next_prefix = prefix + ("    " if is_last_item else "│   ")
+            
+            # Отображаем элемент
+            if data["type"] == "directory":
+                print(f"{prefix}{current_prefix}📁 {name}/")
+                if data["children"]:
+                    _print_tree_recursive(data["children"], next_prefix, is_last_item)
+            else:
+                size_str = f" ({data['size']} bytes)" if data["size"] is not None else ""
+                print(f"{prefix}{current_prefix}📄 {name}{size_str}")
+    
+    _print_tree_recursive(tree_dict)
 
 
 # =============================================================================
@@ -151,7 +197,7 @@ def exec_create_report(
     step: CreateReportStep, context: Dict[str, Any], config: Dict[str, Any]
 ) -> Dict[str, Any]:
     """Execute report creation step"""
-    # Set flag that report is created
+    # Устанавливаем флаг что отчет создан
     context["report_created"] = True
 
     os.makedirs(config["reports_directory"], exist_ok=True)
@@ -194,6 +240,509 @@ def exec_report_completion(
     return {"status": step.status}
 
 
+def exec_read_local_file(
+    step: ReadLocalFileStep, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Execute local file reading step"""
+    print(f"\n[cyan]📖 Reading file:[/cyan] {step.file_path}")
+    print(f"💭 Reason: {step.reasoning}")
+    
+    try:
+        # Проверяем существование файла
+        if not os.path.exists(step.file_path):
+            return {
+                "tool": "read_local_file",
+                "status": "error",
+                "error": f"File not found: {step.file_path}",
+                "file_path": step.file_path,
+            }
+        
+        # Читаем файл
+        with open(step.file_path, "r", encoding=step.encoding) as f:
+            content = f.read()
+        
+        # Получаем информацию о файле
+        file_size = os.path.getsize(step.file_path)
+        lines_count = len(content.splitlines())
+        
+        print(f"📄 File size: {file_size} bytes, {lines_count} lines")
+        
+        # Показываем первые несколько строк для подтверждения
+        preview_lines = content.splitlines()[:3]
+        if preview_lines:
+            print("📝 Preview:")
+            for i, line in enumerate(preview_lines, 1):
+                print(f"   {i}: {line[:80]}{'...' if len(line) > 80 else ''}")
+        
+        return {
+            "tool": "read_local_file",
+            "status": "success",
+            "file_path": step.file_path,
+            "content": content,
+            "file_size": file_size,
+            "lines_count": lines_count,
+            "encoding": step.encoding,
+        }
+        
+    except UnicodeDecodeError as e:
+        return {
+            "tool": "read_local_file",
+            "status": "error",
+            "error": f"Encoding error: {e}. Try different encoding.",
+            "file_path": step.file_path,
+        }
+    except Exception as e:
+        return {
+            "tool": "read_local_file",
+            "status": "error",
+            "error": str(e),
+            "file_path": step.file_path,
+        }
+
+
+def exec_create_local_file(
+    step: CreateLocalFileStep, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Execute local file creation step"""
+    print(f"\n[cyan]📝 Creating file:[/cyan] {step.file_path}")
+    print(f"💭 Reason: {step.reasoning}")
+    
+    try:
+        # Проверяем существование файла
+        if os.path.exists(step.file_path) and not step.overwrite:
+            return {
+                "tool": "create_local_file",
+                "status": "error",
+                "error": f"File already exists: {step.file_path}. Use overwrite=true to replace.",
+                "file_path": step.file_path,
+            }
+        
+        # Создаем директорию если не существует
+        dir_path = os.path.dirname(step.file_path)
+        if dir_path:  # Проверяем, что путь не пустой
+            os.makedirs(dir_path, exist_ok=True)
+        
+        # Записываем файл
+        with open(step.file_path, "w", encoding=step.encoding) as f:
+            f.write(step.content)
+        
+        # Получаем информацию о созданном файле
+        file_size = len(step.content.encode(step.encoding))
+        lines_count = len(step.content.splitlines())
+        
+        print(f"✅ File created: {file_size} bytes, {lines_count} lines")
+        print(f"📁 Path: {step.file_path}")
+        
+        # Помечаем что файл создан - для простых задач создания файла это завершение
+        context["file_created"] = True
+        context["created_file_path"] = step.file_path
+        
+        return {
+            "tool": "create_local_file",
+            "status": "success",
+            "file_path": step.file_path,
+            "file_size": file_size,
+            "lines_count": lines_count,
+            "encoding": step.encoding,
+            "overwritten": os.path.exists(step.file_path) and step.overwrite,
+            "task_completed": True,  # Указываем что задача может быть завершена
+        }
+        
+    except Exception as e:
+        return {
+            "tool": "create_local_file",
+            "status": "error",
+            "error": str(e),
+            "file_path": step.file_path,
+        }
+
+
+def exec_update_local_file(
+    step: UpdateLocalFileStep, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Execute local file update step"""
+    print(f"\n[cyan]📝 Updating file:[/cyan] {step.file_path}")
+    print(f"💭 Reason: {step.reasoning}")
+    print(f"🔧 Operation: {step.operation}")
+    
+    try:
+        # Проверяем существование файла
+        if not os.path.exists(step.file_path):
+            return {
+                "tool": "update_local_file",
+                "status": "error",
+                "error": f"File not found: {step.file_path}",
+                "file_path": step.file_path,
+            }
+        
+        # Читаем текущий контент
+        with open(step.file_path, "r", encoding=step.encoding) as f:
+            current_content = f.read()
+        
+        # Выполняем операцию обновления
+        if step.operation == "append":
+            new_content = current_content + step.content
+        elif step.operation == "prepend":
+            new_content = step.content + current_content
+        elif step.operation == "replace_content":
+            new_content = step.content
+        elif step.operation == "replace_section":
+            if not step.search_text:
+                return {
+                    "tool": "update_local_file",
+                    "status": "error",
+                    "error": "search_text is required for replace_section operation",
+                    "file_path": step.file_path,
+                }
+            if step.search_text not in current_content:
+                return {
+                    "tool": "update_local_file",
+                    "status": "error",
+                    "error": f"Search text not found in file: {step.search_text}",
+                    "file_path": step.file_path,
+                }
+            new_content = current_content.replace(step.search_text, step.content)
+        else:
+            return {
+                "tool": "update_local_file",
+                "status": "error",
+                "error": f"Unknown operation: {step.operation}",
+                "file_path": step.file_path,
+            }
+        
+        # Записываем обновленный контент
+        with open(step.file_path, "w", encoding=step.encoding) as f:
+            f.write(new_content)
+        
+        # Получаем информацию об изменениях
+        old_size = len(current_content.encode(step.encoding))
+        new_size = len(new_content.encode(step.encoding))
+        old_lines = len(current_content.splitlines())
+        new_lines = len(new_content.splitlines())
+        
+        print(f"✅ File updated: {old_size}→{new_size} bytes, {old_lines}→{new_lines} lines")
+        
+        return {
+            "tool": "update_local_file",
+            "status": "success",
+            "file_path": step.file_path,
+            "operation": step.operation,
+            "old_size": old_size,
+            "new_size": new_size,
+            "old_lines": old_lines,
+            "new_lines": new_lines,
+            "encoding": step.encoding,
+        }
+        
+    except Exception as e:
+        return {
+            "tool": "update_local_file",
+            "status": "error",
+            "error": str(e),
+            "file_path": step.file_path,
+        }
+
+
+def exec_list_directory(
+    step: ListDirectoryStep, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Execute directory listing step"""
+    print(f"\n[cyan]📁 Listing directory:[/cyan] {step.directory_path}")
+    print(f"💭 Reason: {step.reasoning}")
+    
+    try:
+        # Проверяем существование директории
+        if not os.path.exists(step.directory_path):
+            return {
+                "tool": "list_directory",
+                "status": "error",
+                "error": f"Directory not found: {step.directory_path}",
+                "directory_path": step.directory_path,
+            }
+        
+        if not os.path.isdir(step.directory_path):
+            return {
+                "tool": "list_directory",
+                "status": "error",
+                "error": f"Path is not a directory: {step.directory_path}",
+                "directory_path": step.directory_path,
+            }
+        
+        # Получаем список содержимого
+        items = []
+        
+        if step.recursive:
+            # Рекурсивный обход
+            for root, dirs, files in os.walk(step.directory_path):
+                # Вычисляем глубину
+                depth = root.replace(step.directory_path, '').count(os.sep)
+                if depth >= step.max_depth:
+                    dirs[:] = []  # Не идем глубже
+                    continue
+                
+                # Фильтруем скрытые файлы и папки
+                if not step.show_hidden:
+                    dirs[:] = [d for d in dirs if not d.startswith('.')]
+                    files = [f for f in files if not f.startswith('.')]
+                
+                # Добавляем директории
+                for dir_name in dirs:
+                    dir_path = os.path.join(root, dir_name)
+                    rel_path = os.path.relpath(dir_path, step.directory_path)
+                    items.append({
+                        "name": rel_path,
+                        "type": "directory",
+                        "size": None,
+                        "depth": depth + 1,
+                    })
+                
+                # Добавляем файлы
+                for file_name in files:
+                    file_path = os.path.join(root, file_name)
+                    rel_path = os.path.relpath(file_path, step.directory_path)
+                    try:
+                        file_size = os.path.getsize(file_path)
+                    except OSError:
+                        file_size = None
+                    
+                    items.append({
+                        "name": rel_path,
+                        "type": "file",
+                        "size": file_size,
+                        "depth": depth + 1,
+                    })
+        else:
+            # Простой список содержимого
+            try:
+                entries = os.listdir(step.directory_path)
+            except PermissionError:
+                return {
+                    "tool": "list_directory",
+                    "status": "error",
+                    "error": f"Permission denied: {step.directory_path}",
+                    "directory_path": step.directory_path,
+                }
+            
+            # Фильтруем скрытые файлы
+            if not step.show_hidden:
+                entries = [e for e in entries if not e.startswith('.')]
+            
+            for entry in sorted(entries):
+                entry_path = os.path.join(step.directory_path, entry)
+                try:
+                    if os.path.isdir(entry_path):
+                        items.append({
+                            "name": entry,
+                            "type": "directory",
+                            "size": None,
+                            "depth": 1,
+                        })
+                    else:
+                        file_size = os.path.getsize(entry_path)
+                        items.append({
+                            "name": entry,
+                            "type": "file",
+                            "size": file_size,
+                            "depth": 1,
+                        })
+                except OSError:
+                    # Файл может быть недоступен
+                    items.append({
+                        "name": entry,
+                        "type": "unknown",
+                        "size": None,
+                        "depth": 1,
+                    })
+        
+        # Сортируем: сначала директории, потом файлы
+        items.sort(key=lambda x: (x["type"] != "directory", x["name"]))
+        
+        # Выводим результат
+        dirs_count = sum(1 for item in items if item["type"] == "directory")
+        files_count = sum(1 for item in items if item["type"] == "file")
+        
+        print(f"📊 Found: {dirs_count} directories, {files_count} files")
+        
+        # Показываем элементы
+        preview_items = items[:15] if not step.tree_view else items
+        if preview_items:
+            if step.tree_view and step.recursive:
+                print("📝 Tree structure:")
+                _print_tree_structure(preview_items, step.directory_path)
+            else:
+                print("📝 Contents:")
+                for item in preview_items:
+                    if step.tree_view:
+                        # Простое древовидное отображение для одного уровня
+                        prefix = "├── " if item != preview_items[-1] else "└── "
+                    else:
+                        prefix = "   "
+                    
+                    indent = "  " * (item["depth"] - 1) if step.recursive and not step.tree_view else ""
+                    if item["type"] == "directory":
+                        print(f"{prefix}{indent}📁 {item['name']}/")
+                    elif item["type"] == "file":
+                        size_str = f" ({item['size']} bytes)" if item["size"] is not None else ""
+                        print(f"{prefix}{indent}📄 {item['name']}{size_str}")
+                    else:
+                        print(f"{prefix}{indent}❓ {item['name']}")
+        
+        if len(items) > 15 and not step.tree_view:
+            print(f"   ... and {len(items) - 15} more items")
+        
+        return {
+            "tool": "list_directory",
+            "status": "success",
+            "directory_path": step.directory_path,
+            "items": items,
+            "total_items": len(items),
+            "directories_count": dirs_count,
+            "files_count": files_count,
+            "show_hidden": step.show_hidden,
+            "recursive": step.recursive,
+        }
+        
+    except Exception as e:
+        return {
+            "tool": "list_directory",
+            "status": "error",
+            "error": str(e),
+            "directory_path": step.directory_path,
+        }
+
+
+def exec_create_directory(
+    step: CreateDirectoryStep, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Execute directory creation step with user confirmation"""
+    print(f"\n[cyan]📁 Creating directory:[/cyan] {step.directory_path}")
+    print(f"💭 Reason: {step.reasoning}")
+    print(f"📝 Description: {step.description}")
+    print(f"🔧 Create parents: {step.create_parents}")
+    
+    try:
+        # Проверяем, существует ли уже директория
+        if os.path.exists(step.directory_path):
+            if os.path.isdir(step.directory_path):
+                return {
+                    "tool": "create_directory",
+                    "status": "error",
+                    "error": f"Directory already exists: {step.directory_path}",
+                    "directory_path": step.directory_path,
+                }
+            else:
+                return {
+                    "tool": "create_directory",
+                    "status": "error",
+                    "error": f"Path exists but is not a directory: {step.directory_path}",
+                    "directory_path": step.directory_path,
+                }
+        
+        # Запрашиваем подтверждение у пользователя
+        print(f"\n[bold yellow]🤔 DIRECTORY CREATION CONFIRMATION[/bold yellow]")
+        print(f"📁 Path: {step.directory_path}")
+        print(f"📝 Purpose: {step.description}")
+        
+        if step.create_parents:
+            parent_dir = os.path.dirname(step.directory_path)
+            if parent_dir and not os.path.exists(parent_dir):
+                print(f"⚠️  Parent directories will be created: {parent_dir}")
+        
+        print(f"\n[bold cyan]Do you want to create this directory? (y/n):[/bold cyan]")
+        
+        try:
+            user_response = input(">>> ").strip().lower()
+            if user_response not in ['y', 'yes', 'да', 'д']:
+                return {
+                    "tool": "create_directory",
+                    "status": "cancelled",
+                    "message": "Directory creation cancelled by user",
+                    "directory_path": step.directory_path,
+                }
+            
+            # Создаем директорию
+            os.makedirs(step.directory_path, exist_ok=False)
+            
+            print(f"✅ Directory created successfully: {step.directory_path}")
+            
+            # Проверяем, что директория действительно создана
+            if os.path.exists(step.directory_path) and os.path.isdir(step.directory_path):
+                return {
+                    "tool": "create_directory",
+                    "status": "success",
+                    "directory_path": step.directory_path,
+                    "description": step.description,
+                    "created_parents": step.create_parents,
+                    "message": f"Directory '{step.directory_path}' created successfully",
+                }
+            else:
+                return {
+                    "tool": "create_directory",
+                    "status": "error",
+                    "error": "Directory creation appeared to succeed but directory not found",
+                    "directory_path": step.directory_path,
+                }
+                
+        except (KeyboardInterrupt, EOFError):
+            return {
+                "tool": "create_directory",
+                "status": "cancelled",
+                "message": "Directory creation cancelled by user (interrupted)",
+                "directory_path": step.directory_path,
+            }
+            
+    except PermissionError:
+        return {
+            "tool": "create_directory",
+            "status": "error",
+            "error": f"Permission denied: cannot create directory {step.directory_path}",
+            "directory_path": step.directory_path,
+        }
+    except FileExistsError:
+        return {
+            "tool": "create_directory",
+            "status": "error",
+            "error": f"Directory already exists: {step.directory_path}",
+            "directory_path": step.directory_path,
+        }
+    except Exception as e:
+        return {
+            "tool": "create_directory",
+            "status": "error",
+            "error": str(e),
+            "directory_path": step.directory_path,
+        }
+
+
+def exec_simple_answer(
+    step: SimpleAnswerStep, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Execute simple answer step - provide direct response"""
+    print(f"\n[green]💬 Simple Answer:[/green]")
+    print(f"💭 Reason: {step.reasoning}")
+    
+    # Отображаем основной ответ
+    print(f"\n[bold cyan]📝 Answer:[/bold cyan]")
+    print(f"{step.answer}")
+    
+    # Отображаем дополнительную информацию если есть
+    if step.additional_info:
+        print(f"\n[yellow]ℹ️  Additional Info:[/yellow]")
+        print(f"{step.additional_info}")
+    
+    # Помечаем что простой ответ дан - задача завершена
+    context["simple_answer_given"] = True
+    
+    return {
+        "tool": "simple_answer",
+        "status": "success",
+        "answer": step.answer,
+        "additional_info": step.additional_info,
+        "reasoning": step.reasoning,
+        "task_completed": True,  # Указываем что задача завершена
+    }
+
+
 # =============================================================================
 # EXECUTOR REGISTRY
 # =============================================================================
@@ -206,4 +755,10 @@ def get_executors() -> Dict[str, callable]:
         "web_search": exec_web_search,
         "create_report": exec_create_report,
         "report_completion": exec_report_completion,
+        "read_local_file": exec_read_local_file,
+        "create_local_file": exec_create_local_file,
+        "update_local_file": exec_update_local_file,
+        "list_directory": exec_list_directory,
+        "create_directory": exec_create_directory,
+        "simple_answer": exec_simple_answer,
     }
