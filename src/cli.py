@@ -3,6 +3,7 @@ SGR Deep Research CLI - интерактивная командная строк
 Запуск: python cli.py "Your research question"
 """
 
+import sys
 import asyncio
 import argparse
 import sys
@@ -119,6 +120,24 @@ async def run_research(task: str, max_steps: int = 6, interactive: bool = False)
 
 def main():
     """Главная функция CLI."""
+
+    # Пытаемся установить UTF-8 кодировку
+    try:
+        if sys.platform.startswith('win'):
+            import codecs
+            sys.stdout = codecs.getwriter('utf-8')(sys.stdout.detach())
+            sys.stderr = codecs.getwriter('utf-8')(sys.stderr.detach())
+            sys.stdin = codecs.getreader('utf-8')(sys.stdin.detach())
+        else:
+            # Для Linux/Mac
+            import io
+            sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+            sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+            sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
+    except Exception:
+        # Если не удалось установить кодировку, продолжаем
+        pass
+    
     parser = argparse.ArgumentParser(
         description="SGR Deep Research CLI - Interactive Research Assistant",
         formatter_class=argparse.RawDescriptionHelpFormatter
@@ -172,7 +191,13 @@ def main():
     # Запускаем исследование
     if args.interactive and not args.task:
         # Интерактивный режим без задачи - запрашиваем у пользователя
-        task = console.input("[bold]Enter your research question:[/bold] ")
+        try:
+            task = console.input("[bold]Enter your research question:[/bold] ")
+        except UnicodeDecodeError:
+            # Fallback для проблем с кодировкой
+            console.print("[yellow]Warning: Encoding issue detected. Using fallback input.[/yellow]")
+            task = input("Enter your research question: ")
+        
         if not task.strip():
             console.print("[red]No task provided. Exiting.[/red]")
             return
