@@ -28,7 +28,7 @@ from core.reasoning_schemas import (
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-config = get_config().app_config
+config = get_config()
 
 
 class ToolCallMixin:
