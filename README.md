@@ -1,8 +1,10 @@
 # 🧠 SGR Deep Research - Open-Source Schema-Guided Reasoning System
 
-https://github.com/user-attachments/assets/a5e34116-7853-43c2-ba93-2db811b8584a
+https://github.com/user-attachments/assets/85335b84-1d15-482b-a699-42c88604d3f5
 
-Production-ready open-source system for automated research using Schema-Guided Reasoning (SGR). Features real-time streaming responses, OpenAI-compatible API, and comprehensive research capabilities with agent interruption support.
+Production-ready open-source system for automated research using Schema-Guided Reasoning (SGR).
+
+Features interactive Web UI, OpenAI-compatible API with real-time streaming responses and comprehensive research capabilities with agent interruption support.
 
 ## 👥 Open-Source Development Team
 
@@ -17,40 +19,12 @@ This project is built by the community with pure enthusiasm as an open-source in
 
 *All development is driven by pure enthusiasm and open-source community collaboration. We welcome contributors of all skill levels!*
 
-## 📁 Project Structure
-
-```
-sgr-deep-research/
-├── src/                     # 🎯 Main application source
-│   ├── api/                 # 🌐 FastAPI endpoints and models
-│   │   ├── endpoints.py     # OpenAI-compatible API routes
-│   │   └── models.py        # Pydantic models for API
-│   ├── core/                # 🧠 Core SGR logic
-│   │   ├── agent.py         # Main SGR research agent with streaming
-│   │   ├── models.py        # Agent state and context models
-│   │   ├── prompts.py       # Prompt loading and management
-│   │   ├── reasoning_schemas.py  # SGR reasoning schemas
-│   │   ├── stream.py        # OpenAI-compatible streaming
-│   │   └── tools.py         # Research tools and execution
-│   ├── services/            # 🔧 External integrations
-│   │   └── tavily_search.py # Tavily search service
-│   ├── prompts/             # 📝 System prompts
-│   │   ├── system_prompt.txt     # Main system prompt
-│   │   └── tool_function_prompt.txt  # Tool selection guidance
-│   ├── main.py              # 🚀 FastAPI application entry point
-│   ├── settings.py          # ⚙️ Configuration management
-│   ├── pyproject.toml       # 📦 Dependencies & project config
-│   ├── config.yaml.example # 📝 Configuration template
-│   └── Dockerfile          # 🐳 Container configuration
-├── reports/                 # 📊 Generated research reports
-├── docker-compose.yml      # 🐳 Docker deployment
-└── README.md               # 📖 This documentation
-```
-
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 First, install UV (modern Python package manager):
+
 ```bash
 # Install UV
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -72,7 +46,15 @@ uv sync
 uv run python main.py
 ```
 
-### Docker Deployment
+#### Run Web Interface
+
+```bash
+cd src
+chainlit run gui_app.py
+```
+
+### Run API Docker Deployment
+
 ```bash
 # 1. Setup configuration
 cp src/config.yaml.example src/config.yaml
