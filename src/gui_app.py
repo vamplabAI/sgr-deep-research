@@ -890,6 +890,22 @@ def format_sources_block(context: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def format_sources_for_prompt(context: Dict[str, Any]) -> str:
+    """Format sources for inclusion in system prompt."""
+    if not context["sources"]:
+        return "No sources available"
+
+    lines = []
+    for url, data in context["sources"].items():
+        title = data["title"]
+        num = data["number"]
+        if title:
+            lines.append(f"[{num}] {title} - {url}")
+        else:
+            lines.append(f"[{num}] {url}")
+    return "\n".join(lines)
+
+
 # =============================================================================
 # MAIN EXECUTION FUNCTIONS
 # =============================================================================
@@ -1035,6 +1051,24 @@ async def exec_action_phase_gui(
     messages: List[Dict[str, Any]], reasoning: ReasoningStep, context: Dict[str, Any]
 ) -> None:
     """Phase 2: Action execution in GUI"""
+
+    # Check if we need to create a report and add sources to system prompt
+    if reasoning.next_action == "report" and context.get("sources"):
+        # Add sources information to the system prompt
+        sources_info = format_sources_for_prompt(context)
+        enhanced_system_prompt = f"""
+{PROMPTS["tool_function_prompt"]["template"]}
+
+AVAILABLE SOURCES FOR CITATIONS:
+{sources_info}
+
+IMPORTANT: When creating reports, use ONLY these real sources with their exact numbers [1], [2], [3], etc.
+Do NOT create fake sources or placeholder links. Use the actual content from these sources.
+"""
+
+        # Update the first system message with sources
+        if messages and messages[0].get("role") == "system":
+            messages[0]["content"] = enhanced_system_prompt
 
     # Model decides which tools to call
     completion = await client.chat.completions.create(
