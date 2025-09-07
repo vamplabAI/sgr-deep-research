@@ -1,7 +1,5 @@
 # 🧠 SGR Deep Research - Open-Source Schema-Guided Reasoning System
 
-https://github.com/user-attachments/assets/85335b84-1d15-482b-a699-42c88604d3f5
-
 Production-ready open-source system for automated research using Schema-Guided Reasoning (SGR).
 
 Features interactive Web UI, OpenAI-compatible API with real-time streaming responses and comprehensive research capabilities with agent interruption support.
@@ -73,6 +71,8 @@ uv sync
 ```
 
 ## Run the Web UI
+
+https://github.com/user-attachments/assets/85335b84-1d15-482b-a699-42c88604d3f5
 
 The project ships with a Chainlit‑based UI for interactive research.
 
