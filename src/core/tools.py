@@ -28,7 +28,7 @@ from core.reasoning_schemas import (
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-config = get_config()
+config = get_config().app_config
 
 
 class ToolCallMixin:
@@ -124,13 +124,13 @@ class CreateReportTool(ToolCallMixin, CreateReport):
             f.write(full_content)
 
         report = {
-            "title": self.title,
-            "content": self.content,
-            "confidence": self.confidence,
+            "title":         self.title,
+            "content":       self.content,
+            "confidence":    self.confidence,
             "sources_count": len(context.sources),
-            "word_count": len(self.content.split()),
-            "filepath": filepath,
-            "timestamp": datetime.now().isoformat(),
+            "word_count":    len(self.content.split()),
+            "filepath":      filepath,
+            "timestamp":     datetime.now().isoformat(),
         }
 
         logger.info(f"📄 Report Created: {self.title}")

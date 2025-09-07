@@ -69,6 +69,9 @@ class AppConfig(BaseModel):
     execution: ExecutionConfig = Field(default_factory=ExecutionConfig, description="Настройки выполнения")
     prompts: PromptsConfig = Field(default_factory=PromptsConfig, description="Настройки промптов")
 
+    max_searches_total: int = Field(default=5, ge=1)
+    max_rounds: int = Field(default=5, ge=1)
+
 
 class ServerConfig(BaseModel):
     """Конфигурация сервера."""

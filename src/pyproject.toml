@@ -13,6 +13,7 @@ dependencies = [
     "openai>=1.0.0",
     "pydantic>=2.0.0",
     "rich>=13.0.0",
+    "chainlit>=1.0.0",
     # HTTP client with proxy support - HTTP клиент с поддержкой прокси
     "httpx>=0.25.0",
     "socksio>=1.0.0",
@@ -29,6 +30,3 @@ dependencies = [
     "fastapi>=0.116.1",
     "uvicorn>=0.35.0",
 ]
-
-
-

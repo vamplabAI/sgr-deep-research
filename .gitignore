@@ -337,3 +337,7 @@ personal_notes.md
 
 # Conversation logs for debugging
 logs/
+
+# Chainlit
+.chainlit/
+.files/
