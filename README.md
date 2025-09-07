@@ -23,6 +23,13 @@ This project is built by the community with pure enthusiasm as an open-source in
 
 ### Prerequisites
 
+- Python 3.11+ (recommended 3.13+)
+- Docker and Docker Compose (optional, for containerized API)
+- Tavily API key (web search)
+- OpenAI API key (default LLM backend; can be proxied via LiteLLM/vLLM)
+
+### Install UV
+
 First, install UV (modern Python package manager):
 
 ```bash
@@ -32,38 +39,71 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 # powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-### Local Development
-```bash
-# 1. Setup configuration
+### Project Setup
+
+Clone the repo and create a runtime config from the example.
+
+```latex
 cp src/config.yaml.example src/config.yaml
-# Edit src/config.yaml with your API keys
-
-# 2. Change to src directory and install dependencies
-cd src
-uv sync
-
-# 3. Run the server
-uv run python main.py
 ```
 
-#### Run Web Interface
+### Configure API Keys
+
+```bash
+cp src/config.yaml.example src/config.yaml
+```
+
+Edit `src/config.yaml` with your API keys:
+
+```yaml
+openai:
+  api_key: "YOUR_OPENAI_API_KEY"
+  ...
+
+tavily:
+  api_key: "YOUR_TAVILY_API_KEY"
+  ...
+```
+
+### Install Dependencies
+
+```
+cd src
+uv sync
+```
+
+## Run the Web UI
+
+The project ships with a Chainlit‑based UI for interactive research.
 
 ```bash
 cd src
 chainlit run gui_app.py
 ```
 
-### Run API Docker Deployment
+Open URL: http://localhost:8000 (Chainlit default, your terminal shows the exact port)
+
+## Run the API Server
+
+Choose either local Python execution or Docker Compose.
+
+### Local (Python)
 
 ```bash
-# 1. Setup configuration
-cp src/config.yaml.example src/config.yaml
-# Edit src/config.yaml with your API keys
+cd src
+uv run python main.py --host 127.0.0.1 --port 8010
+```
 
-# 2. Deploy with Docker Compose
+### Docker Compose
+
+```bash
+# from repo root (where docker-compose.yml lives)
 docker-compose up -d
+```
 
-# 3. Check health
+### Health Check
+
+```bash
 curl http://localhost:8010/health
 ```
 
