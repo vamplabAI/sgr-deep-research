@@ -764,6 +764,10 @@ LANGUAGE ADAPTATION: Always respond and create reports in the SAME LANGUAGE as t
         """
         
         try:
+            # Debug: show request details (useful for gateways/proxies)
+            self.console.print(
+                f"[dim]🔌 Streaming request: model={self.config['openai_model']}, response_format=NextStep, max_tokens={self.config['max_tokens']}, temperature={self.config['temperature']}[/dim]"
+            )
             with self.client.beta.chat.completions.stream(
                 model=self.config['openai_model'],
                 messages=messages,
@@ -797,7 +801,56 @@ LANGUAGE ADAPTATION: Always respond and create reports in the SAME LANGUAGE as t
                 return None, raw_content, metrics
                 
         except Exception as e:
-            self.console.print(f"❌ [bold red]NextStep streaming error: {e}[/bold red]")
+            # Enhanced diagnostics for gateways that return custom errors
+            err_type = type(e).__name__
+            status_code = getattr(e, 'status_code', None) or getattr(e, 'http_status', None)
+            err_code = getattr(e, 'code', None)
+            request_id = getattr(e, 'request_id', None)
+            detail_parts = [f"type={err_type}"]
+            if status_code is not None:
+                detail_parts.append(f"status={status_code}")
+            if err_code is not None:
+                detail_parts.append(f"code={err_code}")
+            if request_id is not None:
+                detail_parts.append(f"req_id={request_id}")
+
+            response_body = None
+            try:
+                resp = getattr(e, 'response', None)
+                if resp is not None:
+                    if hasattr(resp, 'json'):
+                        response_body = resp.json()
+                    elif hasattr(resp, 'text'):
+                        response_body = resp.text
+            except Exception:
+                pass
+
+            if response_body is not None:
+                self.console.print(f"❌ [bold red]NextStep streaming error:[/bold red] {e} (" + ", ".join(detail_parts) + ")")
+                self.console.print(f"[dim]Gateway response:[/dim] {response_body}")
+            else:
+                self.console.print(f"❌ [bold red]NextStep streaming error:[/bold red] {e} (" + ", ".join(detail_parts) + ")")
+
+            # Non-streaming fallback (some gateways don't support streaming structured outputs)
+            try:
+                self.console.print("[yellow]🔁 Falling back to non-streaming structured request...[/yellow]")
+                completion = self.client.beta.chat.completions.parse(
+                    model=self.config['openai_model'],
+                    messages=messages,
+                    response_format=NextStep,
+                    max_tokens=self.config['max_tokens'],
+                    temperature=self.config['temperature']
+                )
+                parsed = completion.choices[0].message.parsed
+                raw_content = completion.choices[0].message.content
+                metrics = {}
+                if parsed is not None:
+                    return parsed, raw_content or "", metrics
+            except Exception as e2:
+                err2_type = type(e2).__name__
+                status2 = getattr(e2, 'status_code', None) or getattr(e2, 'http_status', None)
+                code2 = getattr(e2, 'code', None)
+                self.console.print(f"❌ [bold red]Fallback parse failed:[/bold red] {e2} (type={err2_type}, status={status2}, code={code2})")
             raise
     
     def add_citation(self, url: str, title: str = "") -> int:
