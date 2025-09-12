@@ -51,6 +51,10 @@ def load_config():
         'scraping_enabled': os.getenv('SCRAPING_ENABLED', 'false').lower() == 'true',
         'scraping_max_pages': int(os.getenv('SCRAPING_MAX_PAGES', '5')),
         'scraping_content_limit': int(os.getenv('SCRAPING_CONTENT_LIMIT', '1500')),
+        'presence_penalty': float(os.getenv('PRESENCE_PENALTY', '0.6')),  # Added presence penalty
+        'frequency_penalty': float(os.getenv('FREQUENCY_PENALTY', '0.6')), # Added frequency penalty
+        'max_retries': int(os.getenv('MAX_RETRIES', '3')), # Added max retries
+        'retry_delay': float(os.getenv('RETRY_DELAY', '1.0')) # Added retry delay
     }
 
     if os.path.exists('config.yaml'):
@@ -66,6 +70,10 @@ def load_config():
                     config['openai_model'] = openai_cfg.get('model', config['openai_model'])
                     config['max_tokens'] = openai_cfg.get('max_tokens', config['max_tokens'])
                     config['temperature'] = openai_cfg.get('temperature', config['temperature'])
+                    config['presence_penalty'] = openai_cfg.get('presence_penalty', config['presence_penalty'])
+                    config['frequency_penalty'] = openai_cfg.get('frequency_penalty', config['frequency_penalty'])
+                    config['max_retries'] = openai_cfg.get('max_retries', config['max_retries'])
+                    config['retry_delay'] = openai_cfg.get('retry_delay', config['retry_delay'])
 
                 if 'tavily' in yaml_config:
                     config['tavily_api_key'] = yaml_config['tavily'].get('api_key', config['tavily_api_key'])
@@ -651,7 +659,62 @@ class StreamingSGRAgent:
             "citation_counter": 0,
             "clarification_used": False
         }
-    
+
+    def build_source_bank(self) -> dict:
+        """
+        Build a deterministic source bank from self.context['searches'].
+        Keys are SRC1, SRC2, ... in first-seen order (deduped by URL).
+        """
+        bank = {}
+        seen = set()
+        k = 0
+        for s in self.context.get("searches", []):
+            for r in s.get("results", []) or []:
+                url = (r.get("url") or "").strip()
+                if not url or url in seen:
+                    continue
+                seen.add(url)
+                k += 1
+                bank[f"SRC{k}"] = {
+                    "title": (r.get("title") or "Untitled").strip(),
+                    "url": url
+                }
+        return bank
+    def replace_src_with_numeric(self, report_md: str, source_bank: dict) -> str:
+        """
+        Convert [SRC#] markers to numeric [1], [2] ordered by first appearance.
+        Append a '## Sources' section in that same order.
+        Unknown keys become [?]. Leaves URLs out of the prose.
+        """
+        import re
+
+        # Collect first-appearance order
+        order = []
+        for m in re.finditer(r"\[SRC(\d+)\]", report_md):
+            key = f"SRC{m.group(1)}"
+            if key in source_bank and key not in order:
+                order.append(key)
+
+        key_to_num = {k: i + 1 for i, k in enumerate(order)}
+
+        def repl(m):
+            k = f"SRC{m.group(1)}"
+            return f"[{key_to_num.get(k, '?')}]"
+
+        numbered = re.sub(r"\[SRC(\d+)\]", repl, report_md)
+
+        # Build Sources section
+        if order:
+            lines = []
+            for k in order:
+                n = key_to_num[k]
+                v = source_bank[k]
+                lines.append(f"{n}. {v['title']} — {v['url']}")
+            numbered = numbered.rstrip() + "\n\n## Sources\n" + "\n".join(lines) + "\n"
+
+        return numbered
+
+
     def get_system_prompt(self, user_request: str) -> str:
         """Generate system prompt with user request for language detection"""
         return f"""
@@ -926,11 +989,15 @@ LANGUAGE ADAPTATION: Always respond and create reports in the SAME LANGUAGE as t
             filename = f"{timestamp}_{safe_title}.md"
             filepath = os.path.join(self.config['reports_directory'], filename)
             
-            # Format full report with sources
-            full_content = f"# {cmd.title}\n\n"
-            full_content += f"*Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*\n\n"
-            full_content += cmd.content
-            full_content += self.format_sources()
+            # Convert [SRC#] → numeric [n] and append a Sources section
+            source_bank = self.build_source_bank()
+            processed_body = self.replace_src_with_numeric(cmd.content, source_bank)
+            
+            full_content = (
+                f"# {cmd.title}\n\n"
+                f"*Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*\n\n"
+                f"{processed_body}"
+            )
             
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(full_content)
@@ -1036,7 +1103,20 @@ LANGUAGE ADAPTATION: Always respond and create reports in the SAME LANGUAGE as t
                         sources_info += f"[{number}] {title} - {url}\n"
                     sources_info += "\nUSE THESE EXACT NUMBERS [1], [2], [3] etc. in your report citations."
                     context_msg = context_msg + "\n" + sources_info if context_msg else sources_info
-                
+
+                # Build and inject SOURCE_BANK every turn (after searches accumulate)
+                source_bank = self.build_source_bank()
+                if source_bank:
+                    bank_lines = "\n".join([f"- {k}: {v['title']} — {v['url']}" for k, v in source_bank.items()])
+                    sources_info = (
+                        "\nCITATION PROTOCOL:\n"
+                        "• Use ONLY keys from SOURCE_BANK as inline markers like [SRC1], [SRC2].\n"
+                        "• Do NOT use [1], [2], author-years, or paste URLs inline.\n"
+                        "• Do NOT invent keys. If a claim lacks support, mark it [SRC?].\n"
+                        "\nSOURCE_BANK:\n" + bank_lines
+                    )
+                    context_msg = (context_msg + "\n" + sources_info) if context_msg else sources_info
+
                 if context_msg:
                     log.append({"role": "system", "content": context_msg})
                 

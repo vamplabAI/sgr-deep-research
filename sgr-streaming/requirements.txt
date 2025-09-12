@@ -20,3 +20,12 @@ youtube-transcript-api>=0.6.0
 # Configuration and utilities
 PyYAML>=6.0
 python-dateutil>=2.8.0
+
+# LiteLLM proxy (front of Ollama)
+litellm>=1.35.0
+fastapi>=0.111.0
+uvicorn[standard]>=0.30.0
+httpx>=0.27.0
+Jinja2>=3.1.0
+opentelemetry-api>=1.24.0
+opentelemetry-sdk>=1.24.0

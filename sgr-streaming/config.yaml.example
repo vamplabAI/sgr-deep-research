@@ -4,9 +4,9 @@
 
 # OpenAI Configuration
 openai:
-  api_key: "your-openai-api-key-here"  # Обязательно: Ваш OpenAI API ключ
-  base_url: ""                         # Опционально: Альтернативный URL (например, для прокси)
-  model: "gpt-4o-mini"                 # Модель для использования
+  api_key: "your-openai-api-key-here"  # Обязательно: Ваш OpenAI API ключ или master_key LiteLLM
+  base_url: ""                         # Опционально: Альтернативный URL (например, LiteLLM proxy http://localhost:8000/v1)
+  model: "gpt-4o-mini"                 # Модель для использования (или имя из LiteLLM model_list, напр. research-ollama)
   max_tokens: 8000                     # Максимальное количество токенов
   temperature: 0.4                     # Температура генерации (0.0-1.0)
 

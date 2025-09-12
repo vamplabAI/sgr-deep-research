@@ -67,7 +67,7 @@ Copy `config.yaml.example` to `config.yaml` and configure:
 openai:
   api_key: "your-api-key"
   model: "gpt-4o-mini"
-  base_url: ""  # Optional for custom endpoints
+  base_url: ""  # Optional for custom endpoints (e.g., LiteLLM proxy http://localhost:8000/v1)
   
 tavily:
   api_key: "your-tavily-key"
@@ -76,6 +76,35 @@ execution:
   max_steps: 6
   reports_dir: "reports"
 ```
+
+## 🧩 LiteLLM + Ollama (optional)
+
+- You can place a LiteLLM proxy in front of your local Ollama to expose an OpenAI-compatible `/v1` API.
+- A ready-to-use config is provided at `proxy/litellm_config.yaml`.
+
+Steps:
+- Install deps: `pip install -r requirements.txt`
+- Run Ollama: `ollama serve` (default: http://localhost:11434)
+- Start proxy: `litellm --config proxy/litellm_config.yaml --host 0.0.0.0 --port 8000`
+- Set in `config.yaml`:
+  - `openai.base_url: http://localhost:8000/v1`
+  - `openai.model: research-ollama` (mapped in the proxy config)
+  - `openai.api_key: dev-key` (or your master_key)
+
+airsroute integration: see `proxy/README.md` for a callback hook skeleton to let your private `airsroute` package dynamically select the target model per request.
+
+### Airsroute Gateway + Dashboard (optional)
+
+- A thin FastAPI gateway is available at `proxy/airsroute_gateway`.
+- It accepts OpenAI-compatible requests, does per-request routing via your `airsroute` package (if installed), forwards to the LiteLLM proxy, and provides a basic telemetry/config UI.
+
+Run gateway:
+- `python -m uvicorn proxy.airsroute_gateway.app:app --reload --port 8010`
+- Visit http://localhost:8010/ for telemetry and config editing.
+
+Point app at gateway:
+- In `config.yaml`, set `openai.base_url: http://localhost:8010/v1`
+- `openai.model` can be left as-is; the gateway may override it based on `airsroute` if `force_routing` is enabled.
 
 ## 🔧 Requirements
 

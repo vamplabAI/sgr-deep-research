@@ -1,0 +1,181 @@
+-----8<----- SAVE AS sgr.patch (repo root) -----8<-----
+diff --git a/sgr-streaming/sgr_streaming.py b/sgr-streaming/sgr_streaming.py
+index 0000000..1111111 100644
+--- a/sgr-streaming/sgr_streaming.py
++++ b/sgr-streaming/sgr_streaming.py
+@@ -1,6 +1,7 @@
+ from annotated_types import MinLen, MaxLen
++from annotated_types import MinLen as _MinLen
+ from pydantic import BaseModel, Field
+ from typing import List, Union, Literal, Optional, Dict, Any
+ 
+ # =============================================================================
+ # SGR SCHEMAS (same as original)
+ # =============================================================================
+ 
++# ----------- Schema helpers: enforce non-empty strings everywhere -----------
++NonEmpty = Annotated[str, _MinLen(1)]
++QueryStr = Annotated[str, _MinLen(5)]  # meaningful query (>=5 chars)
++
+ class Clarification(BaseModel):
+     """Ask clarifying questions when facing ambiguous requests"""
+     tool: Literal["clarification"]
+-    reasoning: str = Field(description="Why clarification is needed")
+-    unclear_terms: Annotated[List[str], MinLen(1), MaxLen(5)] = Field(description="List of unclear terms or concepts")
+-    assumptions: Annotated[List[str], MinLen(2), MaxLen(4)] = Field(description="Possible interpretations to verify - use these as basis for questions")
+-    questions: Annotated[List[str], MinLen(3), MaxLen(5)] = Field(description="3-5 specific clarifying questions based on assumptions above")
++    reasoning: NonEmpty = Field(description="Why clarification is needed")
++    unclear_terms: Annotated[List[NonEmpty], MinLen(1), MaxLen(5)] = Field(description="List of unclear terms or concepts")
++    assumptions: Annotated[List[NonEmpty], MinLen(2), MaxLen(4)] = Field(description="Possible interpretations to verify - use these as basis for questions")
++    questions: Annotated[List[NonEmpty], MinLen(3), MaxLen(5)] = Field(description="3-5 specific clarifying questions based on assumptions above")
+ 
+ class GeneratePlan(BaseModel):
+     """Generate research plan based on clear user request"""
+     tool: Literal["generate_plan"]
+-    reasoning: str = Field(description="Justification for research approach")
+-    research_goal: str = Field(description="Primary research objective")
+-    planned_steps: Annotated[List[str], MinLen(3), MaxLen(4)] = Field(description="List of 3-4 planned steps")
+-    search_strategies: Annotated[List[str], MinLen(2), MaxLen(3)] = Field(description="Information search strategies")
++    reasoning: NonEmpty = Field(description="Justification for research approach")
++    research_goal: NonEmpty = Field(description="Primary research objective")
++    planned_steps: Annotated[List[NonEmpty], MinLen(3), MaxLen(4)] = Field(description="List of 3-4 planned steps")
++    search_strategies: Annotated[List[NonEmpty], MinLen(2), MaxLen(3)] = Field(description="Information search strategies")
+ 
+ class WebSearch(BaseModel):
+     """Search for information with credibility focus"""
+     tool: Literal["web_search"]
+-    reasoning: str = Field(description="Why this search is needed and what to expect")
+-    query: str = Field(description="Search query in same language as user request")
++    reasoning: NonEmpty = Field(description="Why this search is needed and what to expect")
++    query: QueryStr = Field(description="Search query in same language as user request")
+     max_results: int = Field(default=10, description="Maximum results (1-15)")
+     plan_adapted: bool = Field(default=False, description="Is this search after plan adaptation?")
+-    scrape_content: bool = Field(default_factory=lambda: CONFIG.get('scraping_enabled', False), description="Fetch full page content for deeper analysis")
++    scrape_content: bool = Field(
++        default_factory=lambda: bool(CONFIG.get('scraping_enabled', False)),
++        description="Fetch full page content for deeper analysis"
++    )
+ 
+ class AdaptPlan(BaseModel):
+     """Adapt research plan based on new findings"""
+     tool: Literal["adapt_plan"]
+-    reasoning: str = Field(description="Why plan needs adaptation based on new data")
+-    original_goal: str = Field(description="Original research goal")
+-    new_goal: str = Field(description="Updated research goal")
+-    plan_changes: Annotated[List[str], MinLen(1), MaxLen(3)] = Field(description="Specific changes made to plan")
+-    next_steps: Annotated[List[str], MinLen(2), MaxLen(4)] = Field(description="Updated remaining steps")
++    reasoning: NonEmpty = Field(description="Why plan needs adaptation based on new data")
++    original_goal: NonEmpty = Field(description="Original research goal")
++    new_goal: NonEmpty = Field(description="Updated research goal")
++    plan_changes: Annotated[List[NonEmpty], MinLen(1), MaxLen(3)] = Field(description="Specific changes made to plan")
++    next_steps: Annotated[List[NonEmpty], MinLen(2), MaxLen(4)] = Field(description="Updated remaining steps")
+ 
+ class CreateReport(BaseModel):
+     """Create comprehensive research report with citations"""
+     tool: Literal["create_report"]
+-    reasoning: str = Field(description="Why ready to create report now")
+-    title: str = Field(description="Report title - MUST be in the SAME language as user_request_language_reference (English request → English title, Russian request → Russian title)")
+-    user_request_language_reference: str = Field(
++    reasoning: NonEmpty = Field(description="Why ready to create report now")
++    title: NonEmpty = Field(description="Report title - MUST be in the SAME language as user_request_language_reference (English request → English title, Russian request → Russian title)")
++    user_request_language_reference: NonEmpty = Field(
+         description="Copy of original user request to ensure language consistency"
+     )
+-    content: str = Field(description="""...""")
++    content: NonEmpty = Field(description="""...""")
+     confidence: Literal["high", "medium", "low"] = Field(description="Confidence in findings")
+ 
+ class ReportCompletion(BaseModel):
+     """Complete research task"""
+     tool: Literal["report_completion"]
+-    reasoning: str = Field(description="Why research is now complete")
+-    completed_steps: Annotated[List[str], MinLen(1), MaxLen(5)] = Field(description="Summary of completed steps")
++    reasoning: NonEmpty = Field(description="Why research is now complete")
++    completed_steps: Annotated[List[NonEmpty], MinLen(1), MaxLen(5)] = Field(description="Summary of completed steps")
+     status: Literal["completed", "failed"] = Field(description="Task completion status")
+ 
+ class NextStep(BaseModel):
+@@
+-    reasoning_steps: Annotated[List[str], MinLen(2), MaxLen(4)] = Field(
++    reasoning_steps: Annotated[List[NonEmpty], MinLen(2), MaxLen(4)] = Field(
+         description="Step-by-step reasoning process leading to decision"
+     )
+-    current_situation: str = Field(description="Current research situation analysis")
+-    plan_status: str = Field(description="Status of current plan execution")
++    current_situation: NonEmpty = Field(description="Current research situation analysis")
++    plan_status: NonEmpty = Field(description="Status of current plan execution")
+-    remaining_steps: Annotated[List[str], MinLen(1), MaxLen(3)] = Field(description="1-3 remaining steps to complete task")
++    remaining_steps: Annotated[List[NonEmpty], MinLen(1), MaxLen(3)] = Field(description="1-3 remaining steps to complete task")
+     task_completed: bool = Field(description="Is the research task finished?")
+@@
+ def load_config():
+@@
+-                if 'scraping' in yaml_config:
+-                    config['scraping_enabled'] = yaml_config['scraping'].get('enabled', config['scraping_enabled'])
++                if 'scraping' in yaml_config:
++                    scr_enabled = yaml_config['scraping'].get('enabled', config['scraping_enabled'])
++                    if isinstance(scr_enabled, str):
++                        scr_enabled = scr_enabled.strip().lower() == 'true'
++                    config['scraping_enabled'] = bool(scr_enabled)
+@@
+     def get_system_prompt(self, user_request: str) -> str:
+@@
+         LANGUAGE ADAPTATION: Always respond and create reports in the SAME LANGUAGE as the user's request.
++        
++        STRICT OUTPUT RULES:
++        - Never emit empty strings for required fields.
++        - For web_search, `query` MUST be a concrete descriptive string (≥ 5 chars). Do NOT call web_search with an empty query.
++        - If you cannot produce a valid query yet, do NOT call web_search; emit generate_plan or clarification instead.
++        - Arrays must not contain empty strings. Omit optional fields rather than using empty placeholders.
+         """.strip()
+@@
+-                log.append({
+-                    "role": "assistant", 
+-                    "content": reasoning_content,
+-                    "tool_calls": [{
+-                        "type": "function",
+-                        "id": step_id,
+-                        "function": {
+-                            "name": job.function.tool,
+-                            "arguments": job.function.model_dump_json()
+-                        }
+-                    }]
+-                })
++                args_for_tool = job.function.model_dump(exclude={"tool"})
++                log.append({
++                    "role": "assistant", 
++                    "content": reasoning_content,
++                    "tool_calls": [{
++                        "type": "function",
++                        "id": step_id,
++                        "function": {
++                            "name": job.function.tool,
++                            "arguments": json.dumps(args_for_tool, ensure_ascii=False)
++                        }
++                    }]
++                })
+@@
+-        elif isinstance(cmd, WebSearch):
+-            self.console.print(f"🔍 [bold cyan]Search query:[/bold cyan] [white]'{cmd.query}'[/white]")
++        elif isinstance(cmd, WebSearch):
++            q = (cmd.query or "").strip()
++            if len(q) < 5:
++                error_msg = "Empty/too-short query prevented. Ask to restate or generate a concrete query."
++                self.console.print(f"❌ {error_msg}")
++                return {"error": "empty_query_blocked", "message": error_msg}
++            self.console.print(f"🔍 [bold cyan]Search query:[/bold cyan] [white]'{q}'[/white]")
+             try:
+-                response = self.tavily.search(
+-                    query=cmd.query,
++                response = self.tavily.search(
++                    query=q,
+                     max_results=cmd.max_results
+                 )
+                 # ...
+-                    "query": cmd.query,
++                    "query": q,
+                     "answer": response.get('answer', ''),
+                     "results": response.get('results', []),
+                     "citation_numbers": citation_numbers,
+                     "timestamp": datetime.now().isoformat(),
+-----8<----- END PATCH -----8<-----

@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Airsroute Gateway</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <style>
+      body { padding: 1rem; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+      table { font-size: 0.9rem; }
+      pre { white-space: pre-wrap; }
+    </style>
+  </head>
+  <body>
+    <h2>Airsroute Gateway</h2>
+    <p>LiteLLM front for Ollama with optional airsroute-based routing.</p>
+
+    <div class="grid">
+      <section>
+        <h4>Gateway Config</h4>
+        <pre id="cfgGateway" class="mono"></pre>
+        <details>
+          <summary>Update Config</summary>
+          <label for="targetSel">Target</label>
+          <select id="targetSel"></select>
+          <button id="loadTarget">Load selected config</button>
+          <pre id="cfgSelected" class="mono" style="max-height: 260px; overflow: auto; border: 1px solid #ddd; padding: .5rem;"></pre>
+          <label for="updates">JSON updates</label>
+          <textarea id="updates" rows="6" class="mono">{
+  "default_model": "research-ollama",
+  "force_routing": false
+}</textarea>
+          <label for="adminkey">Admin Key (if set)</label>
+          <input id="adminkey" type="password" placeholder="admin token" />
+          <button id="saveCfg">Apply</button>
+          <small>Edits selected file from config list (gateway or app)</small>
+        </details>
+      </section>
+
+      <section>
+        <h4>Telemetry</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Status</th>
+              <th>Model</th>
+              <th>Msgs</th>
+              <th>Summary</th>
+              <th>Latency (ms)</th>
+            </tr>
+          </thead>
+          <tbody id="telemetry"></tbody>
+        </table>
+        <small>Auto-refresh every 2s</small>
+      </section>
+    </div>
+
+    <script src="/static/dashboard.js"></script>
+  </body>
+  </html>

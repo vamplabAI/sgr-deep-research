@@ -1,0 +1,30 @@
+## LiteLLM Proxy -> Ollama config
+# Run the LiteLLM proxy in front of your existing Ollama server.
+#
+# Usage:
+#   litellm --config proxy/litellm_config.yaml --host 0.0.0.0 --port 8000
+#
+# Then in this project set `openai.base_url` to `http://localhost:8000/v1`.
+
+model_list:
+  # Map a friendly name to your Ollama model
+  - model_name: research-ollama
+    litellm_params:
+      # Format: provider/model_name
+      # Replace `llama3` with your actual local model (e.g., `llama3.1:8b`)
+      model: ollama/sgr-gemma
+      api_base: http://localhost:11434
+      # API key is not used by Ollama, but LiteLLM expects a value
+      api_key: ollama
+      stream: true
+
+general_settings:
+  # Enforce OpenAI-compatible routes
+  telemetry: false
+  master_key: dev-key
+  disable_spend_logging: true
+
+router_settings:
+  # Single-target routing to Ollama for now; integration with `airsroute`
+  # can be added via custom middleware/callbacks if needed.
+  num_retries: 0
