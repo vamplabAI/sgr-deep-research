@@ -6,6 +6,7 @@ from openai import pydantic_function_tool
 from openai.types.chat import ChatCompletionFunctionToolParam
 
 from sgr_deep_research.core.agents.base_agent import BaseAgent
+from sgr_deep_research.settings import get_config
 from sgr_deep_research.tools import (
     AgentCompletionTool,
     BaseTool,
@@ -16,7 +17,6 @@ from sgr_deep_research.tools import (
     research_agent_tools,
     system_agent_tools,
 )
-from sgr_deep_research.settings import get_config
 
 logging.basicConfig(
     level=logging.INFO,

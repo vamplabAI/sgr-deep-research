@@ -3,8 +3,8 @@ import uuid
 from typing import Type
 
 from sgr_deep_research.core.agents.sgr_tools_agent import SGRToolCallingResearchAgent
-from sgr_deep_research.tools import BaseTool, ReasoningTool
 from sgr_deep_research.settings import get_config
+from sgr_deep_research.tools import BaseTool, ReasoningTool
 
 logging.basicConfig(
     level=logging.INFO,

@@ -9,18 +9,20 @@ if TYPE_CHECKING:
 
 
 class BaseTool(BaseModel):
-    """Base class for all tools providing interface for tool handling capabilities."""
+    """Base class for all tools providing interface for tool handling
+    capabilities."""
 
     tool_name: ClassVar[str | None] = None
     description: ClassVar[str | None] = None
     is_system_tool: ClassVar[bool] = False
 
     def __call__(self, context: ResearchContext) -> str:
-        """Execute tool with given context. Result should be a string or dumped json.
-        
+        """Execute tool with given context. Result should be a string or dumped
+        json.
+
         Args:
             context: Research context containing state, sources, and other data
-            
+
         Returns:
             String result of tool execution
         """

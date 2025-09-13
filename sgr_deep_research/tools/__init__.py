@@ -23,7 +23,7 @@ __all__ = [
     # Base
     "BaseTool",
     # Registry
-    "ToolsRegistry", 
+    "ToolsRegistry",
     "tool",
     # System tools
     "ClarificationTool",
