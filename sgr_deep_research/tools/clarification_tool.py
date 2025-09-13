@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from pydantic import Field
 
@@ -12,6 +12,8 @@ if TYPE_CHECKING:
 
 class ClarificationTool(BaseTool):
     """Ask clarifying questions when facing ambiguous requests."""
+
+    is_system_tool: ClassVar[bool] = True
 
     reasoning: str = Field(description="Why clarification is needed")
     unclear_terms: list[str] = Field(description="List of unclear terms or concepts", min_length=1, max_length=5)

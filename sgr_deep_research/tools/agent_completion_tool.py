@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, ClassVar, Literal
 
 from pydantic import Field
 
@@ -13,6 +13,8 @@ if TYPE_CHECKING:
 
 class AgentCompletionTool(BaseTool):
     """Tool for completing agent execution with status."""
+
+    is_system_tool: ClassVar[bool] = True
 
     reasoning: str = Field(description="Why task is now complete")
     completed_steps: list[str] = Field(description="Summary of completed steps", min_length=1, max_length=5)

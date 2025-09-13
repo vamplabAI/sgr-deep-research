@@ -13,6 +13,7 @@ class BaseTool(BaseModel):
 
     tool_name: ClassVar[str | None] = None
     description: ClassVar[str | None] = None
+    is_system_tool: ClassVar[bool] = False
 
     def __call__(self, context: ResearchContext) -> str:
         """Execute tool with given context. Result should be a string or dumped json.

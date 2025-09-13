@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from pydantic import Field
 
@@ -12,6 +12,8 @@ if TYPE_CHECKING:
 
 class GeneratePlanTool(BaseTool):
     """Generate research plan based on clear user request."""
+
+    is_system_tool: ClassVar[bool] = True
 
     reasoning: str = Field(description="Justification for research approach")
     research_goal: str = Field(description="Primary research objective")

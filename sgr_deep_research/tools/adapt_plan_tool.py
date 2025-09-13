@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from pydantic import Field
 
@@ -12,6 +12,8 @@ if TYPE_CHECKING:
 
 class AdaptPlanTool(BaseTool):
     """Adapt research plan based on new findings."""
+
+    is_system_tool: ClassVar[bool] = True
 
     reasoning: str = Field(description="Why plan needs adaptation based on new data")
     original_goal: str = Field(description="Original research goal")
