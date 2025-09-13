@@ -5,8 +5,10 @@ from typing import ClassVar
 from pydantic import Field
 
 from sgr_deep_research.core.base_tool import BaseTool
+from sgr_deep_research.core.tools_registry import tool
 
 
+@tool
 class ReasoningTool(BaseTool):
     """Agent Core - Determines next reasoning step with adaptive planning."""
 

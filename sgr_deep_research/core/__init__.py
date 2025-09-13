@@ -11,6 +11,7 @@ from sgr_deep_research.core.agents import (  # noqa: F403
 from sgr_deep_research.core.models import AgentStatesEnum, ResearchContext, SearchResult, SourceData
 from sgr_deep_research.core.prompts import PromptLoader
 from sgr_deep_research.core.stream import OpenAIStreamingGenerator
+from sgr_deep_research.core.tools_registry import ToolsRegistry
 from sgr_deep_research.tools import *  # noqa: F403
 
 __all__ = [
@@ -29,4 +30,5 @@ __all__ = [
     # Other core modules
     "PromptLoader",
     "OpenAIStreamingGenerator",
+    "ToolsRegistry",
 ]

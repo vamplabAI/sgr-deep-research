@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Literal
 from pydantic import Field
 
 from sgr_deep_research.core.base_tool import BaseTool
+from sgr_deep_research.core.tools_registry import tool
 from sgr_deep_research.settings import get_config
 
 if TYPE_CHECKING:
@@ -19,6 +20,7 @@ logger.setLevel(logging.INFO)
 config = get_config()
 
 
+@tool
 class CreateReportTool(BaseTool):
     """Create comprehensive research report with citations."""
 
