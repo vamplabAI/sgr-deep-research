@@ -6,7 +6,7 @@ from openai import pydantic_function_tool
 from openai.types.chat import ChatCompletionFunctionToolParam
 
 from sgr_deep_research.core.agents.sgr_agent import SGRResearchAgent
-from sgr_deep_research.core.tools import (
+from sgr_deep_research.tools import (
     AgentCompletionTool,
     BaseTool,
     ClarificationTool,

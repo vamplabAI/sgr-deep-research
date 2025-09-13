@@ -2,7 +2,7 @@ import uuid
 from typing import Literal, Type
 
 from sgr_deep_research.core.agents.sgr_tools_agent import SGRToolCallingResearchAgent
-from sgr_deep_research.core.tools import BaseTool
+from sgr_deep_research.tools import BaseTool
 
 
 class SGRAutoToolCallingResearchAgent(SGRToolCallingResearchAgent):
