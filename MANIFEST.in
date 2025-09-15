@@ -1,5 +1,6 @@
 include sgr_deep_research/prompts/system_prompt.txt
 include sgr_deep_research/prompts/tool_function_prompt.txt
+include sgr_deep_research/prompts/extended_system_prompt.txt
 include LICENSE
 include README.md
 include config.yaml.example

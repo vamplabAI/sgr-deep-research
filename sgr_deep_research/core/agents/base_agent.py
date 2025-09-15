@@ -43,6 +43,9 @@ class ExecutionMetrics:
         self.tokens_used = 0
         self.prompt_tokens = 0
         self.completion_tokens = 0
+        self.cached_tokens = 0
+        self.cache_hits = 0
+        self.cache_misses = 0
         self.searches_performed = 0
         self.clarifications_requested = 0
         self.errors_count = 0
@@ -60,6 +63,25 @@ class ExecutionMetrics:
                 self.tokens_used += usage.total_tokens
             else:
                 self.tokens_used = self.prompt_tokens + self.completion_tokens
+            
+            # Отслеживание кеширования (Azure OpenAI может возвращать cached_tokens)
+            if hasattr(usage, 'prompt_tokens_details'):
+                details = usage.prompt_tokens_details
+                if hasattr(details, 'cached_tokens'):
+                    self.cached_tokens += details.cached_tokens
+                    if details.cached_tokens > 0:
+                        self.cache_hits += 1
+                    else:
+                        self.cache_misses += 1
+            elif hasattr(usage, 'cached_tokens'):
+                # Альтернативный формат кеширования
+                self.cached_tokens += usage.cached_tokens
+                if usage.cached_tokens > 0:
+                    self.cache_hits += 1
+                else:
+                    self.cache_misses += 1
+            else:
+                self.cache_misses += 1
     
     def add_search(self):
         """Добавить выполненный поиск."""
@@ -267,9 +289,10 @@ class BaseAgent:
         """Prepare conversation context with system prompt."""
         deep_level = getattr(self, '_deep_level', 0)
         system_prompt = PromptLoader.get_system_prompt(
-            user_request=self.task, 
+            user_request=self.task,
             sources=list(self._context.sources.values()),
-            deep_level=deep_level
+            deep_level=deep_level,
+            system_prompt_key_or_file=getattr(self, "_system_prompt_key_or_file", None),
         )
         # Заменяем плейсхолдеры для счетчиков
         system_prompt = system_prompt.replace(

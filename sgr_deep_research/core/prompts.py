@@ -1,5 +1,6 @@
 import os
 from functools import cache
+from typing import Optional
 
 from sgr_deep_research.core.models import SourceData
 from sgr_deep_research.settings import get_config
@@ -8,9 +9,21 @@ config = get_config()
 
 
 class PromptLoader:
+    _last_resolved_prompt_path: Optional[str] = None
     @classmethod
     @cache
     def _load_prompt_file(cls, filename: str) -> str:
+        # Allow absolute/relative direct paths first
+        if os.path.isabs(filename) or os.path.sep in filename:
+            if os.path.exists(filename):
+                try:
+                    with open(filename, encoding="utf-8") as f:
+                        content = f.read().strip()
+                        PromptLoader._last_resolved_prompt_path = filename
+                        return content
+                except IOError as e:
+                    raise IOError(f"Error reading prompt file {filename}: {e}") from e
+
         user_file_path = os.path.join(config.prompts.prompts_dir, filename)
         lib_file_path = os.path.join(os.path.dirname(__file__), "..", config.prompts.prompts_dir, filename)
 
@@ -18,7 +31,9 @@ class PromptLoader:
             if os.path.exists(file_path):
                 try:
                     with open(file_path, encoding="utf-8") as f:
-                        return f.read().strip()
+                        content = f.read().strip()
+                        PromptLoader._last_resolved_prompt_path = file_path
+                        return content
                 except IOError as e:
                     raise IOError(f"Error reading prompt file {file_path}: {e}") from e
 
@@ -29,9 +44,39 @@ class PromptLoader:
         return cls._load_prompt_file(config.prompts.tool_function_prompt_file)
 
     @classmethod
-    def get_system_prompt(cls, user_request: str, sources: list[SourceData], deep_level: int = 0) -> str:
+    def get_system_prompt(
+        cls,
+        user_request: str,
+        sources: list[SourceData],
+        deep_level: int = 0,
+        system_prompt_key_or_file: Optional[str] = None,
+    ) -> str:
         sources_formatted = "\n".join([str(source) for source in sources])
-        template = cls._load_prompt_file(config.prompts.system_prompt_file)
+
+        # Resolve which template to use
+        template_file: str
+
+        if system_prompt_key_or_file:
+            # First try to resolve as a named preset
+            template_file = config.prompts.available_prompts.get(
+                system_prompt_key_or_file, system_prompt_key_or_file
+            )
+        else:
+            # Auto-select: deep preset for deep mode (if available), otherwise default
+            if deep_level > 0:
+                template_file = config.prompts.available_prompts.get(
+                    "deep", "extended_system_prompt.txt"
+                )
+            else:
+                template_file = config.prompts.available_prompts.get(
+                    "default", config.prompts.system_prompt_file
+                )
+
+        # Load template (with fallback to default system prompt)
+        try:
+            template = cls._load_prompt_file(template_file)
+        except FileNotFoundError:
+            template = cls._load_prompt_file(config.prompts.system_prompt_file)
         
         # Добавляем инструкции для глубокого режима
         deep_mode_instructions = ""
@@ -51,9 +96,13 @@ DEEP RESEARCH MODE LEVEL {deep_level} ACTIVATED:
         
         try:
             return template.format(
-                user_request=user_request, 
+                user_request=user_request,
                 sources_formatted=sources_formatted,
-                deep_mode_instructions=deep_mode_instructions
+                deep_mode_instructions=deep_mode_instructions,
             )
         except KeyError as e:
             raise KeyError(f"Missing placeholder in system prompt template: {e}") from e
+
+    @classmethod
+    def get_last_resolved_prompt_path(cls) -> Optional[str]:
+        return cls._last_resolved_prompt_path

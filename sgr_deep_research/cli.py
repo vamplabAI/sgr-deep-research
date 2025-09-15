@@ -5,7 +5,7 @@ import logging
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Type
+from typing import Dict, Type, Optional
 
 import click
 from rich.console import Console
@@ -57,7 +57,13 @@ def display_agents():
     console.print()
 
 
-async def run_agent(agent_type: str, query: str, output_file: str = None, deep_level: int = 0):
+async def run_agent(
+    agent_type: str,
+    query: str,
+    output_file: Optional[str] = None,
+    deep_level: int = 0,
+    system_prompt: Optional[str] = None,
+):
     """Запустить агента с заданным запросом."""
     if agent_type not in AGENTS:
         console.print(f"[red]Ошибка:[/red] Неизвестный тип агента '{agent_type}'")
@@ -101,6 +107,9 @@ async def run_agent(agent_type: str, query: str, output_file: str = None, deep_l
             
             # Устанавливаем deep_level для использования в параметрах модели
             agent._deep_level = deep_level
+            # Переопределяем системный промпт при необходимости
+            if system_prompt:
+                agent._system_prompt_key_or_file = system_prompt
             
             # Проверяем поддержку GPT-5
             if hasattr(agent, '_get_model_parameters'):
@@ -111,9 +120,31 @@ async def run_agent(agent_type: str, query: str, output_file: str = None, deep_l
                     console.print(f"[dim]Контекст: {model_params['max_tokens']} токенов[/dim]")
         else:
             agent = agent_class(query)
+            if system_prompt:
+                agent._system_prompt_key_or_file = system_prompt
         
         console.print(f"[bold cyan]Запрос:[/bold cyan] {query}")
         console.print(f"[bold cyan]Модель:[/bold cyan] {agent.model_name}")
+        # Показываем только название выбранного системного промпта (пресет или имя файла)
+        try:
+            from sgr_deep_research.core.prompts import PromptLoader
+            # Прогреваем резолвер (без вывода пути)
+            _ = PromptLoader.get_system_prompt(
+                user_request=query,
+                sources=[],
+                deep_level=getattr(agent, "_deep_level", 0),
+                system_prompt_key_or_file=getattr(agent, "_system_prompt_key_or_file", None),
+            )
+            # Определяем человекочитаемое название
+            cfg = get_config()
+            preset_map = getattr(cfg.prompts, 'available_prompts', {}) or {}
+            if system_prompt:
+                display_name = system_prompt if system_prompt in preset_map else Path(system_prompt).name
+            else:
+                display_name = 'deep' if getattr(agent, '_deep_level', 0) > 0 else 'default'
+            console.print(f"[dim]Системный промпт:[/dim] {display_name}")
+        except Exception:
+            pass
         console.print()
         
         # Запуск агента с интерактивной обработкой уточнений
@@ -212,6 +243,14 @@ async def run_agent(agent_type: str, query: str, output_file: str = None, deep_l
             # Отображение статистики выполнения
             console.print(f"\n[bold yellow]📊 Статистика выполнения:[/bold yellow]")
             stats = agent.metrics.format_stats()
+            # Укажем какой системный промпт был использован
+            try:
+                from sgr_deep_research.core.prompts import PromptLoader
+                prompt_path = PromptLoader.get_last_resolved_prompt_path()
+                if prompt_path:
+                    console.print(f"  [cyan]Системный промпт файл:[/cyan] {prompt_path}")
+            except Exception:
+                pass
             for key, value in stats.items():
                 console.print(f"  [cyan]{key}:[/cyan] {value}")
             
@@ -242,6 +281,13 @@ async def run_agent(agent_type: str, query: str, output_file: str = None, deep_l
             # Отображение статистики даже при ошибке
             console.print(f"\n[bold yellow]📊 Статистика выполнения:[/bold yellow]")
             stats = agent.metrics.format_stats()
+            try:
+                from sgr_deep_research.core.prompts import PromptLoader
+                prompt_path = PromptLoader.get_last_resolved_prompt_path()
+                if prompt_path:
+                    console.print(f"  [cyan]Системный промпт файл:[/cyan] {prompt_path}")
+            except Exception:
+                pass
             for key, value in stats.items():
                 console.print(f"  [cyan]{key}:[/cyan] {value}")
             
@@ -339,10 +385,12 @@ async def interactive_mode():
 @click.option('--output', '-o', help='Файл для сохранения результата (Markdown)')
 @click.option('--deep', type=int, default=0, 
               help='Уровень глубокого исследования (1-5+: 1=20 шагов, 2=40 шагов, 3=60 шагов...)')
+@click.option('--system-prompt', 'system_prompt', type=str, default=None,
+              help='Имя пресета из config.prompts.available_prompts или имя файла из папки prompts')
 @click.option('--debug', is_flag=True, help='Включить отладочный вывод')
 @click.option('--interactive', '-i', is_flag=True, help='Запустить в интерактивном режиме')
 @click.pass_context
-def cli(ctx, query, agent, output, deep, debug, interactive):
+def cli(ctx, query, agent, output, deep, system_prompt, debug, interactive):
     """SGR Deep Research CLI
     
     Примеры использования:
@@ -375,7 +423,7 @@ def cli(ctx, query, agent, output, deep, debug, interactive):
             asyncio.run(interactive_mode())
         else:
             # Выполнить одиночный запрос
-            asyncio.run(run_agent(agent, query, output, deep))
+            asyncio.run(run_agent(agent, query, output, deep, system_prompt=system_prompt))
 
 
 @cli.command()
@@ -392,9 +440,11 @@ def agents():
               default='sgr-tools',
               help='Тип агента')
 @click.option('--output', '-o', help='Файл для сохранения результата')
-def deep(query, level, agent, output):
+@click.option('--system-prompt', 'system_prompt', type=str, default=None,
+              help='Имя пресета из config.prompts.available_prompts или имя файла из папки prompts')
+def deep(query, level, agent, output, system_prompt):
     """Глубокое исследование с указанным уровнем."""
-    asyncio.run(run_agent(agent, query, output, level))
+    asyncio.run(run_agent(agent, query, output, level, system_prompt=system_prompt))
 
 
 @cli.command()
@@ -404,9 +454,11 @@ def deep(query, level, agent, output):
               default='sgr-tools',
               help='Тип агента')
 @click.option('--output', '-o', help='Файл для сохранения результата')
-def deep1(query, agent, output):
+@click.option('--system-prompt', 'system_prompt', type=str, default=None,
+              help='Имя пресета из config.prompts.available_prompts или имя файла из папки prompts')
+def deep1(query, agent, output, system_prompt):
     """Глубокое исследование уровня 1 (20 шагов, ~10-30 мин)."""
-    asyncio.run(run_agent(agent, query, output, 1))
+    asyncio.run(run_agent(agent, query, output, 1, system_prompt=system_prompt))
 
 
 @cli.command()
@@ -416,9 +468,11 @@ def deep1(query, agent, output):
               default='sgr-tools',
               help='Тип агента')
 @click.option('--output', '-o', help='Файл для сохранения результата')
-def deep2(query, agent, output):
+@click.option('--system-prompt', 'system_prompt', type=str, default=None,
+              help='Имя пресета из config.prompts.available_prompts или имя файла из папки prompts')
+def deep2(query, agent, output, system_prompt):
     """Очень глубокое исследование уровня 2 (40 шагов, ~20-60 мин)."""
-    asyncio.run(run_agent(agent, query, output, 2))
+    asyncio.run(run_agent(agent, query, output, 2, system_prompt=system_prompt))
 
 
 @cli.command()
@@ -428,9 +482,11 @@ def deep2(query, agent, output):
               default='sgr-tools',
               help='Тип агента')
 @click.option('--output', '-o', help='Файл для сохранения результата')
-def deep3(query, agent, output):
+@click.option('--system-prompt', 'system_prompt', type=str, default=None,
+              help='Имя пресета из config.prompts.available_prompts или имя файла из папки prompts')
+def deep3(query, agent, output, system_prompt):
     """Экстремально глубокое исследование уровня 3 (60 шагов, ~30-90 мин)."""
-    asyncio.run(run_agent(agent, query, output, 3))
+    asyncio.run(run_agent(agent, query, output, 3, system_prompt=system_prompt))
 
 
 def main():

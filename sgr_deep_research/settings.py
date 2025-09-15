@@ -68,6 +68,13 @@ class PromptsConfig(BaseModel):
     prompts_dir: str = Field(default="prompts", description="Directory with prompts")
     tool_function_prompt_file: str = Field(default="tool_function_prompt.txt", description="Tool functions prompt file")
     system_prompt_file: str = Field(default="system_prompt.txt", description="System prompt file")
+    available_prompts: dict[str, str] = Field(
+        default_factory=lambda: {
+            "default": "system_prompt.txt",
+            "deep": "extended_system_prompt.txt",
+        },
+        description="Named prompt presets mapping: name -> filename in prompts dir",
+    )
 
 
 class ExecutionConfig(BaseModel):
