@@ -16,7 +16,8 @@ class SGRAutoToolCallingResearchAgent(SGRToolCallingResearchAgent):
         max_clarifications: int = 3,
         max_searches: int = 4,
         max_iterations: int = 10,
+        use_streaming: bool = True,
     ):
-        super().__init__(task, toolkit, max_clarifications, max_searches, max_iterations)
+        super().__init__(task, toolkit, max_clarifications, max_searches, max_iterations, use_streaming)
         self.id = f"sgr_auto_tool_calling_agent_{uuid.uuid4()}"
         self.tool_choice: Literal["auto"] = "auto"

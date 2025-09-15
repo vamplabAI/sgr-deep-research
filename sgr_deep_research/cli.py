@@ -95,6 +95,8 @@ async def run_agent(
                     kwargs['max_iterations'] = max_iterations
                 if 'max_searches' in sig.parameters:
                     kwargs['max_searches'] = max_searches
+                if 'use_streaming' in sig.parameters:
+                    kwargs['use_streaming'] = False  # CLI использует non-streaming для точных токенов
                 
                 agent = agent_class(**kwargs)
             else:
@@ -119,7 +121,19 @@ async def run_agent(
                 else:
                     console.print(f"[dim]Контекст: {model_params['max_tokens']} токенов[/dim]")
         else:
-            agent = agent_class(query)
+            # Обычный режим - также отключаем streaming для CLI
+            if hasattr(agent_class, '__init__'):
+                import inspect
+                sig = inspect.signature(agent_class.__init__)
+                kwargs = {'task': query}
+                
+                if 'use_streaming' in sig.parameters:
+                    kwargs['use_streaming'] = False  # CLI использует non-streaming для точных токенов
+                
+                agent = agent_class(**kwargs)
+            else:
+                agent = agent_class(query)
+            
             if system_prompt:
                 agent._system_prompt_key_or_file = system_prompt
         

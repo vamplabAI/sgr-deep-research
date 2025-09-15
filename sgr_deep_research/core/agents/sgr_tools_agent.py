@@ -40,6 +40,7 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
         max_clarifications: int = 3,
         max_searches: int = 4,
         max_iterations: int = 10,
+        use_streaming: bool = True,
     ):
         super().__init__(
             task=task,
@@ -47,6 +48,7 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
             max_clarifications=max_clarifications,
             max_iterations=max_iterations,
             max_searches=max_searches,
+            use_streaming=use_streaming,
         )
         self.id = f"sgr_tool_calling_agent_{uuid.uuid4()}"
         self.toolkit = [*system_agent_tools, *research_agent_tools, *(toolkit if toolkit else [])]
@@ -73,25 +75,45 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
 
     async def _reasoning_phase(self) -> ReasoningTool:
         # Получаем параметры модели с учетом deep_level
+        context_messages = await self._prepare_context()
+        # Сохраняем приблизительную длину промпта для оценки токенов
+        self._last_prompt_length = sum(len(str(msg.get('content', ''))) for msg in context_messages)
+        
         model_params = self._get_model_parameters(getattr(self, '_deep_level', 0))
         model_params.update({
-            "messages": await self._prepare_context(),
+            "messages": context_messages,
             "tools": await self._prepare_tools(),
             "tool_choice": {"type": "function", "function": {"name": ReasoningTool.tool_name}},
         })
         
-        async with self.openai_client.chat.completions.stream(**model_params) as stream:
-            async for event in stream:
-                # print(event)
-                if event.type == "chunk":
-                    content = event.chunk.choices[0].delta.content
-                    self.streaming_generator.add_chunk(content)
-            final_completion = await stream.get_final_completion()
-            # Отслеживаем API вызов и токены
-            self.metrics.add_api_call(final_completion.usage)
-            reasoning: ReasoningTool = (  # noqa
-                final_completion.choices[0].message.tool_calls[0].function.parsed_arguments  #
-            )
+        if self.use_streaming:
+            # Streaming режим (для API)
+            usage_data = None
+            async with self.openai_client.chat.completions.stream(**model_params) as stream:
+                async for event in stream:
+                    if event.type == "chunk":
+                        content = event.chunk.choices[0].delta.content
+                        self.streaming_generator.add_chunk(content)
+                        # Попытаемся получить usage из chunk, если доступно
+                        if hasattr(event.chunk, 'usage') and event.chunk.usage:
+                            usage_data = event.chunk.usage
+                final_completion = await stream.get_final_completion()
+                # Если usage не было получено из chunk, попробуем из final completion
+                if not usage_data and final_completion.usage:
+                    usage_data = final_completion.usage
+                self.metrics.add_api_call(usage_data)
+                reasoning: ReasoningTool = (
+                    final_completion.choices[0].message.tool_calls[0].function.parsed_arguments
+                )
+        else:
+            # Non-streaming режим (для CLI) - получаем точные данные о токенах
+            completion = await self.openai_client.chat.completions.create(**model_params)
+            self.metrics.add_api_call(completion.usage)
+            # В non-streaming режиме нужно парсить arguments вручную
+            import json
+            arguments_str = completion.choices[0].message.tool_calls[0].function.arguments
+            arguments_dict = json.loads(arguments_str)
+            reasoning: ReasoningTool = ReasoningTool(**arguments_dict)
         self.conversation.append(
             {
                 "role": "assistant",
@@ -117,22 +139,55 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
 
     async def _select_action_phase(self, reasoning: ReasoningTool) -> BaseTool:
         # Получаем параметры модели с учетом deep_level
+        context_messages = await self._prepare_context()
+        # Сохраняем приблизительную длину промпта для оценки токенов  
+        self._last_prompt_length = sum(len(str(msg.get('content', ''))) for msg in context_messages)
+        
         model_params = self._get_model_parameters(getattr(self, '_deep_level', 0))
         model_params.update({
-            "messages": await self._prepare_context(),
+            "messages": context_messages,
             "tools": await self._prepare_tools(),
             "tool_choice": self.tool_choice,
         })
         
-        async with self.openai_client.chat.completions.stream(**model_params) as stream:
-            async for event in stream:
-                if event.type == "chunk":
-                    content = event.chunk.choices[0].delta.content
-                    self.streaming_generator.add_chunk(content)
-        final_completion = await stream.get_final_completion()
-        # Отслеживаем API вызов и токены
-        self.metrics.add_api_call(final_completion.usage)
-        tool = final_completion.choices[0].message.tool_calls[0].function.parsed_arguments
+        if self.use_streaming:
+            # Streaming режим (для API)
+            usage_data = None
+            async with self.openai_client.chat.completions.stream(**model_params) as stream:
+                async for event in stream:
+                    if event.type == "chunk":
+                        content = event.chunk.choices[0].delta.content
+                        self.streaming_generator.add_chunk(content)
+                        # Попытаемся получить usage из chunk, если доступно
+                        if hasattr(event.chunk, 'usage') and event.chunk.usage:
+                            usage_data = event.chunk.usage
+            final_completion = await stream.get_final_completion()
+            # Если usage не было получено из chunk, попробуем из final completion
+            if not usage_data and final_completion.usage:
+                usage_data = final_completion.usage
+            self.metrics.add_api_call(usage_data)
+            tool = final_completion.choices[0].message.tool_calls[0].function.parsed_arguments
+        else:
+            # Non-streaming режим (для CLI) - получаем точные данные о токенов
+            completion = await self.openai_client.chat.completions.create(**model_params)
+            self.metrics.add_api_call(completion.usage)
+            # В non-streaming режиме нужно парсить arguments вручную
+            import json
+            tool_name = completion.choices[0].message.tool_calls[0].function.name
+            arguments_str = completion.choices[0].message.tool_calls[0].function.arguments
+            arguments_dict = json.loads(arguments_str)
+            
+            # Простой маппинг имен инструментов к классам
+            tool_class = None
+            for tool_cls in self.toolkit:
+                if hasattr(tool_cls, 'tool_name') and tool_cls.tool_name == tool_name:
+                    tool_class = tool_cls
+                    break
+            
+            if not tool_class:
+                raise ValueError(f"Tool class not found for tool name: {tool_name}")
+            
+            tool = tool_class(**arguments_dict)
 
         if not isinstance(tool, BaseTool):
             raise ValueError("Selected tool is not a valid BaseTool instance")

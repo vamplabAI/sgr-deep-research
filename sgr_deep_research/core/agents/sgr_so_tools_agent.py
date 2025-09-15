@@ -28,6 +28,7 @@ class SGRSOToolCallingResearchAgent(SGRToolCallingResearchAgent):
         max_clarifications: int = 3,
         max_searches: int = 4,
         max_iterations: int = 10,
+        use_streaming: bool = True,
     ):
         super().__init__(
             task=task,
@@ -35,6 +36,7 @@ class SGRSOToolCallingResearchAgent(SGRToolCallingResearchAgent):
             max_clarifications=max_clarifications,
             max_iterations=max_iterations,
             max_searches=max_searches,
+            use_streaming=use_streaming,
         )
         self.id = f"sgr_so_tool_calling_agent_{uuid.uuid4()}"
 

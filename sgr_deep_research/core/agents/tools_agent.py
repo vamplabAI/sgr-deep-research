@@ -40,12 +40,14 @@ class ToolCallingResearchAgent(BaseAgent):
         max_clarifications: int = 3,
         max_searches: int = 4,
         max_iterations: int = 10,
+        use_streaming: bool = True,
     ):
         super().__init__(
             task=task,
             toolkit=toolkit,
             max_clarifications=max_clarifications,
             max_iterations=max_iterations,
+            use_streaming=use_streaming,
         )
         self.id = f"tool_calling_agent_{uuid.uuid4()}"
 

@@ -38,12 +38,14 @@ class SGRResearchAgent(BaseAgent):
         max_clarifications: int = 3,
         max_iterations: int = 10,
         max_searches: int = 4,
+        use_streaming: bool = True,
     ):
         super().__init__(
             task=task,
             toolkit=toolkit,
             max_clarifications=max_clarifications,
             max_iterations=max_iterations,
+            use_streaming=use_streaming,
         )
 
         self.id = f"sgr_agent_{uuid.uuid4()}"

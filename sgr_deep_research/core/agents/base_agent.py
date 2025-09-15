@@ -54,6 +54,7 @@ class ExecutionMetrics:
     def add_api_call(self, usage=None):
         """Добавить API вызов с данными о токенах."""
         self.api_calls += 1
+        logger.info(f"📊 Adding API call #{self.api_calls}, usage data: {usage}")
         if usage:
             if hasattr(usage, 'prompt_tokens'):
                 self.prompt_tokens += usage.prompt_tokens
@@ -81,6 +82,27 @@ class ExecutionMetrics:
                 else:
                     self.cache_misses += 1
             else:
+                self.cache_misses += 1
+        else:
+            # Если usage данных нет, делаем приблизительную оценку
+            # Для GPT-5 и Azure OpenAI в streaming режиме
+            logger.warning("⚠️ No usage data available, using approximate token estimation")
+            # Используем приблизительную оценку: 1 токен ≈ 4 символа для русского текста
+            if hasattr(self, '_last_prompt_length'):
+                estimated_prompt_tokens = max(100, self._last_prompt_length // 4)
+                estimated_completion_tokens = max(50, 200)  # Минимальная оценка для completion
+                
+                self.prompt_tokens += estimated_prompt_tokens
+                self.completion_tokens += estimated_completion_tokens
+                self.tokens_used += estimated_prompt_tokens + estimated_completion_tokens
+                self.cache_misses += 1
+                
+                logger.info(f"📊 Estimated tokens: prompt={estimated_prompt_tokens}, completion={estimated_completion_tokens}")
+            else:
+                # Базовая оценка, если длина промпта неизвестна
+                self.prompt_tokens += 1000  # Базовая оценка для промпта
+                self.completion_tokens += 200  # Базовая оценка для ответа
+                self.tokens_used += 1200
                 self.cache_misses += 1
     
     def add_search(self):
@@ -119,17 +141,30 @@ class ExecutionMetrics:
     
     def format_stats(self):
         """Форматировать статистику для вывода."""
-        return {
+        stats = {
             "Время выполнения": self.format_duration(),
             "API вызовы": self.api_calls,
             "Токены (всего)": f"{self.tokens_used:,}",
             "Токены (запрос)": f"{self.prompt_tokens:,}",
             "Токены (ответ)": f"{self.completion_tokens:,}",
+        }
+        
+        # Добавляем кеширование если есть данные
+        if self.cached_tokens > 0 or self.cache_hits > 0:
+            stats["Кеш токенов"] = f"{self.cached_tokens:,}"
+            stats["Попадания в кеш"] = self.cache_hits
+            stats["Промахи кеша"] = self.cache_misses
+            cache_rate = self.cache_hits / (self.cache_hits + self.cache_misses) * 100 if (self.cache_hits + self.cache_misses) > 0 else 0
+            stats["Эффективность кеша"] = f"{cache_rate:.1f}%"
+        
+        stats.update({
             "Поисковые запросы": self.searches_performed,
             "Уточнения": self.clarifications_requested,
             "Шаги выполнения": self.steps_completed,
             "Ошибки": self.errors_count
-        }
+        })
+        
+        return stats
 
 
 class BaseAgent:
@@ -141,6 +176,7 @@ class BaseAgent:
         toolkit: list[Type[BaseTool]] | None = None,
         max_iterations: int = 10,
         max_clarifications: int = 3,
+        use_streaming: bool = True,
     ):
         self.id = f"base_agent_{uuid.uuid4()}"
         self.task = task
@@ -151,6 +187,7 @@ class BaseAgent:
         self.log = []
         self.max_iterations = max_iterations
         self.max_clarifications = max_clarifications
+        self.use_streaming = use_streaming
         self.metrics = ExecutionMetrics()
 
         # Initialize OpenAI client based on configuration
