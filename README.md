@@ -10,6 +10,54 @@ https://github.com/user-attachments/assets/a5e34116-7853-43c2-ba93-2db811b8584a
 
 Production-ready open-source system for automated research using Schema-Guided Reasoning (SGR). Features real-time streaming responses, OpenAI-compatible API, and comprehensive research capabilities with agent interruption support.
 
+## 🆕 Fork Enhancements
+
+This fork includes several significant enhancements over the original project:
+
+### 1. 🔵 Azure OpenAI Support
+- **Full Azure OpenAI integration** with environment variable configuration
+- **Seamless switching** between OpenAI and Azure OpenAI APIs
+- **Production-ready configuration** with `config.yaml.example` template
+- **Automatic model detection** and parameter optimization for Azure deployments
+
+### 2. 💻 Command Line Interface (CLI)
+- **Interactive CLI mode** with rich terminal interface
+- **Multiple agent types** support (sgr, sgr-tools, sgr-auto-tools, etc.)
+- **Deep research modes** with configurable complexity levels
+- **Real-time progress monitoring** and agent state tracking
+- **Easy configuration** and one-command execution
+
+### 3. 🔍 Deep Research Modes
+- **Extended system prompts** for comprehensive 10-100 page reports
+- **Multi-level deep analysis** (deep1, deep2, deep3+)
+- **Adaptive research complexity** based on topic importance
+- **Enhanced source analysis** with detailed citations and cross-references
+- **Structured report generation** with executive summaries and technical analysis
+
+### 4. 🛠️ Additional Improvements
+- **Enhanced agent base classes** with better error handling
+- **Improved prompt management** system
+- **Extended research tools** with better source validation
+- **Comprehensive documentation** and usage examples
+- **Docker deployment** support with updated configurations
+
+### Quick Start with New Features
+
+```bash
+# 1. Setup with Azure OpenAI
+cp config.yaml.example config.yaml
+# Edit config.yaml with your Azure OpenAI credentials
+
+# 2. Install and run CLI
+uv sync
+uv run python -m sgr_deep_research.cli
+
+# 3. Try deep research mode
+deep2 "Comprehensive analysis of quantum computing trends 2024"
+```
+
+**Note**: These enhancements maintain full compatibility with the original API while adding powerful new capabilities for advanced research workflows.
+
 ## 📊 Summary Table of Agents
 
 | Agent                   | SGR Implementation | ReasoningTool        | Tools                 | API Requests | Selection Mechanism |
