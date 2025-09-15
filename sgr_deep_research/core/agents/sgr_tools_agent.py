@@ -86,8 +86,11 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
                 if event.type == "chunk":
                     content = event.chunk.choices[0].delta.content
                     self.streaming_generator.add_chunk(content)
+            final_completion = await stream.get_final_completion()
+            # Отслеживаем API вызов и токены
+            self.metrics.add_api_call(final_completion.usage)
             reasoning: ReasoningTool = (  # noqa
-                (await stream.get_final_completion()).choices[0].message.tool_calls[0].function.parsed_arguments  #
+                final_completion.choices[0].message.tool_calls[0].function.parsed_arguments  #
             )
         self.conversation.append(
             {
@@ -126,7 +129,10 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
                 if event.type == "chunk":
                     content = event.chunk.choices[0].delta.content
                     self.streaming_generator.add_chunk(content)
-        tool = (await stream.get_final_completion()).choices[0].message.tool_calls[0].function.parsed_arguments
+        final_completion = await stream.get_final_completion()
+        # Отслеживаем API вызов и токены
+        self.metrics.add_api_call(final_completion.usage)
+        tool = final_completion.choices[0].message.tool_calls[0].function.parsed_arguments
 
         if not isinstance(tool, BaseTool):
             raise ValueError("Selected tool is not a valid BaseTool instance")

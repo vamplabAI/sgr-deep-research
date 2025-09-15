@@ -209,6 +209,12 @@ async def run_agent(agent_type: str, query: str, output_file: str = None, deep_l
                     if source.title:
                         console.print(f"     {source.title}")
             
+            # Отображение статистики выполнения
+            console.print(f"\n[bold yellow]📊 Статистика выполнения:[/bold yellow]")
+            stats = agent.metrics.format_stats()
+            for key, value in stats.items():
+                console.print(f"  [cyan]{key}:[/cyan] {value}")
+            
             # Сохранение в файл
             if output_file:
                 output_path = Path(output_file)
@@ -232,6 +238,13 @@ async def run_agent(agent_type: str, query: str, output_file: str = None, deep_l
             return {"answer": final_answer, "sources": sources}
         else:
             console.print(f"[red]Агент завершился с ошибкой. Состояние:[/red] {agent._context.state}")
+            
+            # Отображение статистики даже при ошибке
+            console.print(f"\n[bold yellow]📊 Статистика выполнения:[/bold yellow]")
+            stats = agent.metrics.format_stats()
+            for key, value in stats.items():
+                console.print(f"  [cyan]{key}:[/cyan] {value}")
+            
             return None
         
     except Exception as e:

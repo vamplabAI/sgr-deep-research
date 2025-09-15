@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import time
 import traceback
 import uuid
 from datetime import datetime
@@ -33,6 +34,82 @@ config = get_config()
 logger = logging.getLogger(__name__)
 
 
+class ExecutionMetrics:
+    """Класс для отслеживания метрик выполнения агента."""
+    
+    def __init__(self):
+        self.start_time = time.time()
+        self.api_calls = 0
+        self.tokens_used = 0
+        self.prompt_tokens = 0
+        self.completion_tokens = 0
+        self.searches_performed = 0
+        self.clarifications_requested = 0
+        self.errors_count = 0
+        self.steps_completed = 0
+        
+    def add_api_call(self, usage=None):
+        """Добавить API вызов с данными о токенах."""
+        self.api_calls += 1
+        if usage:
+            if hasattr(usage, 'prompt_tokens'):
+                self.prompt_tokens += usage.prompt_tokens
+            if hasattr(usage, 'completion_tokens'):
+                self.completion_tokens += usage.completion_tokens
+            if hasattr(usage, 'total_tokens'):
+                self.tokens_used += usage.total_tokens
+            else:
+                self.tokens_used = self.prompt_tokens + self.completion_tokens
+    
+    def add_search(self):
+        """Добавить выполненный поиск."""
+        self.searches_performed += 1
+    
+    def add_clarification(self):
+        """Добавить запрос уточнения."""
+        self.clarifications_requested += 1
+    
+    def add_error(self):
+        """Добавить ошибку."""
+        self.errors_count += 1
+    
+    def add_step(self):
+        """Добавить выполненный шаг."""
+        self.steps_completed += 1
+    
+    def get_duration(self):
+        """Получить время выполнения в секундах."""
+        return time.time() - self.start_time
+    
+    def format_duration(self):
+        """Форматировать время выполнения."""
+        duration = self.get_duration()
+        if duration < 60:
+            return f"{duration:.1f} сек"
+        elif duration < 3600:
+            minutes = int(duration // 60)
+            seconds = int(duration % 60)
+            return f"{minutes}м {seconds}с"
+        else:
+            hours = int(duration // 3600)
+            minutes = int((duration % 3600) // 60)
+            return f"{hours}ч {minutes}м"
+    
+    def format_stats(self):
+        """Форматировать статистику для вывода."""
+        return {
+            "Время выполнения": self.format_duration(),
+            "API вызовы": self.api_calls,
+            "Токены (всего)": f"{self.tokens_used:,}",
+            "Токены (запрос)": f"{self.prompt_tokens:,}",
+            "Токены (ответ)": f"{self.completion_tokens:,}",
+            "Поисковые запросы": self.searches_performed,
+            "Уточнения": self.clarifications_requested,
+            "Шаги выполнения": self.steps_completed,
+            "Ошибки": self.errors_count
+        }
+
+
 class BaseAgent:
     """Base class for agents."""
 
@@ -52,6 +129,7 @@ class BaseAgent:
         self.log = []
         self.max_iterations = max_iterations
         self.max_clarifications = max_clarifications
+        self.metrics = ExecutionMetrics()
 
         # Initialize OpenAI client based on configuration
         if config.azure:
@@ -238,6 +316,7 @@ class BaseAgent:
         try:
             while self._context.state not in AgentStatesEnum.FINISH_STATES.value:
                 self._context.iteration += 1
+                self.metrics.add_step()
                 logger.info(f"agent {self.id} Step {self._context.iteration} started")
 
                 reasoning = await self._reasoning_phase()
@@ -246,6 +325,7 @@ class BaseAgent:
                 action_result = await self._action_phase(action_tool)
 
                 if isinstance(action_tool, ClarificationTool):
+                    self.metrics.add_clarification()
                     logger.info("\n⏸️  Research paused - please answer questions")
                     logger.info(action_result)
                     self._context.state = AgentStatesEnum.WAITING_FOR_CLARIFICATION
@@ -254,6 +334,7 @@ class BaseAgent:
                     continue
 
         except Exception as e:
+            self.metrics.add_error()
             logger.error(f"❌ Agent execution error: {str(e)}")
             self._context.state = AgentStatesEnum.FAILED
             traceback.print_exc()

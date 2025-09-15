@@ -116,6 +116,10 @@ class ToolCallingResearchAgent(BaseAgent):
         return tool
 
     async def _action_phase(self, tool: BaseTool) -> str:
+        # Отслеживаем типы инструментов для метрик
+        if isinstance(tool, WebSearchTool):
+            self.metrics.add_search()
+        
         result = tool(self._context)
         self.conversation.append(
             {"role": "tool", "content": result, "tool_call_id": f"{self._context.iteration}-action"}
