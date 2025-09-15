@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Type
 
 import httpx
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, AsyncAzureOpenAI
 from openai.types.chat import ChatCompletionFunctionToolParam
 
 from sgr_deep_research.core.models import AgentStatesEnum, ResearchContext
@@ -53,11 +53,31 @@ class BaseAgent:
         self.max_iterations = max_iterations
         self.max_clarifications = max_clarifications
 
-        client_kwargs = {"base_url": config.openai.base_url, "api_key": config.openai.api_key}
-        if config.openai.proxy.strip():
-            client_kwargs["http_client"] = httpx.AsyncClient(proxy=config.openai.proxy)
-
-        self.openai_client = AsyncOpenAI(**client_kwargs)
+        # Initialize OpenAI client based on configuration
+        if config.azure:
+            # Azure OpenAI configuration
+            client_kwargs = {
+                "azure_endpoint": config.azure.base_url,
+                "api_key": config.azure.api_key,
+                "api_version": config.azure.api_version,
+            }
+            if config.azure.proxy.strip():
+                client_kwargs["http_client"] = httpx.AsyncClient(proxy=config.azure.proxy)
+            self.openai_client = AsyncAzureOpenAI(**client_kwargs)
+            self.model_name = config.azure.deployment_name
+            self.max_tokens = config.azure.max_tokens
+            self.temperature = config.azure.temperature
+        elif config.openai:
+            # Standard OpenAI configuration
+            client_kwargs = {"base_url": config.openai.base_url, "api_key": config.openai.api_key}
+            if config.openai.proxy.strip():
+                client_kwargs["http_client"] = httpx.AsyncClient(proxy=config.openai.proxy)
+            self.openai_client = AsyncOpenAI(**client_kwargs)
+            self.model_name = config.openai.model
+            self.max_tokens = config.openai.max_tokens
+            self.temperature = config.openai.temperature
+        else:
+            raise ValueError("Either 'openai' or 'azure' configuration must be provided")
         self.streaming_generator = OpenAIStreamingGenerator(model=self.id)
 
     async def provide_clarification(self, clarifications: str):

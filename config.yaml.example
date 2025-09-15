@@ -11,6 +11,16 @@ openai:
   temperature: 0.4                     # Generation temperature (0.0-1.0)
   proxy: ""                            # Example: "socks5://127.0.0.1:1081" or "http://127.0.0.1:8080" or leave empty for no proxy
 
+# Azure OpenAI Configuration (alternative to OpenAI)
+azure:
+  api_key: "your-azure-openai-api-key-here"  # Required: Your Azure OpenAI API key
+  base_url: "https://your-resource.openai.azure.com/"  # Required: Your Azure OpenAI endpoint
+  api_version: "2024-02-15-preview"           # Azure API version
+  deployment_name: "gpt-4o-mini"              # Your deployment name in Azure
+  max_tokens: 8000                            # Maximum number of tokens
+  temperature: 0.4                            # Generation temperature (0.0-1.0)
+  proxy: ""                                   # Optional: Proxy settings
+
 # Tavily Search Configuration
 tavily:
   api_key: "your-tavily-api-key-here"  # Required: Your Tavily API key

@@ -79,10 +79,10 @@ class ToolCallingResearchAgent(BaseAgent):
 
     async def _select_action_phase(self, reasoning=None) -> BaseTool:
         async with self.openai_client.chat.completions.stream(
-            model=config.openai.model,
+            model=self.model_name,
             messages=await self._prepare_context(),
-            max_tokens=config.openai.max_tokens,
-            temperature=config.openai.temperature,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
             tools=await self._prepare_tools(),
             tool_choice=self.tool_choice,
         ) as stream:

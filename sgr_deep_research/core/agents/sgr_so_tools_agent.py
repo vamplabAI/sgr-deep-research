@@ -40,10 +40,10 @@ class SGRSOToolCallingResearchAgent(SGRToolCallingResearchAgent):
 
     async def _reasoning_phase(self) -> ReasoningTool:
         async with self.openai_client.chat.completions.stream(
-            model=config.openai.model,
+            model=self.model_name,
             messages=await self._prepare_context(),
-            max_tokens=config.openai.max_tokens,
-            temperature=config.openai.temperature,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
             tools=await self._prepare_tools(),
             tool_choice={"type": "function", "function": {"name": ReasoningTool.tool_name}},
         ) as stream:
@@ -55,11 +55,11 @@ class SGRSOToolCallingResearchAgent(SGRToolCallingResearchAgent):
                 (await stream.get_final_completion()).choices[0].message.tool_calls[0].function.parsed_arguments  #
             )
         async with self.openai_client.chat.completions.stream(
-            model=config.openai.model,
+            model=self.model_name,
             response_format=ReasoningTool,
             messages=await self._prepare_context(),
-            max_tokens=config.openai.max_tokens,
-            temperature=config.openai.temperature,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
         ) as stream:
             async for event in stream:
                 if event.type == "chunk":

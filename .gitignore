@@ -337,3 +337,8 @@ personal_notes.md
 
 # Conversation logs for debugging
 logs/
+
+# Claude AI settings
+.claude/
+
+sgr-classic/

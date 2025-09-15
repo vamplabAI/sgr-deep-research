@@ -77,11 +77,11 @@ class SGRResearchAgent(BaseAgent):
 
     async def _reasoning_phase(self) -> NextStepToolStub:
         async with self.openai_client.chat.completions.stream(
-            model=config.openai.model,
+            model=self.model_name,
             response_format=await self._prepare_tools(),
             messages=await self._prepare_context(),
-            max_tokens=config.openai.max_tokens,
-            temperature=config.openai.temperature,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
         ) as stream:
             async for event in stream:
                 if event.type == "chunk":

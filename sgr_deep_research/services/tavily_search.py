@@ -11,7 +11,9 @@ logger = logging.getLogger(__name__)
 class TavilySearchService:
     def __init__(self):
         config = get_config()
-        self._client = TavilyClient(api_key=config.tavily.api_key, api_base_url=config.tavily.api_base_url)
+        # Use a dummy API key if none provided (for custom servers that don't need authentication)
+        api_key = config.tavily.api_key or "dummy-key-for-custom-server"
+        self._client = TavilyClient(api_key=api_key, api_base_url=config.tavily.api_base_url)
         self._config = config
 
     @staticmethod
