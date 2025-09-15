@@ -24,6 +24,12 @@ Enhanced SGR version with streaming output, animations and extended visualizatio
 # Navigate to directory
 cd sgr-streaming
 
+# Quick setup for local models (recommended)
+python configure_for_local_models.py
+
+# Test JSON parsing capabilities
+python test_json_parsing.py
+
 # Main streaming system
 python sgr_streaming.py
 
@@ -171,3 +177,137 @@ When running, you'll see:
 ---
 
 ✨ **Enjoy beautiful and informative SGR streaming!** ✨
+
+## 🛠️ Local Model Setup & Troubleshooting
+
+### Quick Setup
+```bash
+# 1. Configure for local models
+python configure_for_local_models.py
+
+# 2. Test your model's JSON capabilities  
+python test_json_parsing.py
+
+# 3. Validate schema requirements
+python validate_nextstep_schema.py
+
+# 4. Enable debug mode and run
+SGR_DEBUG_JSON=1 python sgr_streaming.py
+```
+
+### JSON Parsing Issues
+
+If you see "❌ Failed to parse LLM response":
+
+1. **Enable debug mode**: `export SGR_DEBUG_JSON=1`
+2. **Check logs**: Look at `logs/*_nextstep_simple_parse_raw.txt` files
+3. **Lower temperature**: Set to 0.1-0.3 in config.yaml
+4. **Use better model**: gemma2:27b or llama3.1:70b recommended
+5. **Test parsing**: Run `python test_json_parsing.py`
+
+### Model Recommendations
+
+| Model | Quality | Temperature | Max Tokens | Notes |
+|-------|---------|-------------|------------|-------|
+| gemma2:27b | Best | 0.1 | 16000 | Excellent structured output |
+| llama3.1:70b | Best | 0.1 | 16000 | Very capable, slower |
+| gemma2:9b | Good | 0.2 | 12000 | Good balance |
+| llama3.1:8b | Good | 0.2 | 12000 | Faster, decent quality |
+
+### Debug Files
+
+When `SGR_DEBUG_JSON=1` is set, debug files are saved to `logs/`:
+- `*_nextstep_simple_parse_raw.txt` - Raw model output with analysis
+- `*_conversation.json` - Full conversation history
+- Enhanced error messages with recommendations
+
+### Validation Tools
+```bash
+# Test schema validation with examples
+python validate_nextstep_schema.py
+
+# Validate a specific debug file
+python validate_nextstep_schema.py logs/20241212_120000_test_nextstep_simple_parse_raw.txt
+
+# Test model JSON capabilities
+python test_json_parsing.py
+
+# Test clarification behavior (should be less aggressive)
+python test_clarification_behavior.py
+```
+## 🎯 Clarification Behavior
+
+The system has been optimized to be less aggressive with clarification requests:
+
+### When Clarification is Used
+- **Truly ambiguous requests**: "test", "help", single words
+- **Impossible to research**: Completely unclear topics
+
+### When Research Proceeds Directly
+- **Clear topics**: "jazz history", "BMW prices", "AI trends 2024"
+- **Reasonable requests**: Most research topics with identifiable subjects
+- **After one clarification**: Anti-cycling prevents repeated clarification
+
+### Testing Clarification Behavior
+```bash
+python test_clarification_behavior.py
+```
+
+This will test various request types and show whether the system chooses `generate_plan` (good) or `clarification` (potentially too aggressive).### Enh
+anced Fallback Mechanisms
+
+The system now includes multiple fallback layers when structured output fails:
+
+1. **Structured Output**: Primary method using `response_format=NextStep`
+2. **Regular Completion**: Falls back to regular API with explicit JSON instructions  
+3. **Natural Language Extraction**: Extracts questions from natural language responses
+4. **Schema Coercion**: Converts simplified formats to valid NextStep objects
+5. **Default Generation**: Creates reasonable defaults when all else fails
+
+### Additional Testing Tools
+```bash
+# Test fallback mechanisms for natural language responses
+python test_json_fallback.py
+
+# Test clarification behavior (less aggressive)  
+python test_clarification_behavior.py
+```
+
+These improvements should resolve the "❌ Failed to parse LLM response" errors by providing robust fallback mechanisms when local models generate natural language instead of structured JSON.
+## 🛡️ C
+omprehensive Schema Enforcement
+
+### Schema-Guided Reasoning Protection
+
+SGR now includes a **Schema Enforcement Engine** that proactively prevents ALL schema validation failures:
+
+#### Critical Issues Automatically Fixed:
+- ✅ **Generated plan with no steps** - Fills empty `planned_steps` with meaningful defaults
+- ✅ **Empty required lists** - Pads lists to minimum lengths (reasoning_steps: 2+, questions: 3+, etc.)
+- ✅ **Complex objects in simple fields** - Converts `remaining_steps` objects to strings
+- ✅ **Missing function fields** - Completes incomplete function objects with all required fields
+- ✅ **Wrong data types** - Converts string numbers/booleans to proper types
+- ✅ **Empty strings** - Fills required fields with contextually appropriate defaults
+- ✅ **Wrong tool names** - Corrects "plan" → "generate_plan", "search" → "web_search"
+
+#### Schema Enforcement Layers:
+1. **Data Type Correction** - Fix int/bool/string type mismatches
+2. **Structure Validation** - Ensure all NextStep fields exist
+3. **Function Completion** - Fill missing function object fields
+4. **List Validation** - Pad lists to meet minimum length requirements
+5. **String Validation** - Replace empty required strings
+6. **Business Logic** - Prevent critical failures like empty plans
+
+### Testing Schema Enforcement
+```bash
+# Test your specific JSON case
+python test_your_specific_case.py
+
+# Test all failure patterns
+python test_schema_enforcement.py
+
+# Analyze schema requirements
+python schema_enforcement_analysis.py
+```
+
+This ensures **Schema-Guided Reasoning** actually guides the system instead of breaking it.

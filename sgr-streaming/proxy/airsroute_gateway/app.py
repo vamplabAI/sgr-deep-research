@@ -154,32 +154,94 @@ def summarize_messages(messages: Any) -> Dict[str, Any]:
         return {"summary": "", "messages_count": 0}
 
 
-async def stream_upstream(req_json: Dict[str, Any]) -> AsyncGenerator[bytes, None]:
+async def stream_upstream(req_json: Dict[str, Any], auth_header: Optional[str]) -> AsyncGenerator[bytes, None]:
     base_url = str(state.get("litellm_base_url", "http://localhost:8000/v1"))
     headers = {}
+    # Always use gateway proxy_key for upstream auth
     proxy_key = state.get("proxy_key")
     if proxy_key:
         headers["Authorization"] = f"Bearer {proxy_key}"
 
     url = f"{base_url.rstrip('/')}/chat/completions"
+    started = datetime.utcnow()
+    msg_meta = summarize_messages(req_json.get("messages"))
+    chunk_count = 0
+    try:
+        # stream from upstream
+        async with state.client.stream("POST", url, json=req_json, headers=headers) as resp:
+            if resp.status_code != 200:
+                body = await resp.aread()
+                add_telemetry({
+                    "route": "/v1/chat/completions",
+                    "status": "error",
+                    "status_code": resp.status_code,
+                    "model": str(req_json.get("model") or ""),
+                    "latency_ms": (datetime.utcnow() - started).total_seconds() * 1000.0,
+                    **msg_meta,
+                })
+                yield body
+                return
 
-    async with state.client.stream("POST", url, json=req_json, headers=headers) as resp:
-        # Propagate non-200 quickly
-        if resp.status_code != 200:
-            body = await resp.aread()
-            yield body
-            return
+            # announce streaming start
+            add_telemetry({
+                "route": "/v1/chat/completions",
+                "status": "streaming",
+                "model": str(req_json.get("model") or ""),
+                "latency_ms": (datetime.utcnow() - started).total_seconds() * 1000.0,
+                **msg_meta,
+            })
 
-        ctype = resp.headers.get("content-type", "")
-
-        if ctype.startswith("text/event-stream"):
-            async for line in resp.aiter_lines():
-                if line is None:
-                    continue
-                yield (line + "\n").encode("utf-8")
-        else:
-            async for chunk in resp.aiter_bytes():
-                yield chunk
+            ctype = resp.headers.get("content-type", "")
+            if ctype.startswith("text/event-stream"):
+                async for line in resp.aiter_lines():
+                    if line is None:
+                        continue
+                    chunk_count += 1
+                    # lightweight progress sampling
+                    if chunk_count in (1, 10, 50) or (chunk_count % 100 == 0):
+                        add_telemetry({
+                            "route": "/v1/chat/completions",
+                            "status": "progress",
+                            "model": str(req_json.get("model") or ""),
+                            "chunks": chunk_count,
+                            "latency_ms": (datetime.utcnow() - started).total_seconds() * 1000.0,
+                            **msg_meta,
+                        })
+                    yield (line + "\n").encode("utf-8")
+            else:
+                async for chunk in resp.aiter_bytes():
+                    if chunk is None:
+                        continue
+                    chunk_count += 1
+                    if chunk_count in (1, 10, 50) or (chunk_count % 100 == 0):
+                        add_telemetry({
+                            "route": "/v1/chat/completions",
+                            "status": "progress",
+                            "model": str(req_json.get("model") or ""),
+                            "chunks": chunk_count,
+                            "latency_ms": (datetime.utcnow() - started).total_seconds() * 1000.0,
+                            **msg_meta,
+                        })
+                    yield chunk
+    except Exception as e:
+        add_telemetry({
+            "route": "/v1/chat/completions",
+            "status": "error",
+            "error": str(e),
+            "model": str(req_json.get("model") or ""),
+            "latency_ms": (datetime.utcnow() - started).total_seconds() * 1000.0,
+            **msg_meta,
+        })
+        raise
+    finally:
+        add_telemetry({
+            "route": "/v1/chat/completions",
+            "status": "completed",
+            "model": str(req_json.get("model") or ""),
+            "chunks": chunk_count,
+            "latency_ms": (datetime.utcnow() - started).total_seconds() * 1000.0,
+            **msg_meta,
+        })
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -210,6 +272,25 @@ def _sse_format(d: Dict[str, Any]) -> bytes:
         name = "message"
         data = "{}"
     return f"event: {name}\ndata: {data}\n\n".encode("utf-8")
+@app.get("/v1/models")
+async def list_models(request: Request):
+    # Proxy to LiteLLM /v1/models
+    base_url = str(state.get("litellm_base_url", "http://localhost:8000/v1"))
+    url = f"{base_url.rstrip('/')}/models"
+
+    headers = {}
+    incoming_auth = request.headers.get("Authorization")
+    if incoming_auth:
+        headers["Authorization"] = incoming_auth
+    else:
+        proxy_key = state.get("proxy_key")
+        if proxy_key:
+            headers["Authorization"] = f"Bearer {proxy_key}"
+
+    resp0 = await state.client.get(url, headers=headers)
+    data = resp0.content
+    return Response(content=data, status_code=resp0.status_code, media_type=resp0.headers.get("content-type", "application/json"))
+
 
 
 @app.get("/api/telemetry/stream")
@@ -307,6 +388,7 @@ async def chat_completions(request: Request):
     url = f"{base_url.rstrip('/')}/chat/completions"
 
     headers = {}
+    # Always use gateway proxy_key for upstream auth
     proxy_key = state.get("proxy_key")
     if proxy_key:
         headers["Authorization"] = f"Bearer {proxy_key}"
@@ -324,21 +406,21 @@ async def chat_completions(request: Request):
         try:
             if stream:
                 # Stream back exactly what upstream sends
-                upstream = stream_upstream(body)
+                upstream = stream_upstream(body, None)
                 resp = StreamingResponse(upstream, media_type="text/event-stream")
             else:
-                async with state.client.post(url, json=body, headers=headers) as resp0:
-                    data = await resp0.aread()
-                    # Pass-through status and payload
-                    add_telemetry({
-                        "route": "/v1/chat/completions",
-                        "status": "ok" if resp0.status_code == 200 else "error",
-                        "status_code": resp0.status_code,
-                        "model": chosen_model,
-                        "latency_ms": (datetime.utcnow() - started).total_seconds() * 1000.0,
-                        **msg_meta,
-                    })
-                    return Response(content=data, status_code=resp0.status_code, media_type=resp0.headers.get("content-type", "application/json"))
+                resp0 = await state.client.post(url, json=body, headers=headers)
+                data = resp0.content
+                # Pass-through status and payload
+                add_telemetry({
+                    "route": "/v1/chat/completions",
+                    "status": "ok" if resp0.status_code == 200 else "error",
+                    "status_code": resp0.status_code,
+                    "model": chosen_model,
+                    "latency_ms": (datetime.utcnow() - started).total_seconds() * 1000.0,
+                    **msg_meta,
+                })
+                return Response(content=data, status_code=resp0.status_code, media_type=resp0.headers.get("content-type", "application/json"))
         except Exception as e:
             span.record_exception(e)
             add_telemetry({

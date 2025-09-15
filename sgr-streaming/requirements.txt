@@ -20,6 +20,7 @@ youtube-transcript-api>=0.6.0
 # Configuration and utilities
 PyYAML>=6.0
 python-dateutil>=2.8.0
+requests>=2.31.0
 
 # LiteLLM proxy (front of Ollama)
 litellm>=1.35.0

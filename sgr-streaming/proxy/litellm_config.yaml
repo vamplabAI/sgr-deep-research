@@ -1,30 +1,147 @@
-## LiteLLM Proxy -> Ollama config
-# Run the LiteLLM proxy in front of your existing Ollama server.
-#
-# Usage:
-#   litellm --config proxy/litellm_config.yaml --host 0.0.0.0 --port 8000
-#
-# Then in this project set `openai.base_url` to `http://localhost:8000/v1`.
-
-model_list:
-  # Map a friendly name to your Ollama model
-  - model_name: research-ollama
-    litellm_params:
-      # Format: provider/model_name
-      # Replace `llama3` with your actual local model (e.g., `llama3.1:8b`)
-      model: ollama/sgr-gemma
-      api_base: http://localhost:11434
-      # API key is not used by Ollama, but LiteLLM expects a value
-      api_key: ollama
-      stream: true
-
 general_settings:
-  # Enforce OpenAI-compatible routes
-  telemetry: false
-  master_key: dev-key
   disable_spend_logging: true
-
+  master_key: dev-key
+  telemetry: false
+model_list:
+- litellm_params:
+    api_base: http://localhost:11434
+    max_tokens: 12000
+    model: ollama/Flaude
+    stream: true
+    temperature: 0.2
+  model_name: sgr-Flaude
+- litellm_params:
+    api_base: http://localhost:11434
+    max_tokens: 12000
+    model: ollama/deepseek-r1
+    stream: true
+    temperature: 0.2
+  model_name: sgr-deepseek-r1
+- litellm_params:
+    api_base: http://localhost:11434
+    max_tokens: 12000
+    model: ollama/deepseek-r1:14b
+    stream: true
+    temperature: 0.2
+  model_name: sgr-deepseek-r1-14b
+- litellm_params:
+    api_base: http://localhost:11434
+    max_tokens: 12000
+    model: ollama/gemma3:12b
+    stream: true
+    temperature: 0.2
+  model_name: sgr-gemma3-12b
+- litellm_params:
+    api_base: http://localhost:11434
+    max_tokens: 12000
+    model: ollama/gemma3:27b-it-qat
+    stream: true
+    temperature: 0.2
+  model_name: sgr-gemma3-27b-it-qat
+- litellm_params:
+    api_base: http://localhost:11434
+    max_tokens: 12000
+    model: ollama/gpt-oss:20b
+    stream: true
+    temperature: 0.2
+  model_name: sgr-gpt-oss-20b
+- litellm_params:
+    api_base: http://localhost:11434
+    max_tokens: 12000
+    model: ollama/llama3.1
+    stream: true
+    temperature: 0.2
+  model_name: sgr-llama3.1
+- litellm_params:
+    api_base: http://localhost:11434
+    max_tokens: 12000
+    model: ollama/llama3.2
+    stream: true
+    temperature: 0.2
+  model_name: sgr-llama3.2
+- litellm_params:
+    api_base: http://localhost:11434
+    max_tokens: 12000
+    model: ollama/llama3.2:3b
+    stream: true
+    temperature: 0.2
+  model_name: sgr-llama3.2-3b
+- litellm_params:
+    api_base: http://localhost:11434
+    max_tokens: 12000
+    model: ollama/mistral
+    stream: true
+    temperature: 0.2
+  model_name: sgr-mistral
+- litellm_params:
+    api_base: http://localhost:11434
+    max_tokens: 12000
+    model: ollama/phi
+    stream: true
+    temperature: 0.2
+  model_name: sgr-phi
+- litellm_params:
+    api_base: http://localhost:11434
+    max_tokens: 12000
+    model: ollama/phi3
+    stream: true
+    temperature: 0.2
+  model_name: sgr-phi3
+- litellm_params:
+    api_base: http://localhost:11434
+    max_tokens: 12000
+    model: ollama/qwen2.5
+    stream: true
+    temperature: 0.2
+  model_name: sgr-qwen2.5
+- litellm_params:
+    api_base: http://localhost:11434
+    max_tokens: 12000
+    model: ollama/qwen2.5-coder-32k
+    stream: true
+    temperature: 0.2
+  model_name: sgr-qwen2.5-coder-32k
+- litellm_params:
+    api_base: http://localhost:11434
+    max_tokens: 12000
+    model: ollama/qwen2.5-coder:7b
+    stream: true
+    temperature: 0.2
+  model_name: sgr-qwen2.5-coder-7b
+- litellm_params:
+    api_base: http://localhost:11434
+    max_tokens: 12000
+    model: ollama/qwencodo64
+    stream: true
+    temperature: 0.2
+  model_name: sgr-qwencodo64
+- litellm_params:
+    api_base: http://localhost:11434
+    max_tokens: 12000
+    model: ollama/sgr-deepseek
+    stream: true
+    temperature: 0.2
+  model_name: sgr-deepseek
+- litellm_params:
+    api_base: http://localhost:11434
+    max_tokens: 12000
+    model: ollama/sgr-gemma
+    stream: true
+    temperature: 0.2
+  model_name: sgr-gemma
+- litellm_params:
+    api_base: http://localhost:11434
+    max_tokens: 12000
+    model: ollama/sgr-llama
+    stream: true
+    temperature: 0.2
+  model_name: sgr-llama
+- litellm_params:
+    api_base: http://localhost:11434
+    max_tokens: 12000
+    model: ollama/sgr-llama2
+    stream: true
+    temperature: 0.1
+  model_name: sgr-llama2
 router_settings:
-  # Single-target routing to Ollama for now; integration with `airsroute`
-  # can be added via custom middleware/callbacks if needed.
   num_retries: 0

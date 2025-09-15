@@ -22,6 +22,8 @@ trafilatura>=1.6.0
 # YouTube Transcript API для получения субтитров YouTube видео
 youtube-transcript-api>=1.0.0
 
+rapidfuzz>=3.9
+outlines>=0.0.46
 # Дополнительные зависимости для разработки (опционально)
 # pytest>=7.0.0          # Для тестирования
 # black>=23.0.0          # Для форматирования кода

@@ -1,0 +1,264 @@
+diff --git a/sgr_streaming_ec/state.py b/sgr_streaming_ec/state.py
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/sgr_streaming_ec/state.py
+@@ -0,0 +1,33 @@
++from __future__ import annotations
++from pydantic import BaseModel, Field, HttpUrl
++from typing import List, Optional, Dict
++
++class Fact(BaseModel):
++    text: str
++    source: Optional[HttpUrl] = None
++    confidence: float = Field(ge=0.0, le=1.0, default=0.6)
++
++class AgentState(BaseModel):
++    """Trusted, compact state carried between steps.
++    Avoids conditioning on sprawling scratchpads."""
++    facts: List[Fact] = []
++    goals: List[str] = []
++    plan: List[str] = []            # next bounded actions only
++    constraints: Dict = {}          # schema rules, must/forbidden lists
++    step: int = 0
++
++    def brief_context(self) -> str:
++        facts_str = "\n".join(
++            f"- {f.text} [conf={f.confidence:.2f}{' src='+str(f.source) if f.source else ''}]"
++            for f in self.facts[:24]
++        )
++        goals_str = "\n".join(f"- {g}" for g in self.goals[:10])
++        return f"FACTS:\n{facts_str}\n\nGOALS:\n{goals_str}\n"
++
++def start_state(user_goal: str, constraints: Dict | None = None) -> AgentState:
++    return AgentState(goals=[user_goal], constraints=constraints or {})
+diff --git a/sgr_streaming_ec/decoding.py b/sgr_streaming_ec/decoding.py
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/sgr_streaming_ec/decoding.py
+@@ -0,0 +1,40 @@
++from __future__ import annotations
++from typing import Tuple, Callable
++from pydantic import ValidationError
++from .state import AgentState
++import json, re
++
++try:
++    from outlines.fsm.json_schema import build_regex_from_schema  # noqa: F401
++    USE_OUTLINES = True
++except Exception:
++    USE_OUTLINES = False
++
++def try_validate_and_repair(raw: str, Model) -> Tuple[bool, AgentState | None, str]:
++    try:
++        obj = json.loads(raw)
++    except Exception:
++        candidate = re.sub(r"^[^{]*", "", raw, flags=re.S)
++        candidate = re.sub(r"([^}])+$", "", candidate, flags=re.S)
++        try:
++            obj = json.loads(candidate)
++        except Exception as e2:
++            return False, None, f"JSON parse failed: {e2}"
++    try:
++        model = Model.model_validate(obj)
++        return True, model, ""
++    except ValidationError as ve:
++        return False, None, f"Schema validation failed: {ve.errors()[:3]}"
++
++def generate_json(llm: Callable[[str, dict], str], prompt: str, Model, params: dict):
++    raw = llm(prompt, params)
++    return try_validate_and_repair(raw, Model)
+diff --git a/sgr_streaming_ec/guards.py b/sgr_streaming_ec/guards.py
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/sgr_streaming_ec/guards.py
+@@ -0,0 +1,35 @@
++from __future__ import annotations
++from .state import AgentState
++
++def coverage_gain(prev: AgentState, cand: AgentState) -> float:
++    prev_texts = [f.text for f in prev.facts]
++    new = [f for f in cand.facts if f.text not in prev_texts]
++    return len(new) / max(1, len(cand.facts))
++
++def non_contradiction(prev: AgentState, cand: AgentState) -> float:
++    # Placeholder: you can add stricter checks later
++    return 1.0
++
++def schema_valid(cand: AgentState) -> float:
++    try:
++        AgentState.model_validate(cand.model_dump())
++        return 1.0
++    except Exception:
++        return 0.0
++
++def novelty(prev: AgentState, cand: AgentState) -> float:
++    return 1.0 if cand.plan and cand.plan != prev.plan else 0.3
++
++def score_state(prev: AgentState, cand: AgentState) -> float:
++    return (
++        0.4 * coverage_gain(prev, cand)
++        + 0.3 * non_contradiction(prev, cand)
++        + 0.2 * schema_valid(cand)
++        + 0.1 * novelty(prev, cand)
++    )
+diff --git a/sgr_streaming_ec/llm_adapters.py b/sgr_streaming_ec/llm_adapters.py
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/sgr_streaming_ec/llm_adapters.py
+@@ -0,0 +1,9 @@
++from __future__ import annotations
++from typing import Dict
++
++class CallableAdapter:
++    def __init__(self, fn):
++        self.fn = fn
++    def __call__(self, prompt: str, params: Dict):
++        return self.fn(prompt=prompt, **params)
+diff --git a/sgr_streaming_ec/plan_execute.py b/sgr_streaming_ec/plan_execute.py
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/sgr_streaming_ec/plan_execute.py
+@@ -0,0 +1,48 @@
++from __future__ import annotations
++from .state import AgentState
++from .decoding import generate_json
++
++PLANNER_PROMPT = """You are a planner.
++Given goals and facts, propose the SINGLE next bounded action.
++Output JSON strictly matching schema.
++STATE:
++{state}
++"""
++
++EXECUTOR_PROMPT = """You are an executor.
++Perform the action in `plan`, update facts with NEW atomic claims.
++Output JSON strictly matching schema.
++STATE:
++{state}
++"""
++
++def plan_once(llm, state: AgentState, params) -> AgentState:
++    prompt = PLANNER_PROMPT.format(schema=AgentState.model_json_schema(), state=state.brief_context())
++    ok, model, err = generate_json(llm, prompt, AgentState, {**params, "temperature": 0.15, "top_p": 0.8})
++    if not ok:
++        raise RuntimeError(f"Planner failed: {err}")
++    model.step = state.step + 1
++    return AgentState(
++        facts=state.facts, goals=state.goals, plan=model.plan,
++        constraints=state.constraints, step=model.step
++    )
++
++def execute_once(llm, state: AgentState, params) -> AgentState:
++    prompt = EXECUTOR_PROMPT.format(schema=AgentState.model_json_schema(), state=state.brief_context())
++    ok, model, err = generate_json(llm, prompt, AgentState, {**params, "temperature": 0.3, "top_p": 0.85})
++    if not ok:
++        raise RuntimeError(f"Executor failed: {err}")
++    merged = list(state.facts)
++    for f in model.facts:
++        if all(f.text.strip().lower() != g.text.strip().lower() for g in merged):
++            merged.append(f)
++    return AgentState(
++        facts=merged, goals=state.goals, plan=state.plan,
++        constraints=state.constraints, step=state.step
++    )
+diff --git a/sgr_streaming_ec/loop.py b/sgr_streaming_ec/loop.py
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/sgr_streaming_ec/loop.py
+@@ -0,0 +1,32 @@
++from __future__ import annotations
++from .state import start_state, AgentState
++from .guards import score_state
++from .plan_execute import plan_once, execute_once
++
++class LoopConfig:
++    def __init__(self, max_steps=10, critic_threshold=0.72):
++        self.max_steps = max_steps
++        self.critic_threshold = critic_threshold
++
++def run(llm, user_goal: str, cfg: LoopConfig, base_params: dict) -> AgentState:
++    state = start_state(user_goal)
++    for _ in range(cfg.max_steps):
++        plan_state = plan_once(llm, state, base_params)
++        cand = execute_once(llm, plan_state, base_params)
++        s = score_state(state, cand)
++        if s < cfg.critic_threshold:
++            continue
++        state = AgentState(
++            facts=cand.facts, goals=state.goals, plan=[],
++            constraints=state.constraints, step=cand.step
++        )
++        if not state.goals or len(state.facts) >= 20:
++            break
++    return state
+diff --git a/sgr_streaming_ec/synthesize.py b/sgr_streaming_ec/synthesize.py
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/sgr_streaming_ec/synthesize.py
+@@ -0,0 +1,9 @@
++from __future__ import annotations
++from .state import AgentState
++
++def report_from_state(state: AgentState) -> str:
++    return "Findings:\n" + "\n".join(
++        f"- {f.text}{' ('+str(f.source)+')' if f.source else ''}" for f in state.facts
++    )
+diff --git a/sgr_streaming_ec/run.py b/sgr_streaming_ec/run.py
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/sgr_streaming_ec/run.py
+@@ -0,0 +1,39 @@
++from __future__ import annotations
++import argparse, os
++from .llm_adapters import CallableAdapter
++from .loop import run, LoopConfig
++from .synthesize import report_from_state
++
++def env_llm(prompt: str, **params):
++    from openai import OpenAI
++    client = OpenAI()
++    resp = client.chat.completions.create(
++        model=os.getenv("OPENAI_MODEL","gpt-4o-mini"),
++        messages=[{"role":"user","content":prompt}],
++        **params
++    )
++    return resp.choices[0].message.content
++
++def main():
++    ap = argparse.ArgumentParser()
++    ap.add_argument("--query", required=True)
++    ap.add_argument("--max-steps", type=int, default=8)
++    args = ap.parse_args()
++
++    llm = CallableAdapter(env_llm)
++    cfg = LoopConfig(max_steps=args.max_steps)
++    base_params = {"temperature":0.3, "top_p":0.85, "repetition_penalty":1.12}
++
++    state = run(llm, args.query, cfg, base_params)
++    print(report_from_state(state))
++
++if __name__ == "__main__":
++    main()
+diff --git a/sgr_streaming_ec/README.md b/sgr_streaming_ec/README.md
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/sgr_streaming_ec/README.md
+@@ -0,0 +1,12 @@
++# Error-Corrected Streaming (ECS)
++
++This module adds a *plan → execute → critic → (commit|retry/backtrack)* loop that reduces self-conditioning drift in small models.
++
++**Run**
++```bash
++python -m sgr_streaming_ec.run --query "Who built the first turbojet and when?" --max-steps 8
++```
+

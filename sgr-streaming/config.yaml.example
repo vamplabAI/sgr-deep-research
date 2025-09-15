@@ -6,9 +6,9 @@
 openai:
   api_key: "your-openai-api-key-here"  # Обязательно: Ваш OpenAI API ключ или master_key LiteLLM
   base_url: ""                         # Опционально: Альтернативный URL (например, LiteLLM proxy http://localhost:8000/v1)
-  model: "gpt-4o-mini"                 # Модель для использования (или имя из LiteLLM model_list, напр. research-ollama)
-  max_tokens: 8000                     # Максимальное количество токенов
-  temperature: 0.4                     # Температура генерации (0.0-1.0)
+  model: "gpt-4o-mini"                 # Модель для использования (или имя из LiteLLM model_list, напр. sgr-gemma)
+  max_tokens: 12000                    # Максимальное количество токенов (увеличено для полного JSON)
+  temperature: 0.2                     # Температура генерации (понижена для лучшего structured output)
 
 # Tavily Search Configuration
 tavily:
@@ -51,5 +51,38 @@ execution:
 #
 # 4. Создайте директорию для отчетов:
 #    mkdir reports
+#
+# ============================================================================
+# ============================================================================
+# ЛОКАЛЬНЫЕ МОДЕЛИ (Local Models Setup):
+# ============================================================================
+#
+# Для использования локальных моделей через Ollama:
+#
+# 1. Запустите Ollama:
+#    ollama serve
+#
+# 2. Запустите LiteLLM proxy:
+#    litellm --config proxy/litellm_config.yaml --host 0.0.0.0 --port 8000
+#
+# 3. (Опционально) Запустите airsroute gateway:
+#    python -m uvicorn proxy.airsroute_gateway.app:app --reload --port 8010
+#
+# 4. Настройте конфигурацию:
+#    openai:
+#      api_key: "dev-key"                    # Должен совпадать с master_key в LiteLLM
+#      base_url: "http://localhost:8000/v1"  # LiteLLM proxy URL
+#      model: "sgr-gemma"                    # Имя из model_list в litellm_config.yaml
+#      temperature: 0.1                     # Низкая температура для structured output
+#      max_tokens: 16000                    # Больше токенов для сложных схем
+#
+# 5. Включите отладку JSON (опционально):
+#    export SGR_DEBUG_JSON=1
+#
+# Рекомендуемые модели для structured output:
+# - gemma2:27b (лучший результат)
+# - llama3.1:70b (отличный результат)
+# - gemma2:9b (хороший результат)
+# - llama3.1:8b (приемлемый результат)
 #
 # ============================================================================

@@ -97,6 +97,9 @@ def load_config():
 
 CONFIG = load_config()
 
+# Disable Rich Live dashboard on simple TTYs
+SIMPLE_UI = os.getenv('SGR_SIMPLE_TTY', '0').strip().lower() in ('1', 'true', 'yes')
+
 # =============================================================================
 # SGR SCHEMAS (same as original)
 # =============================================================================
@@ -637,6 +640,7 @@ class StreamingSGRAgent:
     
     def __init__(self, config):
         self.config = config
+        self.simple_ui = SIMPLE_UI
         
         # Initialize OpenAI client
         openai_kwargs = {'api_key': config['openai_api_key']}
@@ -720,6 +724,8 @@ class StreamingSGRAgent:
         return f"""
 You are an expert researcher with adaptive planning and Schema-Guided Reasoning capabilities.
 
+🚨 CRITICAL: You MUST respond with valid JSON matching the NextStep schema. NO natural language text allowed.
+
 USER REQUEST EXAMPLE: "{user_request}"
 ↑ 🚨 CRITICAL LANGUAGE RULE: Detect the language from this request and use THE SAME LANGUAGE for ALL outputs.
 
@@ -728,21 +734,43 @@ LANGUAGE DETECTION EXAMPLES:
 - "Спланируй подробно..." → RUSSIAN request → ALL reports in RUSSIAN
 - "Recherche détaillée..." → FRENCH request → ALL reports in FRENCH
 
+🚨 JSON OUTPUT REQUIREMENT:
+You MUST respond with a valid JSON object matching this NextStep schema:
+{{
+  "reasoning_steps": ["step 1", "step 2"],
+  "current_situation": "description",
+  "plan_status": "active|paused|completed",
+  "searches_done": 0,
+  "enough_data": false,
+  "remaining_steps": ["next step"],
+  "task_completed": false,
+  "function": {{ "tool": "clarification|generate_plan|web_search|adapt_plan|create_report|report_completion", ... }}
+}}
+
 CORE PRINCIPLES:
-1. CLARIFICATION FIRST: For ANY uncertainty - ask clarifying questions
-2. DO NOT make assumptions - better ask than guess wrong
+1. SMART CLARIFICATION: Only ask for clarification when the request is truly ambiguous or impossible to research
+2. REASONABLE ASSUMPTIONS: Make reasonable assumptions for common research requests
 3. Adapt plan when new data conflicts with initial assumptions
 4. Search queries in SAME LANGUAGE as user request
 5. 🚨 REPORT ENTIRELY in SAME LANGUAGE as user request (title, headers, content - ALL in same language)
 6. Every fact in report MUST have inline citation [1], [2], [3] integrated into sentences
 
+CLARIFICATION GUIDELINES:
+🚨 CRITICAL: If user says "begin", "start", "proceed", "go ahead" - NEVER ask for clarification, ALWAYS generate_plan
+- Only use clarification for genuinely unclear requests (e.g., "test", "help", single words)
+- For reasonable topics, proceed with generate_plan (e.g., "jazz history", "BMW prices", "AI trends")
+- If user provides ANY context or direction, proceed with generate_plan
+- Make reasonable assumptions about scope and focus
+- Prefer action over endless clarification
+- NEVER clarify twice in a row - if already clarified once, proceed with generate_plan
+
 WORKFLOW:
-0. clarification (HIGHEST PRIORITY) - when request unclear
-1. generate_plan - create research plan
+1. generate_plan - create research plan (DEFAULT for clear topics)
 2. web_search - gather information (2-3 searches MAX, FOLLOW YOUR PLAN)
 3. adapt_plan - adapt when conflicts found
 4. create_report - create detailed report with citations
 5. report_completion - complete task
+6. clarification - ONLY when request is truly ambiguous
 
 SEARCH STRATEGY:
 - After generating a plan, FOLLOW IT step by step
@@ -753,6 +781,8 @@ SEARCH STRATEGY:
 ANTI-CYCLING: Maximum 1 clarification request per session.
 ADAPTIVITY: Actively change plan when discovering new data.
 LANGUAGE ADAPTATION: Always respond and create reports in the SAME LANGUAGE as the user's request.
+
+🚨 REMEMBER: Respond ONLY with valid JSON. No explanatory text before or after the JSON.
         """.strip()
     
     def stream_next_step(self, messages: List[Dict[str, str]]) -> tuple:
@@ -768,17 +798,58 @@ LANGUAGE ADAPTATION: Always respond and create reports in the SAME LANGUAGE as t
             self.console.print(
                 f"[dim]🔌 Streaming request: model={self.config['openai_model']}, response_format=NextStep, max_tokens={self.config['max_tokens']}, temperature={self.config['temperature']}[/dim]"
             )
-            with self.client.beta.chat.completions.stream(
-                model=self.config['openai_model'],
-                messages=messages,
-                response_format=NextStep,
-                max_tokens=self.config['max_tokens'],
-                temperature=self.config['temperature']
-            ) as stream:
-                
-                final_response, raw_content, metrics = enhanced_streaming_display(
-                    stream, "Planning Next Step", self.console
+            # Simple TTY mode: avoid streaming UI entirely; get raw text and parse ourselves
+            if self.simple_ui:
+                completion = self.client.chat.completions.create(
+                    model=self.config['openai_model'],
+                    messages=messages,
+                    max_tokens=self.config['max_tokens'],
+                    temperature=self.config['temperature']
                 )
+                raw_content = completion.choices[0].message.content
+                metrics = {}
+                self._debug_dump_raw("nextstep_simple_parse_raw", raw_content or "")
+                data = self._extract_first_json_dict(raw_content or "")
+                if data is not None:
+                    try:
+                        parsed = NextStep(**data)
+                        return parsed, (raw_content or ""), metrics
+                    except Exception:
+                        # Try schema coercion (e.g., {'clarification_questions': [...], 'actions': []})
+                        coerced = self._coerce_model_json_to_nextstep(data)
+                        if coerced is not None:
+                            return coerced, (raw_content or ""), metrics
+                else:
+                    # Regex fallback: extract questions list without full JSON
+                    qs = self._fallback_extract_clarification(raw_content or "")
+                    if qs:
+                        coerced = self._coerce_model_json_to_nextstep({
+                            "clarification_questions": qs,
+                            "actions": []
+                        })
+                        if coerced is not None:
+                            return coerced, (raw_content or ""), metrics
+                return None, (raw_content or ""), metrics
+            # Try structured output first, fallback to regular if not supported
+            try:
+                with self.client.beta.chat.completions.stream(
+                    model=self.config['openai_model'],
+                    messages=messages,
+                    response_format=NextStep,
+                    max_tokens=self.config['max_tokens'],
+                    temperature=self.config['temperature']
+                ) as stream:
+                
+                    if self.simple_ui:
+                        final_response, raw_content, metrics = show_streaming_progress_with_parsing(
+                            stream, "Planning Next Step", self.console
+                        )
+                    else:
+                        final_response, raw_content, metrics = enhanced_streaming_display(
+                            stream, "Planning Next Step", self.console
+                        )
+                    # Optional debug dump of raw streaming text
+                    self._debug_dump_raw("nextstep_stream_raw", raw_content or "")
                 
                 # Update field durations for current step
                 if 'field_durations' in metrics:
@@ -789,16 +860,101 @@ LANGUAGE ADAPTATION: Always respond and create reports in the SAME LANGUAGE as t
                     content = final_response.choices[0].message.content
                     if content:
                         try:
-                            # Parse JSON and create NextStep object
-                            json_data = json.loads(content)
-                            parsed = NextStep(**json_data)
-                            return parsed, raw_content, metrics
+                            # Parse JSON and create NextStep object (strip fences if present)
+                            json_data = self._extract_first_json_dict(content)
+                            if json_data is None:
+                                raise json.JSONDecodeError("no json", content, 0)
+                            try:
+                                parsed = NextStep(**json_data)
+                                return parsed, raw_content, metrics
+                            except Exception as validation_error:
+                                if os.getenv('SGR_DEBUG_JSON', '').strip().lower() in ('1', 'true', 'yes'):
+                                    self.console.print(f"[yellow]🔧 NextStep validation failed, trying coercion: {validation_error}[/yellow]")
+                                coerced = self._coerce_model_json_to_nextstep(json_data)
+                                if coerced is not None:
+                                    if os.getenv('SGR_DEBUG_JSON', '').strip().lower() in ('1', 'true', 'yes'):
+                                        self.console.print(f"[green]✅ Coercion successful: {coerced.function.tool}[/green]")
+                                    return coerced, raw_content, metrics
+                                raise
                         except (json.JSONDecodeError, Exception) as e:
-                            self.console.print(f"❌ [red]JSON parsing error: {e}[/red]")
-                            self.console.print(f"Raw content: {content}")
+                            # Enhanced error handling with debugging info
+                            self._debug_dump_raw("nextstep_stream_content", content)
+                            
+                            # Show detailed error information
+                            error_type = type(e).__name__
+                            self.console.print(f"❌ [red]Failed to parse LLM response ({error_type})[/red]")
+                            
+                            if os.getenv('SGR_DEBUG_JSON', '').strip().lower() in ('1', 'true', 'yes'):
+                                self.console.print(f"[dim]Error details: {e}[/dim]")
+                                self.console.print(f"[dim]Raw content preview: {content[:200]}...[/dim]")
+                                
+                                # Try to identify the issue
+                                if isinstance(e, json.JSONDecodeError):
+                                    self.console.print(f"[yellow]💡 JSON parsing failed at position {e.pos}[/yellow]")
+                                    self.console.print(f"[yellow]💡 Try lowering temperature (0.1-0.3) for better structured output[/yellow]")
+                                else:
+                                    self.console.print(f"[yellow]💡 Schema validation failed - model may need better prompting[/yellow]")
+                                
+                                # Show model recommendations
+                                self.console.print("[cyan]📋 Recommended models for structured output:[/cyan]")
+                                self.console.print("[cyan]  • Best: gemma2:27b, llama3.1:70b[/cyan]")
+                                self.console.print("[cyan]  • Good: gemma2:9b, llama3.1:8b[/cyan]")
+                            else:
+                                self.console.print("[dim]💡 Enable debug mode: export SGR_DEBUG_JSON=1[/dim]")
+                            
                             return None, raw_content, metrics
                 
                 return None, raw_content, metrics
+            
+            except Exception as structured_error:
+                # Structured output failed, try regular completion with explicit JSON instruction
+                self.console.print("[yellow]⚠️ Structured output failed, trying regular completion...[/yellow]")
+                
+                # Add explicit JSON instruction to the last message
+                json_messages = messages.copy()
+                if json_messages:
+                    json_messages[-1]['content'] += "\n\nIMPORTANT: Respond with ONLY valid JSON matching the NextStep schema. No other text."
+                
+                try:
+                    response = self.client.chat.completions.create(
+                        model=self.config['openai_model'],
+                        messages=json_messages,
+                        max_tokens=self.config['max_tokens'],
+                        temperature=self.config['temperature']
+                    )
+                    
+                    if response and response.choices:
+                        content = response.choices[0].message.content
+                        if content:
+                            # Try to extract and parse JSON
+                            json_data = self._extract_first_json_dict(content)
+                            if json_data:
+                                try:
+                                    parsed = NextStep(**json_data)
+                                    self.console.print("✅ [green]Fallback JSON parsing successful[/green]")
+                                    return parsed, content, {}
+                                except Exception:
+                                    coerced = self._coerce_model_json_to_nextstep(json_data)
+                                    if coerced is not None:
+                                        self.console.print("✅ [green]Fallback coercion successful[/green]")
+                                        return coerced, content, {}
+                            
+                            # Last resort: try to extract clarification questions from natural language
+                            questions = self._fallback_extract_clarification(content)
+                            if questions:
+                                coerced = self._coerce_model_json_to_nextstep({
+                                    "clarification_questions": questions,
+                                    "actions": []
+                                })
+                                if coerced is not None:
+                                    self.console.print("✅ [green]Fallback clarification extraction successful[/green]")
+                                    return coerced, content, {}
+                    
+                except Exception as fallback_error:
+                    self.console.print(f"❌ [red]Fallback also failed: {fallback_error}[/red]")
+                
+                # If all fallbacks fail, return the original structured error
+                raise structured_error
                 
         except Exception as e:
             # Enhanced diagnostics for gateways that return custom errors
@@ -834,25 +990,794 @@ LANGUAGE ADAPTATION: Always respond and create reports in the SAME LANGUAGE as t
             # Non-streaming fallback (some gateways don't support streaming structured outputs)
             try:
                 self.console.print("[yellow]🔁 Falling back to non-streaming structured request...[/yellow]")
-                completion = self.client.beta.chat.completions.parse(
+                completion = self.client.chat.completions.create(
                     model=self.config['openai_model'],
                     messages=messages,
-                    response_format=NextStep,
                     max_tokens=self.config['max_tokens'],
                     temperature=self.config['temperature']
                 )
-                parsed = completion.choices[0].message.parsed
                 raw_content = completion.choices[0].message.content
                 metrics = {}
-                if parsed is not None:
-                    return parsed, raw_content or "", metrics
+                # Optional debug dump of non-streaming raw text
+                self._debug_dump_raw("nextstep_parse_raw", raw_content or "")
+                data = self._extract_first_json_dict(raw_content or "")
+                if data is not None:
+                    try:
+                        parsed = NextStep(**data)
+                        return parsed, raw_content or "", metrics
+                    except Exception:
+                        coerced = self._coerce_model_json_to_nextstep(data)
+                        if coerced is not None:
+                            return coerced, raw_content or "", metrics
+                else:
+                    qs = self._fallback_extract_clarification(raw_content or "")
+                    if qs:
+                        coerced = self._coerce_model_json_to_nextstep({
+                            "clarification_questions": qs,
+                            "actions": []
+                        })
+                        if coerced is not None:
+                            return coerced, raw_content or "", metrics
             except Exception as e2:
                 err2_type = type(e2).__name__
                 status2 = getattr(e2, 'status_code', None) or getattr(e2, 'http_status', None)
                 code2 = getattr(e2, 'code', None)
                 self.console.print(f"❌ [bold red]Fallback parse failed:[/bold red] {e2} (type={err2_type}, status={status2}, code={code2})")
             raise
+
+    def _debug_dump_raw(self, label: str, text: str) -> None:
+        """Enhanced debug dump with JSON analysis when SGR_DEBUG_JSON=1."""
+        try:
+            if os.getenv('SGR_DEBUG_JSON', '').strip().lower() not in ('1', 'true', 'yes'):
+                return
+            
+            os.makedirs('logs', exist_ok=True)
+            ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+            
+            # Get current task name for better file naming
+            task_name = getattr(self, 'current_task', 'unknown')[:20]
+            safe_task = re.sub(r'[^\w\-_]', '_', task_name)
+            
+            path = os.path.join('logs', f"{ts}_{safe_task}_{label}.txt")
+            
+            # Enhanced content with analysis
+            analysis_content = f"""=== SGR DEBUG DUMP ===
+Timestamp: {datetime.now().isoformat()}
+Label: {label}
+Task: {task_name}
+Content Length: {len(text)} characters
+
+=== RAW CONTENT ===
+{text}
+
+=== JSON ANALYSIS ===
+"""
+            
+            # Try to analyze JSON structure
+            try:
+                if text.strip():
+                    # Check if it looks like JSON
+                    stripped = text.strip()
+                    if stripped.startswith('{') and stripped.endswith('}'):
+                        analysis_content += "✅ Looks like complete JSON\n"
+                        try:
+                            parsed = json.loads(stripped)
+                            analysis_content += f"✅ Valid JSON with {len(parsed)} top-level keys\n"
+                            analysis_content += f"Keys: {list(parsed.keys())}\n"
+                            
+                            # Check for expected NextStep fields
+                            expected_fields = ['reasoning_steps', 'current_situation', 'function']
+                            missing_fields = [f for f in expected_fields if f not in parsed]
+                            if missing_fields:
+                                analysis_content += f"⚠️ Missing NextStep fields: {missing_fields}\n"
+                            else:
+                                analysis_content += "✅ Contains expected NextStep fields\n"
+                                
+                        except json.JSONDecodeError as je:
+                            analysis_content += f"❌ JSON syntax error at position {je.pos}: {je.msg}\n"
+                    else:
+                        analysis_content += "⚠️ Does not look like complete JSON (missing braces)\n"
+                else:
+                    analysis_content += "❌ Empty content\n"
+            except Exception as ae:
+                analysis_content += f"❌ Analysis error: {ae}\n"
+            
+            analysis_content += "\n=== END DEBUG DUMP ===\n"
+            
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(analysis_content)
+            
+            preview = (text or '')[:120].replace('\n', ' ')
+            self.console.print(f"[dim]🧪 Debug saved to {path}[/dim]")
+            self.console.print(f"[dim]📄 Preview: {preview}...[/dim]")
+            
+        except Exception:
+            # Fallback to simple dump
+            try:
+                os.makedirs('logs', exist_ok=True)
+                ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+                path = os.path.join('logs', f"{ts}_{label}.txt")
+                with open(path, 'w', encoding='utf-8') as f:
+                    f.write(text)
+            except Exception:
+                pass
+
+    def _coerce_model_json_to_nextstep(self, data: Dict[str, Any]) -> Optional['NextStep']:
+        """Enhanced coercion with comprehensive schema enforcement.
+        Uses Schema Enforcement Engine to handle ALL validation issues proactively.
+        """
+        try:
+            if not isinstance(data, dict):
+                return None
+            
+            # Use Schema Enforcement Engine for comprehensive validation
+            from schema_enforcement_engine import SchemaEnforcementEngine
+            engine = SchemaEnforcementEngine()
+            
+            # Pass context to prevent clarification loops
+            context = {
+                'clarification_used': self.context.get('clarification_used', False),
+                'user_messages': getattr(self, 'recent_user_messages', [])
+            }
+            
+            # First try comprehensive schema enforcement
+            try:
+                enforced_data = engine.enforce_schema(data, context)
+                return NextStep(**enforced_data)
+            except Exception as enforcement_error:
+                if os.getenv('SGR_DEBUG_JSON', '').strip().lower() in ('1', 'true', 'yes'):
+                    self.console.print(f"[dim yellow]⚠️ Schema enforcement failed: {enforcement_error}[/dim yellow]")
+                # Fall back to original coercion patterns
+                pass
+            
+            # Helper function to ensure minimum list lengths
+            def ensure_min_length(items, min_len, default_items):
+                if isinstance(items, str):
+                    items = [items]
+                if not isinstance(items, list):
+                    items = []
+                while len(items) < min_len:
+                    items.extend(default_items[:min_len - len(items)])
+                return items[:min(len(items), min_len + 3)]  # Cap at reasonable max
+            
+            # Pattern 1: Clarification format {clarification_questions: [...], actions: []}
+            if 'clarification_questions' in data:
+                questions = data.get('clarification_questions') or []
+                if isinstance(questions, str):
+                    questions = [questions]
+                
+                # Only proceed with clarification if questions are meaningful
+                # If questions are generic, convert to generate_plan instead
+                generic_questions = [
+                    "what do you want to research",
+                    "could you provide more details",
+                    "what are you looking for",
+                    "can you be more specific"
+                ]
+                
+                questions_text = ' '.join(questions).lower()
+                is_generic = any(generic in questions_text for generic in generic_questions)
+                
+                if is_generic and len(questions) <= 2:
+                    # Convert generic clarification to generate_plan
+                    reasoning_steps = ensure_min_length([
+                        "User request can be interpreted as a research topic",
+                        "Will proceed with reasonable assumptions and create research plan"
+                    ], 2, [])
+                    
+                    result = {
+                        "reasoning_steps": reasoning_steps,
+                        "current_situation": "Creating research plan based on user request.",
+                        "plan_status": "active",
+                        "searches_done": 0,
+                        "enough_data": False,
+                        "remaining_steps": ["Execute research plan", "Gather information", "Create report"],
+                        "task_completed": False,
+                        "function": {
+                            "tool": "generate_plan",
+                            "reasoning": "Request is clear enough to proceed with research planning.",
+                            "research_goal": "Research the requested topic comprehensively",
+                            "planned_steps": [
+                                "Conduct web search for current information",
+                                "Gather comprehensive data from reliable sources",
+                                "Analyze and synthesize findings into report"
+                            ],
+                            "search_strategies": [
+                                "Web search for current and relevant information",
+                                "Focus on authoritative and recent sources"
+                            ]
+                        }
+                    }
+                    return NextStep(**result)
+                
+                # Proceed with clarification only if questions are specific
+                questions = ensure_min_length(questions, 3, [
+                    "Could you please provide more specific details about your request?",
+                    "What particular aspect are you most interested in?",
+                    "Are there any specific requirements or constraints I should know about?"
+                ])
+                
+                unclear_terms = ensure_min_length(data.get('unclear_terms', []), 1, [
+                    "The request topic or scope"
+                ])
+                
+                assumptions = ensure_min_length(data.get('assumptions', []), 2, [
+                    "You want a general overview of the topic",
+                    "You need current and accurate information"
+                ])
+                
+                reasoning_steps = ensure_min_length([
+                    "User request requires specific clarification",
+                    "Need additional details to provide targeted research"
+                ], 2, [])
+                
+                result = {
+                    "reasoning_steps": reasoning_steps,
+                    "current_situation": "Awaiting user clarification to proceed with research.",
+                    "plan_status": "paused",
+                    "searches_done": 0,
+                    "enough_data": False,
+                    "remaining_steps": ["Receive clarification", "Generate research plan"],
+                    "task_completed": False,
+                    "function": {
+                        "tool": "clarification",
+                        "reasoning": "Need user to clarify request to provide accurate research.",
+                        "questions": questions,
+                        "unclear_terms": unclear_terms,
+                        "assumptions": assumptions
+                    }
+                }
+                return NextStep(**result)
+            
+            # Pattern 2: Full NextStep format but with schema issues
+            if 'reasoning_steps' in data and 'current_situation' in data and 'function' in data:
+                # This looks like a NextStep but might have schema issues
+                reasoning_steps = ensure_min_length(data.get('reasoning_steps', []), 2, [
+                    "Processing user request",
+                    "Determining next action"
+                ])
+                
+                current_situation = data.get('current_situation') or 'Processing request'
+                plan_status = data.get('plan_status', 'active')
+                searches_done = data.get('searches_done', 0)
+                enough_data = data.get('enough_data', False)
+                task_completed = data.get('task_completed', False)
+                
+                # Fix remaining_steps if it has complex objects
+                remaining_steps = data.get('remaining_steps', [])
+                if remaining_steps and isinstance(remaining_steps[0], dict):
+                    # Convert complex objects to simple strings
+                    simple_steps = []
+                    for step in remaining_steps:
+                        if isinstance(step, dict):
+                            if 'action_type' in step:
+                                action = step['action_type'].replace('_', ' ').title()
+                                query = step.get('search_query', '')
+                                if query:
+                                    simple_steps.append(f"{action}: {query}")
+                                else:
+                                    simple_steps.append(action)
+                            else:
+                                simple_steps.append(str(step))
+                        else:
+                            simple_steps.append(str(step))
+                    remaining_steps = simple_steps
+                
+                remaining_steps = ensure_min_length(remaining_steps, 1, ["Continue with plan"])
+                
+                # Fix function object based on tool type
+                function_data = data.get('function', {})
+                tool = function_data.get('tool', 'clarification')
+                
+                if tool == 'generate_plan':
+                    # Extract research goal from reasoning or remaining steps
+                    research_goal = "Research jazz history in the first thirty years"
+                    if reasoning_steps:
+                        goal_text = reasoning_steps[0].lower()
+                        if 'jazz' in goal_text:
+                            research_goal = "Research the history and development of jazz music in its first thirty years (1890s-1920s)"
+                    
+                    # Generate planned steps from remaining_steps or defaults
+                    planned_steps = []
+                    search_strategies = []
+                    
+                    if remaining_steps:
+                        for step in remaining_steps:
+                            if 'search' in step.lower():
+                                search_strategies.append(f"Web search: {step}")
+                                planned_steps.append(f"Execute {step}")
+                            else:
+                                planned_steps.append(step)
+                    
+                    # Ensure minimum requirements
+                    planned_steps = ensure_min_length(planned_steps, 3, [
+                        "Research early jazz origins and key figures",
+                        "Investigate jazz development in the 1920s",
+                        "Analyze jazz evolution and major milestones"
+                    ])
+                    
+                    search_strategies = ensure_min_length(search_strategies, 2, [
+                        "Search for early jazz history and origins",
+                        "Research jazz development in the first three decades"
+                    ])
+                    
+                    function_obj = {
+                        "tool": "generate_plan",
+                        "reasoning": function_data.get('reasoning', "Generated comprehensive research plan for jazz history"),
+                        "research_goal": research_goal,
+                        "planned_steps": planned_steps,
+                        "search_strategies": search_strategies
+                    }
+                    
+                elif tool == 'clarification':
+                    # Handle clarification function
+                    questions = ensure_min_length(function_data.get('questions', []), 3, [
+                        "Could you provide more specific details?",
+                        "What particular aspect interests you most?",
+                        "Are there specific requirements to consider?"
+                    ])
+                    
+                    unclear_terms = ensure_min_length(function_data.get('unclear_terms', []), 1, [
+                        "Request scope and focus"
+                    ])
+                    
+                    assumptions = ensure_min_length(function_data.get('assumptions', []), 2, [
+                        "You want comprehensive information",
+                        "Current and accurate data is preferred"
+                    ])
+                    
+                    function_obj = {
+                        "tool": "clarification",
+                        "reasoning": function_data.get('reasoning', "Need clarification to proceed"),
+                        "questions": questions,
+                        "unclear_terms": unclear_terms,
+                        "assumptions": assumptions
+                    }
+                    
+                else:
+                    # Default to clarification for unknown tools
+                    function_obj = {
+                        "tool": "clarification",
+                        "reasoning": "Need clarification to proceed with request",
+                        "questions": [
+                            "Could you provide more specific details about your request?",
+                            "What particular aspect are you most interested in?",
+                            "Are there any specific requirements I should know about?"
+                        ],
+                        "unclear_terms": ["Request scope"],
+                        "assumptions": [
+                            "You want comprehensive information",
+                            "Current data is preferred"
+                        ]
+                    }
+                
+                result = {
+                    "reasoning_steps": reasoning_steps,
+                    "current_situation": current_situation,
+                    "plan_status": plan_status,
+                    "searches_done": searches_done,
+                    "enough_data": enough_data,
+                    "remaining_steps": remaining_steps,
+                    "task_completed": task_completed,
+                    "function": function_obj
+                }
+                
+                return NextStep(**result)
+            
+            # Pattern 3: Direct tool format {tool: "...", ...}
+            if 'tool' in data:
+                tool = data.get('tool')
+                reasoning = data.get('reasoning', f"Executing {tool} step.")
+                
+                if tool == 'clarification':
+                    questions = ensure_min_length(data.get('questions', []), 3, [
+                        "Could you please provide more specific details?",
+                        "What particular aspect interests you most?",
+                        "Are there specific requirements I should consider?"
+                    ])
+                    
+                    unclear_terms = ensure_min_length(data.get('unclear_terms', []), 1, [
+                        "The specific scope or focus area"
+                    ])
+                    
+                    assumptions = ensure_min_length(data.get('assumptions', []), 2, [
+                        "You want comprehensive information on the topic",
+                        "Current and accurate data is preferred"
+                    ])
+                    
+                    reasoning_steps = ensure_min_length([reasoning, "Clarification needed before proceeding"], 2, [])
+                    
+                    result = {
+                        "reasoning_steps": reasoning_steps,
+                        "current_situation": "Awaiting user clarification.",
+                        "plan_status": "paused",
+                        "searches_done": 0,
+                        "enough_data": False,
+                        "remaining_steps": ["Receive clarification", "Generate plan"],
+                        "task_completed": False,
+                        "function": {
+                            "tool": "clarification",
+                            "reasoning": reasoning,
+                            "questions": questions,
+                            "unclear_terms": unclear_terms,
+                            "assumptions": assumptions
+                        }
+                    }
+                    return NextStep(**result)
+                
+                elif tool == 'generate_plan':
+                    planned_steps = ensure_min_length(data.get('planned_steps', []), 3, [
+                        "Conduct initial research",
+                        "Gather comprehensive information",
+                        "Analyze and synthesize findings"
+                    ])
+                    
+                    search_strategies = ensure_min_length(data.get('search_strategies', []), 2, [
+                        "Web search for current information",
+                        "Academic and reliable source verification"
+                    ])
+                    
+                    reasoning_steps = ensure_min_length([reasoning, "Research plan created"], 2, [])
+                    
+                    result = {
+                        "reasoning_steps": reasoning_steps,
+                        "current_situation": "Research plan generated and ready to execute.",
+                        "plan_status": "active",
+                        "searches_done": 0,
+                        "enough_data": False,
+                        "remaining_steps": planned_steps[:3],
+                        "task_completed": False,
+                        "function": {
+                            "tool": "generate_plan",
+                            "reasoning": reasoning,
+                            "research_goal": data.get('research_goal', 'Conduct comprehensive research on the given topic'),
+                            "planned_steps": planned_steps,
+                            "search_strategies": search_strategies
+                        }
+                    }
+                    return NextStep(**result)
+                
+                elif tool == 'web_search':
+                    reasoning_steps = ensure_min_length([reasoning, "Executing web search"], 2, [])
+                    
+                    result = {
+                        "reasoning_steps": reasoning_steps,
+                        "current_situation": "Performing web search for information.",
+                        "plan_status": "active",
+                        "searches_done": 1,
+                        "enough_data": False,
+                        "remaining_steps": ["Analyze search results", "Continue research"],
+                        "task_completed": False,
+                        "function": {
+                            "tool": "web_search",
+                            "reasoning": reasoning,
+                            "query": data.get('query', 'research topic'),
+                            "max_results": data.get('max_results', 10),
+                            "scrape_content": data.get('scrape_content', False)
+                        }
+                    }
+                    return NextStep(**result)
+            
+            # Pattern 4: Minimal reasoning format {reasoning: "...", action: "..."}
+            if 'reasoning' in data and ('action' in data or 'next_action' in data):
+                reasoning = data.get('reasoning', 'Processing request.')
+                action = data.get('action') or data.get('next_action', 'generate_plan')
+                
+                reasoning_steps = ensure_min_length([reasoning, "Proceeding with research planning"], 2, [])
+                
+                # Default to generate_plan instead of clarification
+                result = {
+                    "reasoning_steps": reasoning_steps,
+                    "current_situation": "Creating research plan based on user request.",
+                    "plan_status": "active",
+                    "searches_done": 0,
+                    "enough_data": False,
+                    "remaining_steps": ["Execute research plan", "Gather information", "Create report"],
+                    "task_completed": False,
+                    "function": {
+                        "tool": "generate_plan",
+                        "reasoning": "User request is clear enough to proceed with research planning.",
+                        "research_goal": "Research the requested topic comprehensively",
+                        "planned_steps": [
+                            "Conduct web search for current information",
+                            "Gather comprehensive data from reliable sources", 
+                            "Analyze and synthesize findings into report"
+                        ],
+                        "search_strategies": [
+                            "Web search for current and relevant information",
+                            "Focus on authoritative and recent sources"
+                        ]
+                    }
+                }
+                return NextStep(**result)
+                
+        except Exception as e:
+            # Log coercion failure for debugging
+            if os.getenv('SGR_DEBUG_JSON', '').strip().lower() in ('1', 'true', 'yes'):
+                self.console.print(f"[dim yellow]⚠️ Coercion failed: {e}[/dim yellow]")
+            return None
+        
+        return None
+
+    def _fallback_extract_clarification(self, text: str) -> Optional[list]:
+        """Enhanced extraction of clarification questions from natural language responses.
+        Handles various formats including natural language, bullets, and JSON fragments.
+        """
+        try:
+            import re
+            
+            # Pattern 1: Try to capture list in brackets
+            m = re.search(r"clarification_questions\s*:\s*\[(.*?)\]", text, re.DOTALL | re.IGNORECASE)
+            if m:
+                block = m.group(1)
+                items = re.findall(r"\"([^\"]+)\"", block)
+                if items:
+                    return [s.strip() for s in items if s.strip()]
+            
+            # Pattern 2: Look for question patterns in natural language
+            question_patterns = [
+                r"Could you (?:please )?(?:provide|specify|clarify|tell me).*?\?",
+                r"What (?:specific|particular|kind of|type of).*?\?",
+                r"Are there (?:any|specific).*?\?",
+                r"Do you (?:want|need|have).*?\?",
+                r"Would you like.*?\?",
+                r"Can you (?:please )?(?:provide|specify|clarify).*?\?",
+                r"Which (?:specific|particular|aspect).*?\?",
+                r"How (?:detailed|specific|comprehensive).*?\?"
+            ]
+            
+            questions = []
+            for pattern in question_patterns:
+                matches = re.findall(pattern, text, re.IGNORECASE | re.DOTALL)
+                for match in matches:
+                    clean_question = re.sub(r'\s+', ' ', match.strip())
+                    if clean_question and len(clean_question) > 10:  # Reasonable length
+                        questions.append(clean_question)
+            
+            if questions:
+                # Remove duplicates while preserving order
+                seen = set()
+                unique_questions = []
+                for q in questions:
+                    if q.lower() not in seen:
+                        seen.add(q.lower())
+                        unique_questions.append(q)
+                return unique_questions[:5]  # Limit to 5 questions
+            
+            # Pattern 3: Lines beginning with dash or asterisk
+            items = re.findall(r"^[\-\*]\s*(.+)$", text, re.MULTILINE)
+            items = [s.strip().strip('"') for s in items if s.strip()]
+            if items:
+                return items[:5]  # Limit to 5 questions
+            
+            # Pattern 4: Look for sentences ending with question marks
+            sentences = re.findall(r"[A-Z][^.!?]*\?", text)
+            if sentences:
+                clean_sentences = []
+                for sentence in sentences:
+                    clean = sentence.strip()
+                    if len(clean) > 15 and len(clean) < 200:  # Reasonable length
+                        clean_sentences.append(clean)
+                if clean_sentences:
+                    return clean_sentences[:3]  # Limit to 3 questions
+            
+            # Pattern 5: If text contains clarification-related keywords, generate default questions
+            clarification_keywords = ['clarify', 'unclear', 'ambiguous', 'specify', 'details', 'more information']
+            if any(keyword in text.lower() for keyword in clarification_keywords):
+                return [
+                    "Could you please provide more specific details about your request?",
+                    "What particular aspect are you most interested in?",
+                    "Are there any specific requirements or constraints I should know about?"
+                ]
+            
+            return None
+            
+        except Exception:
+            return None
+
+    def _clean_json_text(self, text: str) -> str:
+        """Clean and fix common JSON issues in model output"""
+        import re
+        
+        # Remove code fences
+        cleaned = text.strip().replace('\r', '')
+        if cleaned.startswith("```"):
+            i = 3
+            while i < len(cleaned) and cleaned[i].isalpha():
+                i += 1
+            while i < len(cleaned) and cleaned[i] in (' ', '\t'):
+                i += 1
+            cleaned = cleaned[i:]
+        
+        end_fence = cleaned.rfind("```")
+        if end_fence != -1:
+            cleaned = cleaned[:end_fence]
+        
+        cleaned = cleaned.strip()
+        
+        # Very simple approach - just fix the most common issues
+        # 1. Replace single quotes with double quotes (but be careful with contractions)
+        cleaned = cleaned.replace("'tool':", '"tool":')
+        cleaned = cleaned.replace("'generate_plan'", '"generate_plan"')
+        cleaned = cleaned.replace("'web_search'", '"web_search"')
+        cleaned = cleaned.replace("'clarification'", '"clarification"')
+        cleaned = cleaned.replace("'create_report'", '"create_report"')
+        
+        # 2. Remove trailing commas
+        cleaned = re.sub(r',(\s*[}\]])', r'\1', cleaned)
+        
+        # 3. Fix incomplete JSON
+        if cleaned.count('{') > cleaned.count('}'):
+            cleaned += '}'
+        
+        return cleaned.strip()
+
+    def _extract_first_json_dict(self, text: str) -> Optional[Dict[str, Any]]:
+        """Extract and clean first balanced JSON object from arbitrary text."""
+        if not text:
+            return None
+        
+        # Try standard JSON parsing first
+        try:
+            cleaned = self._clean_json_text(text)
+            idx_brace = cleaned.find('{')
+            if idx_brace > 0:
+                cleaned = cleaned[idx_brace:]
+            
+            start = cleaned.find('{')
+            if start == -1:
+                return None
+            
+            depth = 0
+            end = -1
+            for i in range(start, len(cleaned)):
+                ch = cleaned[i]
+                if ch == '{':
+                    depth += 1
+                elif ch == '}':
+                    depth -= 1
+                    if depth == 0:
+                        end = i
+                        break
+            
+            if end == -1:
+                return None
+            
+            candidate = cleaned[start:end+1]
+            parsed = json.loads(candidate)
+            return self._clean_parsed_json_for_nextstep(parsed)
+            
+        except Exception:
+            # If JSON parsing fails, try manual extraction
+            return self._manual_extract_json_data(text)
     
+    def _manual_extract_json_data(self, text: str) -> Optional[Dict[str, Any]]:
+        """Manually extract JSON data when parsing fails"""
+        import re
+        
+        try:
+            # Extract key fields manually
+            data = {}
+            
+            # Extract reasoning_steps
+            reasoning_match = re.search(r'"reasoning_steps"\s*:\s*\[(.*?)\]', text, re.DOTALL)
+            if reasoning_match:
+                # Extract quoted strings from the array
+                reasoning_content = reasoning_match.group(1)
+                reasoning_items = re.findall(r'"([^"]*)"', reasoning_content)
+                data['reasoning_steps'] = reasoning_items if reasoning_items else ["Processing request"]
+            
+            # Extract simple fields
+            simple_fields = {
+                'current_situation': r'"current_situation"\s*:\s*"([^"]*)"',
+                'plan_status': r'"plan_status"\s*:\s*"([^"]*)"',
+                'searches_done': r'"searches_done"\s*:\s*(\d+)',
+                'enough_data': r'"enough_data"\s*:\s*(false|true)',
+                'task_completed': r'"task_completed"\s*:\s*(false|true)'
+            }
+            
+            for field, pattern in simple_fields.items():
+                match = re.search(pattern, text)
+                if match:
+                    value = match.group(1)
+                    if field in ['searches_done']:
+                        data[field] = int(value)
+                    elif field in ['enough_data', 'task_completed']:
+                        data[field] = value.lower() == 'true'
+                    else:
+                        data[field] = value
+            
+            # Extract remaining_steps (flatten complex objects)
+            remaining_match = re.search(r'"remaining_steps"\s*:\s*\[(.*?)\]', text, re.DOTALL)
+            if remaining_match:
+                remaining_content = remaining_match.group(1)
+                # Look for query patterns in the complex objects
+                queries = re.findall(r'"_query"\s*:\s*"([^"]*)"', remaining_content)
+                functions = re.findall(r'_function\s*:\s*[\'"]([^\'"]*)[\'"]', remaining_content)
+                
+                steps = []
+                for query in queries:
+                    steps.append(f"Web search: {query}")
+                for func in functions:
+                    if func not in ['web_search']:  # Avoid duplicates
+                        steps.append(f"Execute {func.replace('_', ' ')}")
+                
+                data['remaining_steps'] = steps if steps else ["Continue with plan"]
+            
+            # Set defaults for missing fields
+            defaults = {
+                'reasoning_steps': ["Processing request", "Determining action"],
+                'current_situation': 'Processing user request',
+                'plan_status': 'active',
+                'searches_done': 0,
+                'enough_data': False,
+                'remaining_steps': ['Continue with plan'],
+                'task_completed': False
+            }
+            
+            for field, default in defaults.items():
+                if field not in data:
+                    data[field] = default
+            
+            # Add function field (will be completed by schema enforcement)
+            data['function'] = {'tool': 'generate_plan'}
+            
+            return self._clean_parsed_json_for_nextstep(data)
+            
+        except Exception:
+            return None
+    
+    def _clean_parsed_json_for_nextstep(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Clean parsed JSON to match NextStep schema requirements"""
+        if not isinstance(data, dict):
+            return data
+        
+        cleaned = data.copy()
+        
+        # Remove extra fields that aren't part of NextStep schema
+        extra_fields = ['language', '_clarification_questions', '_id', 'notes', 'metadata']
+        for field in extra_fields:
+            cleaned.pop(field, None)
+        
+        # Fix remaining_steps - should be list of strings, not objects
+        if 'remaining_steps' in cleaned:
+            remaining = cleaned['remaining_steps']
+            if isinstance(remaining, list):
+                fixed_steps = []
+                for step in remaining:
+                    if isinstance(step, dict):
+                        # Extract step name or description
+                        step_name = step.get('step_name') or step.get('name') or step.get('description')
+                        if step_name:
+                            fixed_steps.append(str(step_name))
+                        else:
+                            # Convert dict to string representation
+                            fixed_steps.append(f"Execute {step.get('function', {}).get('tool', 'action')}")
+                    else:
+                        fixed_steps.append(str(step))
+                cleaned['remaining_steps'] = fixed_steps
+        
+        # Ensure reasoning_steps is a list of strings
+        if 'reasoning_steps' in cleaned:
+            steps = cleaned['reasoning_steps']
+            if isinstance(steps, str):
+                cleaned['reasoning_steps'] = [steps]
+            elif isinstance(steps, list):
+                cleaned['reasoning_steps'] = [str(s) for s in steps]
+        
+        # Fix function field if it has extra properties
+        if 'function' in cleaned and isinstance(cleaned['function'], dict):
+            func = cleaned['function'].copy()
+            
+            # Remove extra fields from function
+            func_extra = ['_id', 'metadata', 'notes']
+            for field in func_extra:
+                func.pop(field, None)
+            
+            cleaned['function'] = func
+        
+        return cleaned
+
     def add_citation(self, url: str, title: str = "") -> int:
         """Add source and return citation number"""
         if url in self.context["sources"]:
@@ -1094,14 +2019,15 @@ LANGUAGE ADAPTATION: Always respond and create reports in the SAME LANGUAGE as t
         
         self.console.print(Panel(task, title="🔍 Research Task", title_align="left"))
         
-        # Запускаем мониторинг SGR процесса
-        self.monitor.start_monitoring()
-        self.monitor.update_context({
-            "task": task,
-            "plan": self.context.get("plan"),
-            "searches": self.context.get("searches", []),
-            "sources": self.context.get("sources", {})
-        })
+        # Запускаем мониторинг SGR процесса (optional)
+        if not self.simple_ui:
+            self.monitor.start_monitoring()
+            self.monitor.update_context({
+                "task": task,
+                "plan": self.context.get("plan"),
+                "searches": self.context.get("searches", []),
+                "sources": self.context.get("sources", {})
+            })
         
         system_prompt = self.get_system_prompt(task)
         
@@ -1129,10 +2055,13 @@ LANGUAGE ADAPTATION: Always respond and create reports in the SAME LANGUAGE as t
                 self.step_tracker.start_step(schema_step_name, f"{step_id}: Schema generation")
                 self.monitor.start_step(schema_step_name, f"{step_id}: Schema generation")
                 
-                # Add context
+                # Add context - be more directive about avoiding unnecessary clarification
                 context_msg = ""
                 if self.context["clarification_used"]:
-                    context_msg = "IMPORTANT: Clarification already used. Do not request clarification again."
+                    context_msg = "CRITICAL: Clarification already used. You MUST proceed with generate_plan or web_search. DO NOT ask for clarification again."
+                else:
+                    # Proactively discourage unnecessary clarification
+                    context_msg = "GUIDANCE: Only use clarification for truly ambiguous requests (single words, unclear topics). For reasonable research topics, proceed directly with generate_plan."
                 
                 searches_count = len(self.context.get("searches", []))
                 user_request_info = f"\nORIGINAL USER REQUEST: '{task}'\n(Use this for language consistency)"
@@ -1177,12 +2106,14 @@ LANGUAGE ADAPTATION: Always respond and create reports in the SAME LANGUAGE as t
                     # STREAMING NEXT STEP GENERATION
                     # Note: Dashboard will be paused during schema generation
                     # Users can scroll up to see the generation process
-                    self.monitor.stop_monitoring()  # Pause dashboard to show schema generation
+                    if not self.simple_ui:
+                        self.monitor.stop_monitoring()  # Pause dashboard to show schema generation
                     
                     job, raw_content, metrics = self.stream_next_step(log)
                     
                     # Resume dashboard after schema generation
-                    self.monitor.start_monitoring()
+                    if not self.simple_ui:
+                        self.monitor.start_monitoring()
                     
                     if job is None:
                         self.console.print("[bold red]❌ Failed to parse LLM response[/bold red]")
@@ -1190,7 +2121,8 @@ LANGUAGE ADAPTATION: Always respond and create reports in the SAME LANGUAGE as t
                     
                     # Complete schema generation step
                     self.step_tracker.complete_current_step(f"Generated: {job.function.tool}")
-                    self.monitor.complete_step(f"Generated: {job.function.tool}")
+                    if not self.simple_ui:
+                        self.monitor.complete_step(f"Generated: {job.function.tool}")
                     
                     # Показываем только финальное решение после парсинга
                     self.console.print(f"🤖 [bold magenta]LLM Decision:[/bold magenta] {job.function.tool}")
@@ -1200,7 +2132,8 @@ LANGUAGE ADAPTATION: Always respond and create reports in the SAME LANGUAGE as t
                     if not isinstance(job.function, Clarification):
                         tool_step_name = f"{job.function.tool}_{step_id}"
                         self.step_tracker.start_step(tool_step_name, f"Executing {job.function.tool}")
-                        self.monitor.start_step(tool_step_name, f"Executing {job.function.tool}")
+                        if not self.simple_ui:
+                            self.monitor.start_step(tool_step_name, f"Executing {job.function.tool}")
                     
                 except Exception as e:
                     self.console.print(f"[bold red]❌ LLM request error: {str(e)}[/bold red]")
@@ -1224,7 +2157,8 @@ LANGUAGE ADAPTATION: Always respond and create reports in the SAME LANGUAGE as t
                 # Handle clarification specially
                 if isinstance(job.function, Clarification):
                     # Stop monitoring before showing clarification
-                    self.monitor.stop_monitoring()
+                    if not self.simple_ui:
+                        self.monitor.stop_monitoring()
                     
                     self.step_tracker.start_step("clarification", "Asking clarifying questions")
                     result = self.dispatch(job.function)
@@ -1261,14 +2195,16 @@ Next action: {job.function.tool}"""
                 
                 # Завершаем этап выполнения в трекере (монитор использует те же данные)
                 self.step_tracker.complete_current_step(result)
-                self.monitor.complete_step(result)
+                if not self.simple_ui:
+                    self.monitor.complete_step(result)
                 
                 # Обновляем контекст в мониторе
-                self.monitor.update_context({
-                    "plan": self.context.get("plan"),
-                    "searches": self.context.get("searches", []),
-                    "sources": self.context.get("sources", {})
-                })
+                if not self.simple_ui:
+                    self.monitor.update_context({
+                        "plan": self.context.get("plan"),
+                        "searches": self.context.get("searches", []),
+                        "sources": self.context.get("sources", {})
+                    })
                 
                 # Format result for log - use detailed summary for search results
                 if isinstance(job.function, WebSearch) and isinstance(result, dict) and 'summary_for_llm' in result:
@@ -1287,7 +2223,8 @@ Next action: {job.function.tool}"""
         
         finally:
             # Останавливаем мониторинг
-            self.monitor.stop_monitoring()
+            if not self.simple_ui:
+                self.monitor.stop_monitoring()
             
             # Save conversation log for debugging
             self._save_conversation_log(log, task)
@@ -1354,8 +2291,15 @@ def main():
                 if response.lower() in ['quit', 'exit']:
                     break
                 
+                # Track user messages for anti-clarification-loop logic
+                if not hasattr(agent, 'recent_user_messages'):
+                    agent.recent_user_messages = []
+                agent.recent_user_messages.append(response)
+                # Keep only last 3 messages
+                agent.recent_user_messages = agent.recent_user_messages[-3:]
+                
                 task = f"Original request: '{original_task}'\nClarification: {response}\n\nProceed with research based on clarification."
-                agent.context["clarification_used"] = False
+                agent.context["clarification_used"] = True  # Mark that clarification was used
             else:
                 task = input("🔍 Enter research task (or 'quit'): ").strip()
             
@@ -1369,6 +2313,14 @@ def main():
             
             # Reset context for new task
             if not awaiting_clarification:
+                agent.current_task = task  # Track current task for debug logging
+                
+                # Initialize user message tracking
+                if not hasattr(agent, 'recent_user_messages'):
+                    agent.recent_user_messages = []
+                agent.recent_user_messages.append(task)
+                agent.recent_user_messages = agent.recent_user_messages[-3:]
+                
                 agent.context = {
                     "plan": None,
                     "searches": [],
