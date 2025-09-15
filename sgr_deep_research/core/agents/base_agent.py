@@ -37,6 +37,30 @@ logger = logging.getLogger(__name__)
 class ExecutionMetrics:
     """Класс для отслеживания метрик выполнения агента."""
     
+    # Цены моделей (за 1M токенов в USD)
+    MODEL_PRICING = {
+        "gpt-5": {
+            "input": 1.250,
+            "cached_input": 0.125,
+            "output": 10.000
+        },
+        "gpt-4o": {
+            "input": 5.000,
+            "cached_input": 2.500,
+            "output": 15.000
+        },
+        "gpt-4-turbo": {
+            "input": 10.000,
+            "cached_input": 5.000,
+            "output": 30.000
+        },
+        "gpt-3.5-turbo": {
+            "input": 0.500,
+            "cached_input": 0.500,
+            "output": 1.500
+        }
+    }
+    
     def __init__(self):
         self.start_time = time.time()
         self.api_calls = 0
@@ -50,6 +74,7 @@ class ExecutionMetrics:
         self.clarifications_requested = 0
         self.errors_count = 0
         self.steps_completed = 0
+        self.model_name = None  # Для отслеживания используемой модели
         
     def add_api_call(self, usage=None):
         """Добавить API вызов с данными о токенах."""
@@ -121,6 +146,61 @@ class ExecutionMetrics:
         """Добавить выполненный шаг."""
         self.steps_completed += 1
     
+    def calculate_cost(self, model_name=None):
+        """Рассчитать стоимость использования токенов для указанной модели."""
+        # Используем переданную модель или сохраненную
+        model = model_name or self.model_name
+        if not model:
+            return None
+            
+        # Ищем цены для модели (проверяем точное совпадение и частичное)
+        pricing = None
+        model_lower = model.lower()
+        
+        # Сначала точное совпадение
+        if model_lower in self.MODEL_PRICING:
+            pricing = self.MODEL_PRICING[model_lower]
+        else:
+            # Ищем частичное совпадение (например, "gpt-5-preview" -> "gpt-5")
+            for price_model in self.MODEL_PRICING:
+                if price_model in model_lower:
+                    pricing = self.MODEL_PRICING[price_model]
+                    break
+        
+        if not pricing:
+            return None
+            
+        try:
+            # Рассчитываем стоимость
+            input_cost = 0
+            output_cost = 0
+            
+            # Стоимость входных токенов (обычные + кешированные)
+            if self.prompt_tokens > 0:
+                regular_input_tokens = max(0, self.prompt_tokens - self.cached_tokens)
+                input_cost = (regular_input_tokens * pricing["input"]) / 1_000_000
+                
+                # Кешированные токены дешевле
+                if self.cached_tokens > 0:
+                    cached_cost = (self.cached_tokens * pricing["cached_input"]) / 1_000_000
+                    input_cost += cached_cost
+            
+            # Стоимость выходных токенов
+            if self.completion_tokens > 0:
+                output_cost = (self.completion_tokens * pricing["output"]) / 1_000_000
+                
+            total_cost = input_cost + output_cost
+            
+            return {
+                "input_cost": input_cost,
+                "output_cost": output_cost,
+                "total_cost": total_cost,
+                "currency": "USD"
+            }
+        except (KeyError, TypeError, ZeroDivisionError):
+            # Если что-то пошло не так, возвращаем None
+            return None
+    
     def get_duration(self):
         """Получить время выполнения в секундах."""
         return time.time() - self.start_time
@@ -156,6 +236,13 @@ class ExecutionMetrics:
             stats["Промахи кеша"] = self.cache_misses
             cache_rate = self.cache_hits / (self.cache_hits + self.cache_misses) * 100 if (self.cache_hits + self.cache_misses) > 0 else 0
             stats["Эффективность кеша"] = f"{cache_rate:.1f}%"
+        
+        # Добавляем стоимость если можем её рассчитать
+        cost_info = self.calculate_cost()
+        if cost_info:
+            stats["Стоимость (общая)"] = f"${cost_info['total_cost']:.4f}"
+            stats["Стоимость (входные)"] = f"${cost_info['input_cost']:.4f}"
+            stats["Стоимость (выходные)"] = f"${cost_info['output_cost']:.4f}"
         
         stats.update({
             "Поисковые запросы": self.searches_performed,
@@ -221,6 +308,9 @@ class BaseAgent:
             self.verbosity = config.openai.verbosity
         else:
             raise ValueError("Either 'openai' or 'azure' configuration must be provided")
+        
+        # Передаем название модели в метрики для расчета стоимости
+        self.metrics.model_name = self.model_name
         self.streaming_generator = OpenAIStreamingGenerator(model=self.id)
 
     def _get_model_parameters(self, deep_level: int = 0) -> dict:
