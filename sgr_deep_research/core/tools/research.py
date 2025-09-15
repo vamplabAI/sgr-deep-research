@@ -80,7 +80,7 @@ class WebSearchTool(BaseTool):
 
     reasoning: str = Field(description="Why this search is needed and what to expect")
     query: str = Field(description="Search query in same language as user request")
-    max_results: int = Field(default=10, description="Maximum results", ge=1, le=10)
+    max_results: int = Field(default=10, description="Maximum results", ge=1, le=50)
     plan_adapted: bool = Field(default=False, description="Is this search after plan adaptation?")
     scrape_content: bool = Field(
         default=False,

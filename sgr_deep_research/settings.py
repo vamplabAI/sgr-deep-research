@@ -18,8 +18,11 @@ class OpenAIConfig(BaseModel):
     api_key: str = Field(description="API key")
     base_url: str = Field(default="https://api.openai.com/v1", description="Base URL")
     model: str = Field(default="gpt-4o-mini", description="Model to use")
-    max_tokens: int = Field(default=8000, description="Maximum number of tokens")
+    max_tokens: int = Field(default=32000, description="Maximum number of tokens (for older models)")
+    max_completion_tokens: int = Field(default=32000, description="Maximum completion tokens (for newer models like GPT-5)")
     temperature: float = Field(default=0.4, ge=0.0, le=1.0, description="Generation temperature")
+    reasoning_effort: str = Field(default="medium", description="GPT-5 reasoning effort: low/medium/high")
+    verbosity: str = Field(default="medium", description="GPT-5 verbosity level: low/medium/high")
     proxy: str = Field(default="", description="Proxy URL (e.g., socks5://127.0.0.1:1081 or http://127.0.0.1:8080)")
 
 
@@ -28,10 +31,13 @@ class AzureConfig(BaseModel):
 
     api_key: str = Field(description="Azure OpenAI API key")
     base_url: str = Field(description="Azure OpenAI endpoint URL")
-    api_version: str = Field(default="2024-02-15-preview", description="Azure API version")
+    api_version: str = Field(default="2024-12-01-preview", description="Azure API version")
     deployment_name: str = Field(description="Azure deployment name")
-    max_tokens: int = Field(default=8000, description="Maximum number of tokens")
+    max_tokens: int = Field(default=32000, description="Maximum number of tokens (for older models)")
+    max_completion_tokens: int = Field(default=32000, description="Maximum completion tokens (for newer models like GPT-5)")
     temperature: float = Field(default=0.4, ge=0.0, le=1.0, description="Generation temperature")
+    reasoning_effort: str = Field(default="medium", description="GPT-5 reasoning effort: low/medium/high")
+    verbosity: str = Field(default="medium", description="GPT-5 verbosity level: low/medium/high")
     proxy: str = Field(default="", description="Proxy URL (e.g., socks5://127.0.0.1:1081 or http://127.0.0.1:8080)")
 
 
@@ -72,6 +78,19 @@ class ExecutionConfig(BaseModel):
     logs_dir: str = Field(default="logs", description="Directory for saving bot logs")
 
 
+class DeepResearchConfig(BaseModel):
+    """Deep research mode settings for intensive analysis."""
+
+    enabled: bool = Field(default=False, description="Enable deep research mode")
+    max_steps: int = Field(default=20, gt=0, description="Maximum research steps for deep mode")
+    max_searches: int = Field(default=10, gt=0, description="Maximum number of search queries")
+    max_results_per_search: int = Field(default=20, gt=0, description="Results per search query")
+    enable_full_scraping: bool = Field(default=True, description="Enable full content scraping")
+    scraping_limit: int = Field(default=5000, gt=0, description="Character limit per scraped page")
+    cross_reference: bool = Field(default=True, description="Enable cross-referencing sources")
+    synthesis_iterations: int = Field(default=3, gt=0, description="Number of synthesis passes")
+
+
 class AppConfig(BaseModel):
     """Main application configuration."""
 
@@ -81,6 +100,7 @@ class AppConfig(BaseModel):
     search: SearchConfig = Field(default_factory=SearchConfig, description="Search settings")
     scraping: ScrapingConfig = Field(default_factory=ScrapingConfig, description="Scraping settings")
     execution: ExecutionConfig = Field(default_factory=ExecutionConfig, description="Execution settings")
+    deep_research: DeepResearchConfig = Field(default_factory=DeepResearchConfig, description="Deep research settings")
     prompts: PromptsConfig = Field(default_factory=PromptsConfig, description="Prompts settings")
 
 

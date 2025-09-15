@@ -1,6 +1,5 @@
 """CLI интерфейс для SGR Deep Research агентов."""
 
-import argparse
 import asyncio
 import logging
 import sys
@@ -8,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Type
 
+import click
 from rich.console import Console
 from rich.live import Live
 from rich.markdown import Markdown
@@ -57,7 +57,7 @@ def display_agents():
     console.print()
 
 
-async def run_agent(agent_type: str, query: str, output_file: str = None):
+async def run_agent(agent_type: str, query: str, output_file: str = None, deep_level: int = 0):
     """Запустить агента с заданным запросом."""
     if agent_type not in AGENTS:
         console.print(f"[red]Ошибка:[/red] Неизвестный тип агента '{agent_type}'")
@@ -68,20 +68,97 @@ async def run_agent(agent_type: str, query: str, output_file: str = None):
     
     try:
         console.print(f"\n[bold cyan]Инициализация агента:[/bold cyan] {agent_class.__name__}")
-        agent = agent_class(query)
+        
+        # Настройка глубокого режима - простое масштабирование параметров
+        if deep_level > 0:
+            # Базовые значения
+            base_steps = 6
+            base_searches = 4
+            
+            # Динамическое масштабирование
+            max_iterations = base_steps * (deep_level * 3 + 1)  # 6 -> 12/24/36/48
+            max_searches = base_searches * (deep_level + 1)     # 4 -> 8/12/16/20
+            
+            # Создаем агента с увеличенными параметрами
+            if hasattr(agent_class, '__init__'):
+                import inspect
+                sig = inspect.signature(agent_class.__init__)
+                kwargs = {'task': query}
+                
+                if 'max_iterations' in sig.parameters:
+                    kwargs['max_iterations'] = max_iterations
+                if 'max_searches' in sig.parameters:
+                    kwargs['max_searches'] = max_searches
+                
+                agent = agent_class(**kwargs)
+            else:
+                agent = agent_class(query, max_iterations=max_iterations)
+            
+            console.print(f"[bold yellow]🔍 ГЛУБОКИЙ РЕЖИМ УРОВНЯ {deep_level}[/bold yellow]")
+            console.print(f"[yellow]Максимум шагов: {max_iterations}[/yellow]")
+            console.print(f"[yellow]Максимум поисков: {max_searches}[/yellow]")
+            console.print(f"[yellow]Примерное время: {deep_level * 10}-{deep_level * 30} минут[/yellow]")
+            
+            # Устанавливаем deep_level для использования в параметрах модели
+            agent._deep_level = deep_level
+            
+            # Проверяем поддержку GPT-5
+            if hasattr(agent, '_get_model_parameters'):
+                model_params = agent._get_model_parameters(deep_level)
+                if 'max_completion_tokens' in model_params:
+                    console.print(f"[dim]GPT-5 режим: {model_params['max_completion_tokens']} токенов, reasoning_effort={model_params.get('reasoning_effort', 'medium')}[/dim]")
+                else:
+                    console.print(f"[dim]Контекст: {model_params['max_tokens']} токенов[/dim]")
+        else:
+            agent = agent_class(query)
         
         console.print(f"[bold cyan]Запрос:[/bold cyan] {query}")
         console.print(f"[bold cyan]Модель:[/bold cyan] {agent.model_name}")
         console.print()
         
-        # Запуск агента с прогресс-индикатором
-        with Live(Spinner("dots", text="Обработка запроса..."), console=console, refresh_per_second=10):
-            await agent.execute()
-        
-        # Ожидание завершения агента
+        # Запуск агента с интерактивной обработкой уточнений
         from sgr_deep_research.core.models import AgentStatesEnum
+        
+        # Запуск агента в фоновом режиме
+        agent_task = asyncio.create_task(agent.execute())
+        
+        # Мониторинг состояния агента
         while agent._context.state not in AgentStatesEnum.FINISH_STATES.value:
+            if agent._context.state == AgentStatesEnum.WAITING_FOR_CLARIFICATION:
+                # Агент ждет уточнений
+                console.print("\n[bold yellow]🤔 Агент запрашивает уточнения:[/bold yellow]")
+                
+                # Получаем последний результат инструмента clarification
+                last_clarification = ""
+                if agent.log:
+                    for log_entry in reversed(agent.log):
+                        if (log_entry.get("step_type") == "tool_execution" and 
+                            log_entry.get("tool_name") == "clarificationtool"):
+                            last_clarification = log_entry.get("agent_tool_execution_result", "")
+                            break
+                
+                if last_clarification:
+                    console.print(Panel(last_clarification, title="Вопросы", border_style="yellow"))
+                
+                # Запрашиваем ответ от пользователя
+                user_answer = Prompt.ask("\n[bold]Ваш ответ[/bold]", default="")
+                
+                if user_answer.strip():
+                    # Передаем уточнения агенту
+                    await agent.provide_clarification(user_answer)
+                    console.print("[green]✅ Уточнения переданы агенту[/green]\n")
+                else:
+                    # Пользователь не ответил, завершаем
+                    console.print("[yellow]⚠️ Нет ответа, завершаем работу агента[/yellow]")
+                    break
+            
             await asyncio.sleep(0.1)
+        
+        # Ждем завершения задачи агента
+        try:
+            await agent_task
+        except asyncio.CancelledError:
+            pass
         
         # Получение результата из контекста агента
         if agent._context.state == AgentStatesEnum.COMPLETED:
@@ -185,6 +262,9 @@ async def interactive_mode():
                 console.print("  help              - Показать эту справку")
                 console.print("  agents            - Показать доступных агентов")
                 console.print("  agent <type>      - Переключиться на агента")
+                console.print("  deep <запрос>     - Глубокое исследование (20 шагов)")
+                console.print("  deep2 <запрос>    - Очень глубокое (40 шагов, ~20-60 мин)")
+                console.print("  deep3 <запрос>    - Экстремально глубокое (60 шагов, ~30-90 мин)")
                 console.print("  quit/exit/q       - Выход")
                 console.print("  <запрос>          - Выполнить исследование")
                 console.print()
@@ -205,7 +285,29 @@ async def interactive_mode():
                 continue
             
             # Выполнить исследование
-            await run_agent(current_agent, command)
+            deep_level = 0
+            if command.startswith("deep"):
+                if command.startswith("deep "):
+                    deep_level = 1
+                    command = command[5:]  # Убрать "deep " из начала
+                else:
+                    # Проверяем паттерн deep1, deep2, deep3 и т.д.
+                    import re
+                    match = re.match(r"deep(\d+)\s+(.+)", command)
+                    if match:
+                        deep_level = int(match.group(1))
+                        command = match.group(2)
+                    else:
+                        # Проверяем просто deep1, deep2 без пробела
+                        match = re.match(r"deep(\d+)$", command.split()[0])
+                        if match and len(command.split()) > 1:
+                            deep_level = int(match.group(1))
+                            command = " ".join(command.split()[1:])
+                
+                if deep_level > 0:
+                    console.print(f"[yellow]🔍 Глубокий режим уровня {deep_level} (время: ~{deep_level * 10}-{deep_level * 30} мин)[/yellow]")
+            
+            await run_agent(current_agent, command, deep_level=deep_level)
             console.print()
             
         except KeyboardInterrupt:
@@ -215,72 +317,36 @@ async def interactive_mode():
             console.print(f"\n[red]Ошибка:[/red] {e}")
 
 
-def main():
-    """Главная функция CLI."""
-    parser = argparse.ArgumentParser(
-        description="SGR Deep Research CLI",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Примеры использования:
-
-  # Интерактивный режим
-  uv run python -m sgr_deep_research.cli
-
-  # Быстрый запрос
-  uv run python -m sgr_deep_research.cli --query "Что такое квантовые компьютеры?"
-
-  # Использование конкретного агента
-  uv run python -m sgr_deep_research.cli --agent sgr-tools --query "Последние новости AI"
-
-  # Сохранение результата в файл
-  uv run python -m sgr_deep_research.cli --query "Python async/await" --output report.md
-
-  # Показать доступных агентов
-  uv run python -m sgr_deep_research.cli --list-agents
-        """
-    )
+@click.group(invoke_without_command=True)
+@click.option('--query', '-q', help='Запрос для исследования')
+@click.option('--agent', '-a', 
+              type=click.Choice(list(AGENTS.keys())), 
+              default='sgr-tools',
+              help='Тип агента (по умолчанию: sgr-tools)')
+@click.option('--output', '-o', help='Файл для сохранения результата (Markdown)')
+@click.option('--deep', type=int, default=0, 
+              help='Уровень глубокого исследования (1-5+: 1=20 шагов, 2=40 шагов, 3=60 шагов...)')
+@click.option('--debug', is_flag=True, help='Включить отладочный вывод')
+@click.option('--interactive', '-i', is_flag=True, help='Запустить в интерактивном режиме')
+@click.pass_context
+def cli(ctx, query, agent, output, deep, debug, interactive):
+    """SGR Deep Research CLI
     
-    parser.add_argument(
-        "--query", "-q",
-        type=str,
-        help="Запрос для исследования"
-    )
+    Примеры использования:
     
-    parser.add_argument(
-        "--agent", "-a",
-        type=str,
-        choices=list(AGENTS.keys()),
-        default="sgr-tools",
-        help="Тип агента (по умолчанию: sgr-tools)"
-    )
+      # Интерактивный режим
+      uv run python -m sgr_deep_research.cli
     
-    parser.add_argument(
-        "--output", "-o",
-        type=str,
-        help="Файл для сохранения результата (Markdown)"
-    )
+      # Быстрый запрос
+      uv run python -m sgr_deep_research.cli --query "Что такое квантовые компьютеры?"
     
-    parser.add_argument(
-        "--list-agents",
-        action="store_true",
-        help="Показать доступных агентов"
-    )
+      # Использование конкретного агента
+      uv run python -m sgr_deep_research.cli --agent sgr-tools --query "Последние новости AI"
     
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="Включить отладочный вывод"
-    )
-    
-    parser.add_argument(
-        "--interactive", "-i",
-        action="store_true",
-        help="Запустить в интерактивном режиме"
-    )
-    
-    args = parser.parse_args()
-    
-    setup_logging(args.debug)
+      # Сохранение результата в файл
+      uv run python -m sgr_deep_research.cli --query "Python async/await" --output report.md
+    """
+    setup_logging(debug)
     
     try:
         # Проверка конфигурации
@@ -290,16 +356,73 @@ def main():
         console.print(f"[red]Ошибка конфигурации:[/red] {e}")
         sys.exit(1)
     
-    if args.list_agents:
-        display_agents()
-        return
-    
-    if args.interactive or not args.query:
-        asyncio.run(interactive_mode())
-        return
-    
-    # Выполнить одиночный запрос
-    asyncio.run(run_agent(args.agent, args.query, args.output))
+    # Если команда не вызвана, запускаем основную логику
+    if ctx.invoked_subcommand is None:
+        if interactive or not query:
+            asyncio.run(interactive_mode())
+        else:
+            # Выполнить одиночный запрос
+            asyncio.run(run_agent(agent, query, output, deep))
+
+
+@cli.command()
+def agents():
+    """Показать доступных агентов."""
+    display_agents()
+
+
+@cli.command()
+@click.argument('query')
+@click.option('--level', '-l', type=int, default=1, help='Уровень глубины (1-5+)')
+@click.option('--agent', '-a', 
+              type=click.Choice(list(AGENTS.keys())), 
+              default='sgr-tools',
+              help='Тип агента')
+@click.option('--output', '-o', help='Файл для сохранения результата')
+def deep(query, level, agent, output):
+    """Глубокое исследование с указанным уровнем."""
+    asyncio.run(run_agent(agent, query, output, level))
+
+
+@cli.command()
+@click.argument('query')
+@click.option('--agent', '-a', 
+              type=click.Choice(list(AGENTS.keys())), 
+              default='sgr-tools',
+              help='Тип агента')
+@click.option('--output', '-o', help='Файл для сохранения результата')
+def deep1(query, agent, output):
+    """Глубокое исследование уровня 1 (20 шагов, ~10-30 мин)."""
+    asyncio.run(run_agent(agent, query, output, 1))
+
+
+@cli.command()
+@click.argument('query')
+@click.option('--agent', '-a', 
+              type=click.Choice(list(AGENTS.keys())), 
+              default='sgr-tools',
+              help='Тип агента')
+@click.option('--output', '-o', help='Файл для сохранения результата')
+def deep2(query, agent, output):
+    """Очень глубокое исследование уровня 2 (40 шагов, ~20-60 мин)."""
+    asyncio.run(run_agent(agent, query, output, 2))
+
+
+@cli.command()
+@click.argument('query')
+@click.option('--agent', '-a', 
+              type=click.Choice(list(AGENTS.keys())), 
+              default='sgr-tools',
+              help='Тип агента')
+@click.option('--output', '-o', help='Файл для сохранения результата')
+def deep3(query, agent, output):
+    """Экстремально глубокое исследование уровня 3 (60 шагов, ~30-90 мин)."""
+    asyncio.run(run_agent(agent, query, output, 3))
+
+
+def main():
+    """Точка входа CLI."""
+    cli()
 
 
 if __name__ == "__main__":

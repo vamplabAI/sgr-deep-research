@@ -29,10 +29,31 @@ class PromptLoader:
         return cls._load_prompt_file(config.prompts.tool_function_prompt_file)
 
     @classmethod
-    def get_system_prompt(cls, user_request: str, sources: list[SourceData]) -> str:
+    def get_system_prompt(cls, user_request: str, sources: list[SourceData], deep_level: int = 0) -> str:
         sources_formatted = "\n".join([str(source) for source in sources])
         template = cls._load_prompt_file(config.prompts.system_prompt_file)
+        
+        # Добавляем инструкции для глубокого режима
+        deep_mode_instructions = ""
+        if deep_level > 0:
+            min_searches = min(deep_level * 3 + 2, 15)  # 2->5, 3->8, 4->11, 5->14, max 15
+            deep_mode_instructions = f"""
+DEEP RESEARCH MODE LEVEL {deep_level} ACTIVATED:
+- MINIMUM REQUIRED SEARCHES: {min_searches} different search queries before considering data sufficient
+- Current searches done: {{searches_count}}/{{max_searches}}
+- You MUST perform MULTIPLE diverse search queries covering different aspects of the topic
+- Set enough_data=False UNTIL you have conducted at least {min_searches} searches
+- Search variations: different keywords, specific terms, related concepts, historical context, recent developments
+- For topics like history: search periods, regions, key figures, institutions, sources, conflicts, demographics
+- Example search progression: broad overview → specific periods → key events → sources analysis → related peoples/regions
+- DEPTH OVER SPEED: More thorough analysis is expected at this deep level
+"""
+        
         try:
-            return template.format(user_request=user_request, sources_formatted=sources_formatted)
+            return template.format(
+                user_request=user_request, 
+                sources_formatted=sources_formatted,
+                deep_mode_instructions=deep_mode_instructions
+            )
         except KeyError as e:
             raise KeyError(f"Missing placeholder in system prompt template: {e}") from e

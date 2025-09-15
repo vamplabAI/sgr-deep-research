@@ -43,6 +43,11 @@ uv run python -m sgr_deep_research.cli --agent sgr-tools --query "Research AI tr
 # Save results to file
 uv run python -m sgr_deep_research.cli --query "Python best practices" --output report.md
 
+# Deep research mode with levels (1-5+)
+uv run python -m sgr_deep_research.cli --deep 1 --query "AI trends"    # 20 steps
+uv run python -m sgr_deep_research.cli --deep 2 --query "AI research"  # 40 steps
+uv run python -m sgr_deep_research.cli --deep 3 --query "Deep analysis" # 60 steps
+
 # List available agents
 uv run python -m sgr_deep_research.cli --list-agents
 
@@ -61,8 +66,22 @@ uv run python -m sgr_deep_research.cli --debug --query "Your question"
 - `help` - Show help
 - `agents` - List available agents
 - `agent <type>` - Switch agent type
+- `deep <question>` - Deep research mode (20+ steps)
 - `quit/exit/q` - Exit
 - `<your question>` - Start research
+
+**Research Depth Configuration:**
+- **Normal mode**: 6 steps, 4 searches, ~1-2 min
+- **Deep Level 1**: 24 steps, 8 searches, ~10-30 min
+- **Deep Level 2**: 42 steps, 12 searches, ~20-60 min  
+- **Deep Level 3**: 60 steps, 16 searches, ~30-90 min
+- **Deep Level 4**: 78 steps, 20 searches, ~40-120 min
+
+**Dynamic Deep Mode Features:**
+- Exponential scaling: steps = 6 × (3×level + 1), searches = 4 × (level + 1)
+- Each search can fetch up to 50 results (increased from 10)
+- Agents automatically perform more comprehensive analysis
+- Extended research time proportional to depth level
 
 ### Development Tools
 ```bash

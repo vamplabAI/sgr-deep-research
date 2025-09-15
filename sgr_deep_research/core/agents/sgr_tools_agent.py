@@ -72,14 +72,15 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
         return [pydantic_function_tool(tool, name=tool.tool_name, description=tool.description) for tool in tools]
 
     async def _reasoning_phase(self) -> ReasoningTool:
-        async with self.openai_client.chat.completions.stream(
-            model=self.model_name,
-            messages=await self._prepare_context(),
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            tools=await self._prepare_tools(),
-            tool_choice={"type": "function", "function": {"name": ReasoningTool.tool_name}},
-        ) as stream:
+        # Получаем параметры модели с учетом deep_level
+        model_params = self._get_model_parameters(getattr(self, '_deep_level', 0))
+        model_params.update({
+            "messages": await self._prepare_context(),
+            "tools": await self._prepare_tools(),
+            "tool_choice": {"type": "function", "function": {"name": ReasoningTool.tool_name}},
+        })
+        
+        async with self.openai_client.chat.completions.stream(**model_params) as stream:
             async for event in stream:
                 # print(event)
                 if event.type == "chunk":
@@ -112,14 +113,15 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
         return reasoning
 
     async def _select_action_phase(self, reasoning: ReasoningTool) -> BaseTool:
-        async with self.openai_client.chat.completions.stream(
-            model=self.model_name,
-            messages=await self._prepare_context(),
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            tools=await self._prepare_tools(),
-            tool_choice=self.tool_choice,
-        ) as stream:
+        # Получаем параметры модели с учетом deep_level
+        model_params = self._get_model_parameters(getattr(self, '_deep_level', 0))
+        model_params.update({
+            "messages": await self._prepare_context(),
+            "tools": await self._prepare_tools(),
+            "tool_choice": self.tool_choice,
+        })
+        
+        async with self.openai_client.chat.completions.stream(**model_params) as stream:
             async for event in stream:
                 if event.type == "chunk":
                     content = event.chunk.choices[0].delta.content

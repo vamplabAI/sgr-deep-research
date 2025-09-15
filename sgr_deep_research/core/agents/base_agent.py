@@ -66,7 +66,10 @@ class BaseAgent:
             self.openai_client = AsyncAzureOpenAI(**client_kwargs)
             self.model_name = config.azure.deployment_name
             self.max_tokens = config.azure.max_tokens
+            self.max_completion_tokens = config.azure.max_completion_tokens
             self.temperature = config.azure.temperature
+            self.reasoning_effort = config.azure.reasoning_effort
+            self.verbosity = config.azure.verbosity
         elif config.openai:
             # Standard OpenAI configuration
             client_kwargs = {"base_url": config.openai.base_url, "api_key": config.openai.api_key}
@@ -75,10 +78,48 @@ class BaseAgent:
             self.openai_client = AsyncOpenAI(**client_kwargs)
             self.model_name = config.openai.model
             self.max_tokens = config.openai.max_tokens
+            self.max_completion_tokens = config.openai.max_completion_tokens
             self.temperature = config.openai.temperature
+            self.reasoning_effort = config.openai.reasoning_effort
+            self.verbosity = config.openai.verbosity
         else:
             raise ValueError("Either 'openai' or 'azure' configuration must be provided")
         self.streaming_generator = OpenAIStreamingGenerator(model=self.id)
+
+    def _get_model_parameters(self, deep_level: int = 0) -> dict:
+        """Get model parameters based on model type and deep level."""
+        params = {
+            "model": self.model_name,
+        }
+        
+        # Определяем, поддерживает ли модель новые параметры GPT-5
+        is_gpt5 = "gpt-5" in self.model_name.lower() or "o3" in self.model_name.lower()
+        
+        if is_gpt5:
+            # GPT-5 не поддерживает кастомную температуру, только дефолтную (1)
+            # params["temperature"] = 1  # Можно не указывать, используется по умолчанию
+            
+            # GPT-5 и новые модели используют max_completion_tokens
+            base_tokens = self.max_completion_tokens
+            params["max_completion_tokens"] = min(base_tokens * (deep_level + 1), 128000)  # До 128K
+            
+            # Специальные параметры GPT-5
+            if deep_level >= 2:
+                params["reasoning_effort"] = "high"  # Максимальное рассуждение для deep режимов
+                params["verbosity"] = "high"  # Максимальная подробность
+            elif deep_level >= 1:
+                params["reasoning_effort"] = "medium"
+                params["verbosity"] = "medium"
+            else:
+                params["reasoning_effort"] = self.reasoning_effort
+                params["verbosity"] = self.verbosity
+        else:
+            # Старые модели поддерживают температуру и используют max_tokens
+            params["temperature"] = self.temperature
+            base_tokens = self.max_tokens
+            params["max_tokens"] = min(base_tokens * (deep_level + 1), 128000)  # До 128K для GPT-4
+        
+        return params
 
     async def provide_clarification(self, clarifications: str):
         """Receive clarification from external source (e.g. user input)"""
@@ -146,8 +187,17 @@ class BaseAgent:
 
     async def _prepare_context(self) -> list[dict]:
         """Prepare conversation context with system prompt."""
+        deep_level = getattr(self, '_deep_level', 0)
         system_prompt = PromptLoader.get_system_prompt(
-            user_request=self.task, sources=list(self._context.sources.values())
+            user_request=self.task, 
+            sources=list(self._context.sources.values()),
+            deep_level=deep_level
+        )
+        # Заменяем плейсхолдеры для счетчиков
+        system_prompt = system_prompt.replace(
+            "{searches_count}", str(self._context.searches_used)
+        ).replace(
+            "{max_searches}", str(getattr(self, 'max_searches', 10))
         )
         return [{"role": "system", "content": system_prompt}, *self.conversation]
 
