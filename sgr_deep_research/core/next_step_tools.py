@@ -3,15 +3,13 @@ from __future__ import annotations
 import operator
 from abc import ABC
 from functools import reduce
-from typing import Type, TypeVar
+from typing import Type
 
 from pydantic import Field, create_model
 
 from sgr_deep_research.core.base_tool import BaseTool
 from sgr_deep_research.core.prompts import PromptLoader
 from sgr_deep_research.tools.reasoning_tool import ReasoningTool
-
-T = TypeVar("T", bound=BaseTool)
 
 
 class NextStepToolStub(ReasoningTool, ABC):

@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Type, TypeVar
+from typing import Type
 
 from sgr_deep_research.core.base_tool import BaseTool
-
-T = TypeVar("T", bound=BaseTool)
 
 
 class ToolsRegistry:
@@ -85,7 +83,7 @@ class ToolsRegistry:
         }
 
 
-def tool(cls: Type[T]) -> Type[T]:
+def tool(cls: Type[BaseTool]) -> Type[BaseTool]:
     """Decorator for automatic tool registration.
 
     This decorator automatically registers any class that inherits from BaseTool
@@ -110,8 +108,3 @@ def tool(cls: Type[T]) -> Type[T]:
 
     ToolsRegistry.register(cls)
     return cls
-
-
-# Convenience aliases for backward compatibility
-system_agent_tools = ToolsRegistry.get_system_tools
-research_agent_tools = ToolsRegistry.get_research_tools
