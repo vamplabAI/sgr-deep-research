@@ -418,6 +418,7 @@ class BaseAgent:
         system_prompt = PromptLoader.get_system_prompt(
             user_request=self.task,
             sources=list(self._context.sources.values()),
+            available_tools=self.toolkit,
             deep_level=deep_level,
             system_prompt_key_or_file=getattr(self, "_system_prompt_key_or_file", None),
         )

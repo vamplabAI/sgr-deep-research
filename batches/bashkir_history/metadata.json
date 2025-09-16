@@ -1,0 +1,53 @@
+{
+  "batch_name": "bashkir_history_new_20250916_230004",
+  "original_name": "bashkir_history_new",
+  "topic": "история башкир",
+  "created": "2025-09-16T23:01:05.448667",
+  "total_queries": 5,
+  "languages": [
+    "ru",
+    "en"
+  ],
+  "queries_meta": [
+    {
+      "line": 1,
+      "query": "Когда началось и чем закончилось восстание башкир 1704–1711 годов?",
+      "query_en": "When did the Bashkir rebellion of 1704–1711 start and end, and what was its outcome?",
+      "aspect": "история и хронология",
+      "scope": "детали",
+      "suggested_depth": 1
+    },
+    {
+      "line": 2,
+      "query": "Где исторически расселялись башкиры и в каких регионах они живут сегодня?",
+      "query_en": "Where did the Bashkirs traditionally live, and which regions do they inhabit today?",
+      "aspect": "география и расселение",
+      "scope": "обзор",
+      "suggested_depth": 1
+    },
+    {
+      "line": 3,
+      "query": "Какие основные национальные праздники и традиции у башкир?",
+      "query_en": "What are the main Bashkir national holidays and traditions?",
+      "aspect": "культура и традиции",
+      "scope": "обзор",
+      "suggested_depth": 1
+    },
+    {
+      "line": 4,
+      "query": "Какие диалекты есть у башкирского языка и когда появилась его письменность?",
+      "query_en": "What dialects does the Bashkir language have, and when did its writing system emerge?",
+      "aspect": "язык и письменность",
+      "scope": "детали",
+      "suggested_depth": 2
+    },
+    {
+      "line": 5,
+      "query": "Какие традиционные виды хозяйства и промыслы были у башкир в прошлом?",
+      "query_en": "What traditional forms of economy and crafts did the Bashkirs practice in the past?",
+      "aspect": "экономика и хозяйство",
+      "scope": "обзор",
+      "suggested_depth": 1
+    }
+  ]
+}
