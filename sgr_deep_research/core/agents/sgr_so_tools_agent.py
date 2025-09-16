@@ -41,14 +41,24 @@ class SGRSOToolCallingResearchAgent(SGRToolCallingResearchAgent):
         self.id = f"sgr_so_tool_calling_agent_{uuid.uuid4()}"
 
     async def _reasoning_phase(self) -> ReasoningTool:
-        async with self.openai_client.chat.completions.stream(
-            model=self.model_name,
-            messages=await self._prepare_context(),
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            tools=await self._prepare_tools(),
-            tool_choice={"type": "function", "function": {"name": ReasoningTool.tool_name}},
-        ) as stream:
+        # Определяем, поддерживает ли модель новые параметры GPT-5
+        is_gpt5 = "gpt-5" in self.model_name.lower() or "o3" in self.model_name.lower()
+        
+        # Готовим параметры для первого API call
+        api_params_1 = {
+            "model": self.model_name,
+            "messages": await self._prepare_context(),
+            "tools": await self._prepare_tools(),
+            "tool_choice": {"type": "function", "function": {"name": ReasoningTool.tool_name}},
+        }
+        
+        if is_gpt5:
+            api_params_1["max_completion_tokens"] = self.max_completion_tokens
+        else:
+            api_params_1["max_tokens"] = self.max_tokens
+            api_params_1["temperature"] = self.temperature
+        
+        async with self.openai_client.chat.completions.stream(**api_params_1) as stream:
             async for event in stream:
                 if event.type == "chunk":
                     content = event.chunk.choices[0].delta.content
@@ -56,13 +66,20 @@ class SGRSOToolCallingResearchAgent(SGRToolCallingResearchAgent):
             reasoning: ReasoningTool = (  # noqa
                 (await stream.get_final_completion()).choices[0].message.tool_calls[0].function.parsed_arguments  #
             )
-        async with self.openai_client.chat.completions.stream(
-            model=self.model_name,
-            response_format=ReasoningTool,
-            messages=await self._prepare_context(),
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-        ) as stream:
+        # Готовим параметры для второго API call
+        api_params_2 = {
+            "model": self.model_name,
+            "response_format": ReasoningTool,
+            "messages": await self._prepare_context(),
+        }
+        
+        if is_gpt5:
+            api_params_2["max_completion_tokens"] = self.max_completion_tokens
+        else:
+            api_params_2["max_tokens"] = self.max_tokens
+            api_params_2["temperature"] = self.temperature
+        
+        async with self.openai_client.chat.completions.stream(**api_params_2) as stream:
             async for event in stream:
                 if event.type == "chunk":
                     content = event.chunk.choices[0].delta.content

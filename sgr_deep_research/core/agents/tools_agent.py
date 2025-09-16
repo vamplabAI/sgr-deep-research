@@ -80,14 +80,27 @@ class ToolCallingResearchAgent(BaseAgent):
         return None
 
     async def _select_action_phase(self, reasoning=None) -> BaseTool:
-        async with self.openai_client.chat.completions.stream(
-            model=self.model_name,
-            messages=await self._prepare_context(),
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            tools=await self._prepare_tools(),
-            tool_choice=self.tool_choice,
-        ) as stream:
+        # Определяем, поддерживает ли модель новые параметры GPT-5
+        is_gpt5 = "gpt-5" in self.model_name.lower() or "o3" in self.model_name.lower()
+        
+        # Готовим параметры для API call
+        api_params = {
+            "model": self.model_name,
+            "messages": await self._prepare_context(),
+            "tools": await self._prepare_tools(),
+            "tool_choice": self.tool_choice,
+        }
+        
+        if is_gpt5:
+            # GPT-5 и новые модели используют max_completion_tokens
+            api_params["max_completion_tokens"] = self.max_completion_tokens
+            # GPT-5 не поддерживает кастомную температуру, используется дефолтная (1)
+        else:
+            # Старые модели используют max_tokens и temperature
+            api_params["max_tokens"] = self.max_tokens
+            api_params["temperature"] = self.temperature
+        
+        async with self.openai_client.chat.completions.stream(**api_params) as stream:
             async for event in stream:
                 if event.type == "chunk":
                     content = event.chunk.choices[0].delta.content

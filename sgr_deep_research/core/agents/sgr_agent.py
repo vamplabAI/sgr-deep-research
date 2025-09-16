@@ -78,18 +78,36 @@ class SGRResearchAgent(BaseAgent):
         return NextStepToolsBuilder.build_NextStepTools(list(tools))
 
     async def _reasoning_phase(self) -> NextStepToolStub:
-        async with self.openai_client.chat.completions.stream(
-            model=self.model_name,
-            response_format=await self._prepare_tools(),
-            messages=await self._prepare_context(),
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-        ) as stream:
-            async for event in stream:
-                if event.type == "chunk":
-                    content = event.chunk.choices[0].delta.content
-                    self.streaming_generator.add_chunk(content)
-        reasoning: NextStepToolStub = (await stream.get_final_completion()).choices[0].message.parsed  # type: ignore
+        # Определяем, поддерживает ли модель новые параметры GPT-5
+        is_gpt5 = "gpt-5" in self.model_name.lower() or "o3" in self.model_name.lower()
+        
+        # Готовим параметры для API call
+        api_params = {
+            "model": self.model_name,
+            "response_format": await self._prepare_tools(),
+            "messages": await self._prepare_context(),
+        }
+        
+        if is_gpt5:
+            # GPT-5 и новые модели используют max_completion_tokens
+            api_params["max_completion_tokens"] = self.max_completion_tokens
+            # GPT-5 не поддерживает кастомную температуру, используется дефолтная (1)
+            # GPT-5 имеет проблемы со streaming + structured output, используем обычный вызов
+            completion = await self.openai_client.beta.chat.completions.parse(**api_params)
+            reasoning: NextStepToolStub = completion.choices[0].message.parsed  # type: ignore
+        else:
+            # Старые модели используют max_tokens и temperature
+            api_params["max_tokens"] = self.max_tokens
+            api_params["temperature"] = self.temperature
+            
+            # Используем streaming для старых моделей
+            async with self.openai_client.chat.completions.stream(**api_params) as stream:
+                async for event in stream:
+                    if event.type == "chunk":
+                        content = event.chunk.choices[0].delta.content
+                        self.streaming_generator.add_chunk(content)
+            reasoning: NextStepToolStub = (await stream.get_final_completion()).choices[0].message.parsed  # type: ignore
+        
         # we are not fully sure if it should be in conversation or not. Looks like not necessary data
         # self.conversation.append({"role": "assistant", "content": reasoning.model_dump_json(exclude={"function"})})
         self._log_reasoning(reasoning)

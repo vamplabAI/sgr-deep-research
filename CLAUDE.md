@@ -53,6 +53,14 @@ uv run python -m sgr_deep_research.cli --list-agents
 
 # Debug mode
 uv run python -m sgr_deep_research.cli --debug --query "Your question"
+
+# Batch исследования - множественные запросы по теме (упрощенный интерфейс)
+uv run python -m sgr_deep_research.cli batch create batch_name 10 "тема исследования"
+uv run python -m sgr_deep_research.cli batch run batch_name                # Простой запуск
+uv run python -m sgr_deep_research.cli batch run batch_name --restart      # Перезапуск
+uv run python -m sgr_deep_research.cli batch run batch_name --clarifications  # С уточнениями
+uv run python -m sgr_deep_research.cli batch list
+uv run python -m sgr_deep_research.cli batch status batch_name
 ```
 
 **Available agent types:**
@@ -67,6 +75,10 @@ uv run python -m sgr_deep_research.cli --debug --query "Your question"
 - `agents` - List available agents
 - `agent <type>` - Switch agent type
 - `deep <question>` - Deep research mode (20+ steps)
+- `batches` - Show list of batch research projects
+- `batch create <name> <count> <topic>` - Create batch research plan
+- `batch run <name>` - Execute batch research
+- `batch status <name>` - Show batch status
 - `quit/exit/q` - Exit
 - `<your question>` - Start research
 
@@ -213,3 +225,75 @@ Using the test-runner agent ensures:
 - Context usage is optimized
 - All issues are properly surfaced
 - No approval dialogs interrupt the workflow
+
+## BATCH RESEARCH MODE
+
+### Overview
+The Batch Research feature allows you to automatically generate and execute multiple research queries on different aspects of a single topic. This is perfect for comprehensive analysis of complex subjects, competitor research, or multi-faceted investigation.
+
+### Key Features
+1. **Intelligent Query Generation**: Uses specialized SGR agent to create diverse research angles
+2. **Structured Organization**: Each batch creates organized folder structure with progress tracking
+3. **Resume Capability**: Interrupted batches can be resumed from where they stopped
+4. **Multi-language Support**: Generates queries in multiple languages for broader coverage
+5. **Progress Monitoring**: Real-time status tracking and completion reporting
+
+### Usage Examples
+
+**Historical Research:**
+```bash
+# Generate 20 diverse queries about Bashkir history
+uv run python -m sgr_deep_research.cli batch create bashkir_history 20 "история башкир"
+uv run python -m sgr_deep_research.cli batch run bashkir_history --agent sgr-tools
+```
+
+**Competitor Analysis:**
+```bash
+# Research 10 different aspects of each competitor
+uv run python -m sgr_deep_research.cli batch create competitor_openai 10 "OpenAI business model"
+uv run python -m sgr_deep_research.cli batch create competitor_anthropic 10 "Anthropic strategy"
+```
+
+**YouTube Content Analysis:**
+```bash
+# Analyze trending topics in AI niche
+uv run python -m sgr_deep_research.cli batch create ai_youtube_trends 15 "AI YouTube content trends 2025"
+```
+
+### File Structure
+```
+batches/
+└── batch_name/
+    ├── plan.json              # Generated research plan
+    ├── status.txt             # Progress tracking
+    ├── query_01_история/      # Individual query results
+    │   ├── result.md
+    │   └── metadata.json
+    ├── query_02_экономика/
+    │   ├── result.md
+    │   └── metadata.json
+    └── ...
+```
+
+### Batch Commands
+- `batch create <name> <count> <topic>` - Generate research plan
+- `batch list` - Show all batch projects
+- `batch run <name>` - Execute batch research
+- `batch status <name>` - Check progress
+- `batch run <name> --restart` - Start over ignoring progress
+
+### Interactive Mode
+```bash
+uv run python -m sgr_deep_research.cli
+batches                                    # List all batches
+batch create startup_research 15 "fintech startups 2025"
+batch run startup_research
+batch status startup_research
+```
+
+### Advanced Features
+- **Smart Query Diversity**: Covers history, economics, technology, culture, geography, etc.
+- **Depth Recommendations**: Each query gets suggested depth level (0-5)
+- **Multi-language Coverage**: Ensures comprehensive international perspective
+- **Resumable Execution**: Can stop and resume large batch jobs
+- **Error Handling**: Failed queries marked separately, successful ones preserved

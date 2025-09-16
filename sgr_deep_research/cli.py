@@ -1,23 +1,27 @@
 """CLI интерфейс для SGR Deep Research агентов."""
 
 import asyncio
+import json
 import logging
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Type, Optional
+from typing import Dict, Type, Optional, List
 
 import click
 from rich.console import Console
 from rich.live import Live
 from rich.markdown import Markdown
 from rich.panel import Panel
-from rich.prompt import Prompt
+from rich.progress import Progress, TextColumn, BarColumn, TimeRemainingColumn
+from rich.prompt import Prompt, Confirm
 from rich.spinner import Spinner
 from rich.text import Text
 
 from sgr_deep_research.core.agents import (
     BaseAgent,
+    BatchGeneratorAgent,
     SGRAutoToolCallingResearchAgent,
     SGRResearchAgent,
     SGRSOToolCallingResearchAgent,
@@ -63,6 +67,8 @@ async def run_agent(
     output_file: Optional[str] = None,
     deep_level: int = 0,
     system_prompt: Optional[str] = None,
+    clarifications: bool = False,
+    log_file: Optional[str] = None,
 ):
     """Запустить агента с заданным запросом."""
     if agent_type not in AGENTS:
@@ -161,6 +167,38 @@ async def run_agent(
             pass
         console.print()
         
+        # Настройка логирования в файл если указан
+        file_logger = None
+        if log_file:
+            import logging
+            import os
+            # Создаем папку если не существует
+            os.makedirs(os.path.dirname(log_file), exist_ok=True)
+            
+            # Создаем файловый логгер
+            file_logger = logging.getLogger(f"agent_{id(agent)}")
+            file_logger.setLevel(logging.INFO)
+            
+            # Удаляем старые хендлеры
+            for handler in file_logger.handlers[:]:
+                file_logger.removeHandler(handler)
+            
+            file_handler = logging.FileHandler(log_file, mode='w', encoding='utf-8')
+            file_handler.setLevel(logging.INFO)
+            formatter = logging.Formatter('%(asctime)s - %(message)s', datefmt='%H:%M:%S')
+            file_handler.setFormatter(formatter)
+            file_logger.addHandler(file_handler)
+            file_logger.propagate = False
+            
+            # Записываем начальную информацию
+            file_logger.info(f"🚀 Агент запущен: {agent_class.__name__}")
+            file_logger.info(f"📝 Запрос: {query}")
+            file_logger.info(f"🧠 Модель: {agent.model_name}")
+            if deep_level > 0:
+                file_logger.info(f"🔍 ГЛУБОКИЙ РЕЖИМ УРОВНЯ {deep_level}")
+                file_logger.info(f"📊 Максимум шагов: {getattr(agent, 'max_iterations', 'N/A')}")
+                file_logger.info(f"🔍 Максимум поисков: {getattr(agent, 'max_searches', 'N/A')}")
+        
         # Запуск агента с интерактивной обработкой уточнений
         from sgr_deep_research.core.models import AgentStatesEnum
         
@@ -168,34 +206,95 @@ async def run_agent(
         agent_task = asyncio.create_task(agent.execute())
         
         # Мониторинг состояния агента
+        last_logged_step = 0
+        last_logged_state = None
+        
         while agent._context.state not in AgentStatesEnum.FINISH_STATES.value:
-            if agent._context.state == AgentStatesEnum.WAITING_FOR_CLARIFICATION:
-                # Агент ждет уточнений
-                console.print("\n[bold yellow]🤔 Агент запрашивает уточнения:[/bold yellow]")
+            # Логируем прогресс агента
+            if file_logger:
+                current_step = getattr(agent._context, 'step', 0)
+                current_state = agent._context.state
                 
-                # Получаем последний результат инструмента clarification
-                last_clarification = ""
-                if agent.log:
-                    for log_entry in reversed(agent.log):
-                        if (log_entry.get("step_type") == "tool_execution" and 
-                            log_entry.get("tool_name") == "clarificationtool"):
-                            last_clarification = log_entry.get("agent_tool_execution_result", "")
-                            break
+                # Логируем новые шаги
+                if current_step > last_logged_step:
+                    file_logger.info(f"📈 Шаг {current_step} выполняется...")
+                    last_logged_step = current_step
                 
-                if last_clarification:
-                    console.print(Panel(last_clarification, title="Вопросы", border_style="yellow"))
+                # Логируем изменения состояния
+                if current_state != last_logged_state:
+                    if current_state == AgentStatesEnum.RESEARCHING:
+                        file_logger.info("⚡ Агент исследует...")
+                    elif current_state == AgentStatesEnum.WAITING_FOR_CLARIFICATION:
+                        file_logger.info("❓ Ожидание уточнений...")
+                    elif current_state == AgentStatesEnum.COMPLETED:
+                        file_logger.info("✅ Работа завершена")
+                    elif current_state == AgentStatesEnum.ERROR:
+                        file_logger.info("❌ Произошла ошибка")
+                    elif current_state == AgentStatesEnum.FAILED:
+                        file_logger.info("💥 Задача провалена")
+                    else:
+                        file_logger.info(f"🔄 Состояние: {current_state}")
+                    last_logged_state = current_state
                 
-                # Запрашиваем ответ от пользователя
-                user_answer = Prompt.ask("\n[bold]Ваш ответ[/bold]", default="")
-                
-                if user_answer.strip():
-                    # Передаем уточнения агенту
-                    await agent.provide_clarification(user_answer)
-                    console.print("[green]✅ Уточнения переданы агенту[/green]\n")
+                # Логируем выполненные поиски
+                current_searches = getattr(agent._context, 'searches_used', 0)
+                if hasattr(agent._context, '_last_logged_searches'):
+                    last_searches = agent._context._last_logged_searches
                 else:
-                    # Пользователь не ответил, завершаем
-                    console.print("[yellow]⚠️ Нет ответа, завершаем работу агента[/yellow]")
-                    break
+                    last_searches = 0
+                    agent._context._last_logged_searches = 0
+                
+                if current_searches > last_searches:
+                    file_logger.info(f"🔍 Выполнен поиск {current_searches}/{getattr(agent, 'max_searches', 'N/A')}")
+                    agent._context._last_logged_searches = current_searches
+                
+                # Логируем активность через streaming generator если доступен
+                if hasattr(agent, 'streaming_generator') and hasattr(agent.streaming_generator, '_buffer'):
+                    current_buffer_len = len(agent.streaming_generator._buffer)
+                    if not hasattr(agent._context, '_last_logged_buffer_len'):
+                        agent._context._last_logged_buffer_len = 0
+                    
+                    # Логируем новые данные в буфере (сокращенно)
+                    if current_buffer_len > agent._context._last_logged_buffer_len + 500:  # каждые 500 символов
+                        new_content = agent.streaming_generator._buffer[agent._context._last_logged_buffer_len:agent._context._last_logged_buffer_len + 100]
+                        if new_content.strip():
+                            file_logger.info(f"💭 Агент размышляет: {new_content.strip()[:80]}...")
+                        agent._context._last_logged_buffer_len = current_buffer_len
+            
+            if agent._context.state == AgentStatesEnum.WAITING_FOR_CLARIFICATION:
+                if not clarifications:
+                    # В режиме без уточнений - автоматически продолжаем с пустым ответом
+                    console.print("[yellow]⚠️ Режим без уточнений - продолжаем автономно[/yellow]")
+                    if file_logger:
+                        file_logger.info("⚠️ Режим без уточнений - продолжаем автономно")
+                    await agent.provide_clarification("Продолжайте без дополнительных уточнений, используя доступную информацию.")
+                else:
+                    # Агент ждет уточнений
+                    console.print("\n[bold yellow]🤔 Агент запрашивает уточнения:[/bold yellow]")
+                    
+                    # Получаем последний результат инструмента clarification
+                    last_clarification = ""
+                    if agent.log:
+                        for log_entry in reversed(agent.log):
+                            if (log_entry.get("step_type") == "tool_execution" and 
+                                log_entry.get("tool_name") == "clarificationtool"):
+                                last_clarification = log_entry.get("agent_tool_execution_result", "")
+                                break
+                    
+                    if last_clarification:
+                        console.print(Panel(last_clarification, title="Вопросы", border_style="yellow"))
+                    
+                    # Запрашиваем ответ от пользователя
+                    user_answer = Prompt.ask("\n[bold]Ваш ответ[/bold]", default="")
+                    
+                    if user_answer.strip():
+                        # Передаем уточнения агенту
+                        await agent.provide_clarification(user_answer)
+                        console.print("[green]✅ Уточнения переданы агенту[/green]\n")
+                    else:
+                        # Пользователь не ответил, завершаем
+                        console.print("[yellow]⚠️ Нет ответа, завершаем работу агента[/yellow]")
+                        break
             
             await asyncio.sleep(0.1)
         
@@ -205,6 +304,18 @@ async def run_agent(
         except asyncio.CancelledError:
             pass
         
+        # Логируем завершение работы агента
+        if file_logger:
+            if agent._context.state == AgentStatesEnum.COMPLETED:
+                file_logger.info("✅ Агент успешно завершил работу")
+                
+                # Логируем финальную статистику
+                stats = agent.metrics.format_stats()
+                for key, value in stats.items():
+                    file_logger.info(f"📊 {key}: {value}")
+            else:
+                file_logger.info(f"❌ Агент завершился с состоянием: {agent._context.state}")
+
         # Получение результата из контекста агента
         if agent._context.state == AgentStatesEnum.COMPLETED:
             # Попытка найти сгенерированный отчет
@@ -308,11 +419,623 @@ async def run_agent(
             return None
         
     except Exception as e:
+        if file_logger:
+            file_logger.error(f"💥 Критическая ошибка: {e}")
+            import traceback
+            file_logger.error(f"📜 Traceback: {traceback.format_exc()}")
+        
         console.print(f"\n[red]Ошибка при выполнении:[/red] {e}")
         if logging.getLogger().isEnabledFor(logging.DEBUG):
             import traceback
             console.print(f"[red]Traceback:[/red]\n{traceback.format_exc()}")
         return None
+
+
+async def create_batch_plan(
+    topic: str,
+    batch_name: str,
+    count: int,
+    languages: List[str] = None,
+) -> Path:
+    """Создает план batch-исследования."""
+    
+    # Добавляем timestamp для уникальности
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    full_batch_name = f"{batch_name}_{timestamp}"
+    
+    console.print(f"[bold cyan]🎯 Генерация плана для batch '{full_batch_name}'[/bold cyan]")
+    console.print(f"[cyan]Тема:[/cyan] {topic}")
+    console.print(f"[cyan]Количество запросов:[/cyan] {count}")
+    
+    # Создаем папку для batch
+    batch_dir = Path("batches") / full_batch_name
+    batch_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Генерируем план с помощью специализированного агента
+    try:
+        generator = BatchGeneratorAgent(
+            topic=topic,
+            count=count,
+            languages=languages or ["ru", "en"],
+        )
+        
+        console.print("[yellow]⚡ Генерируем разнообразные исследовательские запросы...[/yellow]")
+        batch_plan = await generator.execute()
+        
+        # Создаем простой план - одна строка = один запрос
+        plan_file = batch_dir / "plan.txt"
+        with open(plan_file, "w", encoding="utf-8") as f:
+            f.write(f"# Batch: {full_batch_name}\n")
+            f.write(f"# Topic: {topic}\n")
+            f.write(f"# Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"# Total queries: {len(batch_plan.queries)}\n\n")
+            
+            for query in batch_plan.queries:
+                f.write(f"{query.query}\n")
+        
+        # Создаем метаданные в JSON для глубины и языков
+        meta_file = batch_dir / "metadata.json"
+        with open(meta_file, "w", encoding="utf-8") as f:
+            meta = {
+                "batch_name": full_batch_name,
+                "original_name": batch_name,
+                "topic": topic,
+                "created": datetime.now().isoformat(),
+                "total_queries": len(batch_plan.queries),
+                "languages": batch_plan.languages,
+                "queries_meta": [
+                    {
+                        "line": i+1,
+                        "query": query.query,
+                        "query_en": query.query_en,
+                        "aspect": query.aspect,
+                        "scope": query.scope,
+                        "suggested_depth": query.suggested_depth,
+                    }
+                    for i, query in enumerate(batch_plan.queries)
+                ]
+            }
+            json.dump(meta, f, ensure_ascii=False, indent=2)
+        
+        console.print(f"[green]✅ План создан:[/green] {batch_dir}")
+        console.print(f"[green]📊 Сгенерировано запросов:[/green] {len(batch_plan.queries)}")
+        console.print(f"[green]📁 План:[/green] {plan_file}")
+        console.print(f"[green]📋 Метаданные:[/green] {meta_file}")
+        
+        return batch_dir
+        
+    except Exception as e:
+        console.print(f"[red]❌ Ошибка создания плана:[/red] {e}")
+        return None
+
+
+async def execute_single_query(
+    line_num: int,
+    query: str,
+    batch_dir: Path,
+    agent_type: str,
+    suggested_depth: int = 0,
+    semaphore: asyncio.Semaphore = None,
+    clarifications: bool = False,
+) -> tuple[int, bool]:
+    """Выполняет один запрос из batch плана."""
+    if semaphore:
+        async with semaphore:
+            return await _execute_query_impl(line_num, query, batch_dir, agent_type, suggested_depth, not clarifications)
+    else:
+        return await _execute_query_impl(line_num, query, batch_dir, agent_type, suggested_depth, not clarifications)
+
+
+async def _execute_query_impl(
+    line_num: int,
+    query: str, 
+    batch_dir: Path,
+    agent_type: str,
+    suggested_depth: int = 0,
+    clarifications: bool = False,
+) -> tuple[int, bool]:
+    """Внутренняя реализация выполнения запроса."""
+    try:
+        # Создаем папку для результата
+        result_dir = batch_dir / f"{line_num:02d}_result"
+        result_dir.mkdir(exist_ok=True)
+        
+        output_file = result_dir / "report.md"
+        log_file = result_dir / "agent.log"
+        
+        console.print(f"[cyan]🔄 Строка {line_num}:[/cyan] Выполняем запрос...")
+        
+        # Выполняем запрос с логированием
+        result = await run_agent(
+            agent_type=agent_type,
+            query=query,
+            output_file=str(output_file),
+            deep_level=suggested_depth,
+            clarifications=clarifications,
+            log_file=str(log_file),
+        )
+        
+        if result:
+            # Сохраняем метаданные выполнения
+            meta_file = result_dir / "execution.json"
+            with open(meta_file, "w", encoding="utf-8") as f:
+                json.dump({
+                    "line_number": line_num,
+                    "query": query,
+                    "agent_type": agent_type,
+                    "suggested_depth": suggested_depth,
+                    "completed_at": datetime.now().isoformat(),
+                    "status": "COMPLETED",
+                    "output_file": str(output_file),
+                }, f, ensure_ascii=False, indent=2)
+            
+            console.print(f"[green]✅ Строка {line_num} завершена[/green]")
+            return line_num, True
+        else:
+            console.print(f"[red]❌ Строка {line_num} завершилась с ошибкой[/red]")
+            return line_num, False
+            
+    except Exception as e:
+        console.print(f"[red]❌ Ошибка в строке {line_num}:[/red] {e}")
+        return line_num, False
+
+
+async def run_batch_parallel(
+    batch_name: str,
+    agent_type: str = "sgr-tools",
+    max_concurrent: int = 3,
+    force_restart: bool = False,
+    clarifications: bool = False,
+) -> None:
+    """Выполняет batch-исследование параллельно."""
+    batch_dir = Path("batches") / batch_name
+    
+    if not batch_dir.exists():
+        console.print(f"[red]❌ Batch '{batch_name}' не найден в:[/red] {batch_dir}")
+        return
+    
+    plan_file = batch_dir / "plan.txt"
+    meta_file = batch_dir / "metadata.json"
+    
+    if not plan_file.exists():
+        console.print(f"[red]❌ Файл плана не найден:[/red] {plan_file}")
+        return
+    
+    # Загружаем план и метаданные
+    queries = []
+    with open(plan_file, "r", encoding="utf-8") as f:
+        actual_line_num = 0
+        for line_num, line in enumerate(f, 1):
+            line = line.strip()
+            if line and not line.startswith("#"):
+                actual_line_num += 1
+                queries.append((actual_line_num, line))
+    
+    # Загружаем метаданные для глубины
+    queries_meta = {}
+    if meta_file.exists():
+        try:
+            with open(meta_file, "r", encoding="utf-8") as f:
+                meta = json.load(f)
+                for qmeta in meta.get("queries_meta", []):
+                    queries_meta[qmeta["line"]] = qmeta
+        except Exception as e:
+            console.print(f"[yellow]⚠️ Не удалось загрузить метаданные: {e}[/yellow]")
+    
+    if not queries:
+        console.print("[red]❌ Не найдены запросы для выполнения[/red]")
+        return
+    
+    # Проверяем что уже выполнено (если не force_restart)
+    completed_queries = set()
+    if not force_restart:
+        for line_num, _ in queries:
+            result_dir = batch_dir / f"{line_num:02d}_result"
+            exec_file = result_dir / "execution.json"
+            if exec_file.exists():
+                try:
+                    with open(exec_file, "r", encoding="utf-8") as f:
+                        exec_data = json.load(f)
+                        if exec_data.get("status") == "COMPLETED":
+                            completed_queries.add(line_num)
+                except:
+                    pass
+    
+    # Определяем запросы для выполнения
+    queries_to_run = [(ln, q) for ln, q in queries if ln not in completed_queries]
+    
+    if not queries_to_run:
+        console.print("[green]✅ Все запросы уже выполнены![/green]")
+        return
+    
+    console.print(f"[bold cyan]🚀 Параллельное выполнение batch '{batch_name}'[/bold cyan]")
+    console.print(f"[cyan]К выполнению:[/cyan] {len(queries_to_run)} из {len(queries)} запросов")
+    console.print(f"[cyan]Агент:[/cyan] {agent_type}")
+    console.print(f"[cyan]Параллельность:[/cyan] {max_concurrent}")
+    
+    if completed_queries:
+        console.print(f"[dim]Пропускаем {len(completed_queries)} уже выполненных[/dim]")
+    
+    # Создаем семафор для ограничения параллельности
+    semaphore = asyncio.Semaphore(max_concurrent)
+    
+    # Создаем задачи для всех запросов
+    tasks = []
+    for line_num, query in queries_to_run:
+        # Получаем suggested_depth из метаданных
+        suggested_depth = queries_meta.get(line_num, {}).get("suggested_depth", 0)
+        
+        task = execute_single_query(
+            line_num=line_num,
+            query=query,
+            batch_dir=batch_dir,
+            agent_type=agent_type,
+            suggested_depth=suggested_depth,
+            semaphore=semaphore,
+            clarifications=clarifications,
+        )
+        tasks.append(task)
+    
+    # Выполняем все задачи параллельно
+    console.print(f"\n[yellow]⚡ Запускаем {len(tasks)} задач параллельно...[/yellow]")
+    
+    with Progress(
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        "[progress.percentage]{task.percentage:>3.1f}%",
+        "•",
+        TimeRemainingColumn(),
+        console=console,
+    ) as progress:
+        
+        task_progress = progress.add_task(f"Batch {batch_name}", total=len(tasks))
+        
+        # Используем asyncio.as_completed для отображения прогресса
+        completed_count = 0
+        success_count = 0
+        
+        for coro in asyncio.as_completed(tasks):
+            line_num, success = await coro
+            completed_count += 1
+            if success:
+                success_count += 1
+            
+            progress.update(task_progress, advance=1)
+    
+    console.print(f"\n[bold green]🎉 Batch '{batch_name}' завершен![/bold green]")
+    console.print(f"[green]✅ Успешно:[/green] {success_count}/{len(tasks)}")
+    console.print(f"[green]📁 Результаты в:[/green] {batch_dir}")
+
+
+async def run_batch(
+    batch_name: str,
+    agent_type: str = "sgr-tools",
+    force_restart: bool = False,
+) -> None:
+    """Выполняет batch-исследование."""
+    batch_dir = Path("batches") / batch_name
+    
+    if not batch_dir.exists():
+        console.print(f"[red]❌ Batch '{batch_name}' не найден в:[/red] {batch_dir}")
+        return
+    
+    plan_file = batch_dir / "plan.json"
+    status_file = batch_dir / "status.txt"
+    
+    if not plan_file.exists():
+        console.print(f"[red]❌ Файл плана не найден:[/red] {plan_file}")
+        return
+    
+    # Загружаем план
+    try:
+        with open(plan_file, "r", encoding="utf-8") as f:
+            plan_data = json.load(f)
+        
+        from sgr_deep_research.core.agents.batch_generator_agent import BatchPlan
+        batch_plan = BatchPlan(**plan_data)
+        
+    except Exception as e:
+        console.print(f"[red]❌ Ошибка загрузки плана:[/red] {e}")
+        return
+    
+    console.print(f"[bold cyan]🚀 Запуск batch исследования '{batch_name}'[/bold cyan]")
+    console.print(f"[cyan]Тема:[/cyan] {batch_plan.topic}")
+    console.print(f"[cyan]Запросов:[/cyan] {len(batch_plan.queries)}")
+    console.print(f"[cyan]Агент:[/cyan] {agent_type}")
+    
+    # Читаем текущий статус
+    completed_queries = set()
+    if status_file.exists() and not force_restart:
+        with open(status_file, "r", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("[COMPLETED]"):
+                    # Извлекаем ID запроса
+                    match = re.search(r"\[COMPLETED\]\s+(\d+)\.", line)
+                    if match:
+                        completed_queries.add(int(match.group(1)))
+    
+    # Определяем запросы для выполнения
+    queries_to_run = [q for q in batch_plan.queries if q.id not in completed_queries]
+    
+    if not queries_to_run:
+        console.print("[green]✅ Все запросы уже выполнены![/green]")
+        return
+    
+    console.print(f"[yellow]📋 К выполнению: {len(queries_to_run)} из {len(batch_plan.queries)} запросов[/yellow]")
+    
+    if not force_restart and len(completed_queries) > 0:
+        console.print(f"[dim]Пропускаем {len(completed_queries)} уже выполненных запросов[/dim]")
+    
+    # Выполняем запросы
+    with Progress(
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        "[progress.percentage]{task.percentage:>3.1f}%",
+        "•",
+        TimeRemainingColumn(),
+        console=console,
+    ) as progress:
+        
+        task = progress.add_task(f"Batch {batch_name}", total=len(queries_to_run))
+        
+        for query in queries_to_run:
+            # Обновляем статус на RUNNING
+            update_query_status(status_file, query.id, "RUNNING")
+            
+            progress.update(task, description=f"[cyan]Запрос {query.id:02d}:[/cyan] {query.aspect}")
+            
+            # Создаем папку для результата
+            query_dir = batch_dir / f"query_{query.id:02d}_{query.aspect.replace(' ', '_')}"
+            query_dir.mkdir(exist_ok=True)
+            
+            output_file = query_dir / "result.md"
+            
+            try:
+                # Выполняем запрос
+                result = await run_agent(
+                    agent_type=agent_type,
+                    query=query.query,
+                    output_file=str(output_file),
+                    deep_level=query.suggested_depth,
+                )
+                
+                if result:
+                    # Сохраняем метаданные
+                    meta_file = query_dir / "metadata.json"
+                    with open(meta_file, "w", encoding="utf-8") as f:
+                        json.dump({
+                            "id": query.id,
+                            "query": query.query,
+                            "query_en": query.query_en,
+                            "aspect": query.aspect,
+                            "scope": query.scope,
+                            "suggested_depth": query.suggested_depth,
+                            "agent_type": agent_type,
+                            "completed_at": datetime.now().isoformat(),
+                            "status": "COMPLETED",
+                        }, f, ensure_ascii=False, indent=2)
+                    
+                    update_query_status(status_file, query.id, "COMPLETED")
+                    console.print(f"[green]✅ Запрос {query.id} завершен[/green]")
+                else:
+                    update_query_status(status_file, query.id, "ERROR")
+                    console.print(f"[red]❌ Запрос {query.id} завершился с ошибкой[/red]")
+                
+            except Exception as e:
+                console.print(f"[red]❌ Ошибка в запросе {query.id}:[/red] {e}")
+                update_query_status(status_file, query.id, "ERROR")
+            
+            progress.advance(task)
+    
+    console.print(f"\n[bold green]🎉 Batch исследование '{batch_name}' завершено![/bold green]")
+    console.print(f"[green]📁 Результаты в:[/green] {batch_dir}")
+
+
+def update_query_status(status_file: Path, query_id: int, new_status: str) -> None:
+    """Обновляет статус запроса в файле."""
+    if not status_file.exists():
+        return
+    
+    # Читаем файл
+    with open(status_file, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+    
+    # Обновляем строку с нужным ID
+    for i, line in enumerate(lines):
+        if re.search(rf"\[.*\]\s+{query_id:02d}\.", line):
+            # Заменяем статус
+            lines[i] = re.sub(r"\[.*?\]", f"[{new_status}]", line)
+            break
+    
+    # Записываем обратно
+    with open(status_file, "w", encoding="utf-8") as f:
+        f.writelines(lines)
+
+
+def list_batches() -> None:
+    """Показывает список существующих batch-исследований."""
+    batches_dir = Path("batches")
+    
+    if not batches_dir.exists():
+        console.print("[yellow]📁 Папка batches не найдена[/yellow]")
+        return
+    
+    batch_dirs = [d for d in batches_dir.iterdir() if d.is_dir()]
+    
+    if not batch_dirs:
+        console.print("[yellow]📁 Batch-исследования не найдены[/yellow]")
+        return
+    
+    console.print(f"[bold cyan]📋 Найдено {len(batch_dirs)} batch-исследований:[/bold cyan]\n")
+    
+    for batch_dir in sorted(batch_dirs):
+        batch_name = batch_dir.name
+        plan_file = batch_dir / "plan.txt"
+        meta_file = batch_dir / "metadata.json"
+        
+        # Читаем тему и общую информацию
+        topic = "Неизвестная тема"
+        total_queries = 0
+        
+        if meta_file.exists():
+            try:
+                with open(meta_file, "r", encoding="utf-8") as f:
+                    meta = json.load(f)
+                    topic = meta.get("topic", topic)
+                    total_queries = meta.get("total_queries", 0)
+            except:
+                pass
+        elif plan_file.exists():
+            # Fallback: считаем строки в плане
+            try:
+                with open(plan_file, "r", encoding="utf-8") as f:
+                    for line in f:
+                        if line.strip() and not line.strip().startswith("#"):
+                            total_queries += 1
+                        elif line.strip().startswith("# Topic:"):
+                            topic = line.strip()[8:].strip()
+            except:
+                pass
+        
+        # Анализируем статус выполнения
+        completed_queries = 0
+        error_queries = 0
+        
+        for i in range(1, total_queries + 1):
+            result_dir = batch_dir / f"{i:02d}_result"
+            exec_file = result_dir / "execution.json"
+            
+            if exec_file.exists():
+                try:
+                    with open(exec_file, "r", encoding="utf-8") as f:
+                        exec_data = json.load(f)
+                        if exec_data.get("status") == "COMPLETED":
+                            completed_queries += 1
+                        else:
+                            error_queries += 1
+                except:
+                    error_queries += 1
+        
+        # Определяем общий статус
+        if completed_queries == total_queries and total_queries > 0:
+            status_color = "green"
+            status_text = "✅ ЗАВЕРШЕН"
+        elif completed_queries > 0:
+            status_color = "yellow"
+            status_text = "🔄 ЧАСТИЧНО"
+        elif error_queries > 0:
+            status_color = "red"
+            status_text = "❌ ОШИБКИ"
+        else:
+            status_color = "blue"
+            status_text = "⏳ ОЖИДАЕТ"
+        
+        console.print(f"[bold]{batch_name}[/bold]")
+        console.print(f"  [dim]Тема:[/dim] {topic}")
+        console.print(f"  [{status_color}]Статус:[/{status_color}] {status_text}")
+        console.print(f"  [dim]Прогресс:[/dim] {completed_queries}/{total_queries}")
+        if error_queries > 0:
+            console.print(f"  [red]Ошибок:[/red] {error_queries}")
+        console.print()
+
+
+def show_batch_status(batch_name: str) -> None:
+    """Показывает детальный статус batch исследования."""
+    batch_dir = Path("batches") / batch_name
+    
+    if not batch_dir.exists():
+        console.print(f"[red]❌ Batch '{batch_name}' не найден в:[/red] {batch_dir}")
+        return
+    
+    plan_file = batch_dir / "plan.txt"
+    meta_file = batch_dir / "metadata.json"
+    
+    # Загружаем план
+    queries = []
+    topic = "Неизвестная тема"
+    
+    if plan_file.exists():
+        with open(plan_file, "r", encoding="utf-8") as f:
+            actual_line_num = 0
+            for line_num, line in enumerate(f, 1):
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    actual_line_num += 1
+                    queries.append((actual_line_num, line))
+                elif line.startswith("# Topic:"):
+                    topic = line[8:].strip()
+    
+    # Загружаем метаданные
+    queries_meta = {}
+    if meta_file.exists():
+        try:
+            with open(meta_file, "r", encoding="utf-8") as f:
+                meta = json.load(f)
+                topic = meta.get("topic", topic)
+                for qmeta in meta.get("queries_meta", []):
+                    queries_meta[qmeta["line"]] = qmeta
+        except Exception as e:
+            console.print(f"[yellow]⚠️ Не удалось загрузить метаданные: {e}[/yellow]")
+    
+    if not queries:
+        console.print("[red]❌ Не найдены запросы в плане[/red]")
+        return
+    
+    console.print(f"[bold cyan]📋 Batch исследование: {batch_name}[/bold cyan]")
+    console.print(f"[cyan]Тема:[/cyan] {topic}")
+    console.print(f"[cyan]Запросов:[/cyan] {len(queries)}")
+    console.print(f"\n[bold yellow]📊 Статус выполнения:[/bold yellow]")
+    
+    # Показываем статус каждого запроса
+    for line_num, query in queries:
+        result_dir = batch_dir / f"{line_num:02d}_result"
+        exec_file = result_dir / "execution.json"
+        
+        # Определяем статус
+        if exec_file.exists():
+            try:
+                with open(exec_file, "r", encoding="utf-8") as f:
+                    exec_data = json.load(f)
+                    status = exec_data.get("status", "UNKNOWN")
+                    completed_at = exec_data.get("completed_at", "")
+                    
+                if status == "COMPLETED":
+                    status_color = "green"
+                    status_icon = "✅"
+                    status_text = f"COMPLETED ({completed_at[:16]})"
+                else:
+                    status_color = "red"
+                    status_icon = "❌"
+                    status_text = "ERROR"
+            except:
+                status_color = "red"
+                status_icon = "❌"
+                status_text = "ERROR (корр. файл)"
+        else:
+            status_color = "dim"
+            status_icon = "⏳"
+            status_text = "PENDING"
+        
+        # Показываем запрос с метаданными
+        console.print(f"  [{status_color}]{status_icon} {line_num:02d}.[/{status_color}] {status_text}")
+        
+        # Показываем сокращенный запрос
+        short_query = query[:80] + "..." if len(query) > 80 else query
+        console.print(f"      [dim]{short_query}[/dim]")
+        
+        # Показываем метаданные если есть
+        if line_num in queries_meta:
+            qmeta = queries_meta[line_num]
+            console.print(f"      [dim]Аспект: {qmeta.get('aspect', 'N/A')}, "
+                         f"Глубина: {qmeta.get('suggested_depth', 0)}[/dim]")
+        
+        # Показываем путь к результату если есть
+        if exec_file.exists():
+            report_file = result_dir / "report.md"
+            if report_file.exists():
+                console.print(f"      [dim]Отчет: {report_file}[/dim]")
+        
+        console.print()
 
 
 async def interactive_mode():
@@ -332,14 +1055,19 @@ async def interactive_mode():
             
             if command.lower() == "help":
                 console.print("\n[bold cyan]Команды:[/bold cyan]")
-                console.print("  help              - Показать эту справку")
-                console.print("  agents            - Показать доступных агентов")
-                console.print("  agent <type>      - Переключиться на агента")
-                console.print("  deep <запрос>     - Глубокое исследование (20 шагов)")
-                console.print("  deep2 <запрос>    - Очень глубокое (40 шагов, ~20-60 мин)")
-                console.print("  deep3 <запрос>    - Экстремально глубокое (60 шагов, ~30-90 мин)")
-                console.print("  quit/exit/q       - Выход")
-                console.print("  <запрос>          - Выполнить исследование")
+                console.print("  help                    - Показать эту справку")
+                console.print("  agents                  - Показать доступных агентов")
+                console.print("  agent <type>            - Переключиться на агента")
+                console.print("  deep <запрос>           - Глубокое исследование (20 шагов)")
+                console.print("  deep2 <запрос>          - Очень глубокое (40 шагов, ~20-60 мин)")
+                console.print("  deep3 <запрос>          - Экстремально глубокое (60 шагов, ~30-90 мин)")
+                console.print("  [bold yellow]Batch режим:[/bold yellow]")
+                console.print("  batches                 - Показать список batch-исследований")
+                console.print("  batch create <название> <количество> <тема> - Создать batch план")
+                console.print("  batch run <название>    - Запустить batch исследование")
+                console.print("  batch status <название> - Показать статус batch")
+                console.print("  quit/exit/q             - Выход")
+                console.print("  <запрос>                - Выполнить исследование")
                 console.print()
                 continue
             
@@ -356,6 +1084,66 @@ async def interactive_mode():
                     console.print(f"[red]Неизвестный агент:[/red] {new_agent}")
                     display_agents()
                 continue
+            
+            # Batch команды
+            if command.lower() == "batches":
+                list_batches()
+                continue
+            
+            if command.lower().startswith("batch "):
+                batch_args = command[6:].split()
+                
+                if len(batch_args) == 0:
+                    console.print("[red]Укажите подкоманду:[/red] create, run, status")
+                    continue
+                
+                batch_cmd = batch_args[0].lower()
+                
+                if batch_cmd == "create":
+                    if len(batch_args) < 4:
+                        console.print("[red]Использование:[/red] batch create <название> <количество> <тема>")
+                        console.print("[yellow]Пример:[/yellow] batch create bashkir_history 10 история башкир")
+                        continue
+                    
+                    batch_name = batch_args[1]
+                    try:
+                        count = int(batch_args[2])
+                    except ValueError:
+                        console.print("[red]Количество должно быть числом[/red]")
+                        continue
+                    
+                    topic = " ".join(batch_args[3:])
+                    
+                    await create_batch_plan(topic, batch_name, count)
+                    continue
+                
+                elif batch_cmd == "run":
+                    if len(batch_args) < 2:
+                        console.print("[red]Использование:[/red] batch run <название> [parallel|sequential]")
+                        continue
+                    
+                    batch_name = batch_args[1]
+                    run_mode = batch_args[2] if len(batch_args) > 2 else "parallel"
+                    
+                    if run_mode == "parallel":
+                        await run_batch_parallel(batch_name, current_agent, max_concurrent=3)
+                    else:
+                        await run_batch(batch_name, current_agent)
+                    continue
+                
+                elif batch_cmd == "status":
+                    if len(batch_args) < 2:
+                        console.print("[red]Использование:[/red] batch status <название>")
+                        continue
+                    
+                    batch_name = batch_args[1]
+                    show_batch_status(batch_name)
+                    continue
+                
+                else:
+                    console.print(f"[red]Неизвестная batch команда:[/red] {batch_cmd}")
+                    console.print("[yellow]Доступные:[/yellow] create, run, status")
+                    continue
             
             # Выполнить исследование
             deep_level = 0
@@ -501,6 +1289,64 @@ def deep2(query, agent, output, system_prompt):
 def deep3(query, agent, output, system_prompt):
     """Экстремально глубокое исследование уровня 3 (60 шагов, ~30-90 мин)."""
     asyncio.run(run_agent(agent, query, output, 3, system_prompt=system_prompt))
+
+
+@cli.group()
+def batch():
+    """Batch исследования - множественные запросы по теме."""
+    pass
+
+
+@batch.command('create')
+@click.argument('batch_name')
+@click.argument('count', type=int)
+@click.argument('topic')
+@click.option('--languages', '-l', multiple=True, default=['ru', 'en'], 
+              help='Языки для исследования (по умолчанию: ru, en)')
+def batch_create(batch_name, count, topic, languages):
+    """Создать план batch-исследования.
+    
+    Пример: uv run python -m sgr_deep_research.cli batch create bashkir_history 10 "история башкир"
+    """
+    asyncio.run(create_batch_plan(topic, batch_name, count, list(languages)))
+
+
+@batch.command('run')
+@click.argument('batch_name')
+@click.option('--agent', '-a', 
+              type=click.Choice(list(AGENTS.keys())), 
+              default='tools',  # По умолчанию tools агент - он стабильнее
+              help='Тип агента для выполнения')
+@click.option('--restart', is_flag=True, help='Начать заново, игнорируя прогресс')
+@click.option('--parallel/--sequential', default=True, help='Параллельное или последовательное выполнение')
+@click.option('--max-concurrent', '-c', default=2, help='Максимум параллельных задач')
+@click.option('--clarifications/--no-clarifications', default=False, help='Запрашивать уточнения (по умолчанию автономно)')
+def batch_run(batch_name, agent, restart, parallel, max_concurrent, clarifications):
+    """Запустить batch-исследование.
+    
+    Простой запуск (рекомендуется):
+        uv run python -m sgr_deep_research.cli batch run bashkir_history
+    
+    С настройками:
+        uv run python -m sgr_deep_research.cli batch run bashkir_history --restart --clarifications
+    """
+    if parallel:
+        asyncio.run(run_batch_parallel(batch_name, agent, max_concurrent, restart, not clarifications))
+    else:
+        asyncio.run(run_batch(batch_name, agent, restart, not clarifications))
+
+
+@batch.command('list')
+def batch_list():
+    """Показать список всех batch-исследований."""
+    list_batches()
+
+
+@batch.command('status')
+@click.argument('batch_name')
+def batch_status(batch_name):
+    """Показать статус batch-исследования."""
+    show_batch_status(batch_name)
 
 
 def main():
