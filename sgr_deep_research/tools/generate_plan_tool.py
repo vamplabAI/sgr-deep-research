@@ -13,7 +13,10 @@ if TYPE_CHECKING:
 
 @tool
 class GeneratePlanTool(BaseTool):
-    """Generate research plan based on clear user request."""
+    """Generate research plan.
+
+    Useful to split complex request into manageable steps.
+    """
 
     is_system_tool: ClassVar[bool] = True
 

@@ -35,5 +35,4 @@ execution:
 # Prompts Settings
 prompts:
   prompts_dir: "prompts"               # Directory with prompts
-  tool_function_prompt_file: "tool_function_prompt.txt"  # Tool function prompt file
   system_prompt_file: "system_prompt.txt"  # System prompt file

@@ -10,7 +10,7 @@ from sgr_deep_research.core.tools_registry import tool
 
 @tool
 class ReasoningTool(BaseTool):
-    """Agent Core - Determines next reasoning step with adaptive planning."""
+    """Agent Core - Determines next reasoning step with adaptive planning"""
 
     is_system_tool: ClassVar[bool] = True
 

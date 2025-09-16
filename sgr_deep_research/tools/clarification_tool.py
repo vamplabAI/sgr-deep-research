@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 @tool
 class ClarificationTool(BaseTool):
-    """Ask clarifying questions when facing ambiguous requests."""
+    """Ask clarifying questions when facing ambiguous request."""
 
     is_system_tool: ClassVar[bool] = True
 

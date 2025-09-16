@@ -4,7 +4,7 @@ import json
 import logging
 import os
 from datetime import datetime
-from typing import TYPE_CHECKING, Literal
+from typing import ClassVar, TYPE_CHECKING, Literal
 
 from pydantic import Field
 
@@ -22,7 +22,10 @@ config = get_config()
 
 @tool
 class CreateReportTool(BaseTool):
-    """Create comprehensive research report with citations."""
+    """Create comprehensive detailed report with citations as a final step of
+    research."""
+
+    is_system_tool: ClassVar[bool] = True
 
     reasoning: str = Field(description="Why ready to create report now")
     title: str = Field(description="Report title")

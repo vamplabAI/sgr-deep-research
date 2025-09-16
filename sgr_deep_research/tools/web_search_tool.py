@@ -22,12 +22,18 @@ config = get_config()
 
 @tool
 class WebSearchTool(BaseTool):
-    """Search for information with credibility focus."""
+    """Gather information.
+
+    - Use SPECIFIC terms and context in search queries
+    - For acronyms like "SGR", add context: "SGR Schema-Guided Reasoning"
+    - Use quotes for exact phrases: "Structured Output OpenAI"
+    - SEARCH QUERIES in SAME LANGUAGE as user request
+    - scrape_content=True for deeper analysis (fetches full page content)
+    """
 
     reasoning: str = Field(description="Why this search is needed and what to expect")
     query: str = Field(description="Search query in same language as user request")
     max_results: int = Field(default=10, description="Maximum results", ge=1, le=10)
-    plan_adapted: bool = Field(default=False, description="Is this search after plan adaptation?")
     scrape_content: bool = Field(
         default=False,
         description="Fetch full page content for deeper analysis",

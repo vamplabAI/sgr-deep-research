@@ -14,7 +14,8 @@ if TYPE_CHECKING:
 
 @tool
 class AgentCompletionTool(BaseTool):
-    """Tool for completing agent execution with status."""
+    """Finalize research task and complete agent execution after all steps are
+    completed."""
 
     is_system_tool: ClassVar[bool] = True
 

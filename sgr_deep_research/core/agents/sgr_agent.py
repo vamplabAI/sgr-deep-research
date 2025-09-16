@@ -54,17 +54,16 @@ class SGRResearchAgent(BaseAgent):
             *(toolkit or []),
         ]
         self.toolkit.remove(ReasoningTool)  # we use our own reasoning scheme
-
         self.max_searches = max_searches
 
     async def _prepare_tools(self) -> Type[NextStepToolStub]:
         """Prepare tool classes with current context limits."""
         tools = set(self.toolkit)
         if self._context.iteration >= self.max_iterations:
-            tools = [
+            tools = {
                 CreateReportTool,
                 AgentCompletionTool,
-            ]
+            }
         if self._context.clarifications_used >= self.max_clarifications:
             tools -= {
                 ClarificationTool,
@@ -126,19 +125,3 @@ class SGRResearchAgent(BaseAgent):
         self.streaming_generator.add_chunk(f"{result}\n")
         self._log_tool_execution(tool, result)
         return result
-
-
-async def main():
-    agent = SGRResearchAgent(
-        task="Research the current state of Tesla's Full Self-Driving technology \
-    in 2025. I need to understand if Tesla has achieved Level 5 autonomous driving as Elon Musk promised\
-    it would be ready by 2024, and whether regulatory approval has been granted worldwide."
-    )
-    # agent = SGRToolCallingResearchAgent(task="Сравни цену на биткоин за 2023 и 2024 год")
-    await agent.execute()
-
-
-if __name__ == "__main__":
-    import asyncio
-
-    asyncio.run(main())
