@@ -91,7 +91,8 @@ DEEP RESEARCH MODE LEVEL {deep_level} ACTIVATED:
 - Set enough_data=False UNTIL you have conducted at least {min_searches} searches
 - Search variations: different keywords, specific terms, related concepts, historical context, recent developments
 - For topics like history: search periods, regions, key figures, institutions, sources, conflicts, demographics
-- Example search progression: broad overview → specific periods → key events → sources analysis → related peoples/regions
+- Example search progression: broad overview → specific periods → key events → sources analysis →
+  related peoples/regions
 - DEPTH OVER SPEED: More thorough analysis is expected at this deep level
 """
 
