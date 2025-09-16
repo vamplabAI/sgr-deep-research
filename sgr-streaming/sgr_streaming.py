@@ -54,7 +54,15 @@ def load_config():
         'presence_penalty': float(os.getenv('PRESENCE_PENALTY', '0.6')),  # Added presence penalty
         'frequency_penalty': float(os.getenv('FREQUENCY_PENALTY', '0.6')), # Added frequency penalty
         'max_retries': int(os.getenv('MAX_RETRIES', '3')), # Added max retries
-        'retry_delay': float(os.getenv('RETRY_DELAY', '1.0')) # Added retry delay
+        'retry_delay': float(os.getenv('RETRY_DELAY', '1.0')), # Added retry delay
+        # Reporting control
+        'force_final_report': os.getenv('FORCE_FINAL_REPORT', 'false').strip().lower() in ('1', 'true', 'yes'),
+        'min_searches_for_report': int(os.getenv('MIN_SEARCHES_FOR_REPORT', '2')),
+        'min_sources_for_force_report': int(os.getenv('MIN_SOURCES_FOR_FORCE_REPORT', '5')),
+        # Prompt budgeting to avoid proxy truncation
+        'prompt_char_budget': int(os.getenv('PROMPT_CHAR_BUDGET', '9000')),
+        'message_char_limit': int(os.getenv('MESSAGE_CHAR_LIMIT', '1200')),
+        'max_history_messages': int(os.getenv('MAX_HISTORY_MESSAGES', '8'))
     }
 
     if os.path.exists('config.yaml'):
@@ -86,9 +94,24 @@ def load_config():
                     config['scraping_max_pages'] = yaml_config['scraping'].get('max_pages', config['scraping_max_pages'])
                     config['scraping_content_limit'] = yaml_config['scraping'].get('content_limit', config['scraping_content_limit'])
 
+                # Execution / reporting controls (optional)
                 if 'execution' in yaml_config:
-                    config['max_execution_steps'] = yaml_config['execution'].get('max_steps', config['max_execution_steps'])
-                    config['reports_directory'] = yaml_config['execution'].get('reports_dir', config['reports_directory'])
+                    exec_cfg = yaml_config['execution'] or {}
+                    config['reports_directory'] = exec_cfg.get('reports_dir', config['reports_directory'])
+                    config['force_final_report'] = exec_cfg.get('force_final_report', config['force_final_report'])
+                    config['min_searches_for_report'] = exec_cfg.get('min_searches_for_report', config['min_searches_for_report'])
+                    config['min_sources_for_force_report'] = exec_cfg.get('min_sources_for_force_report', config['min_sources_for_force_report'])
+                    # New optional tuning knobs with safe defaults
+                    config['strict_report_quality'] = exec_cfg.get('strict_report_quality', False)
+                    config['min_report_words'] = int(exec_cfg.get('min_report_words', 300))
+                    config['min_report_words_forced'] = int(exec_cfg.get('min_report_words_forced', 150))
+
+                if 'execution' in yaml_config:
+                    exec_cfg = yaml_config['execution'] or {}
+                    config['max_execution_steps'] = exec_cfg.get('max_steps', config['max_execution_steps'])
+                    config['prompt_char_budget'] = exec_cfg.get('prompt_char_budget', config['prompt_char_budget'])
+                    config['message_char_limit'] = exec_cfg.get('message_char_limit', config['message_char_limit'])
+                    config['max_history_messages'] = exec_cfg.get('max_history_messages', config['max_history_messages'])
 
         except Exception as e:
             print(f"Warning: Could not load config.yaml: {e}")
@@ -661,8 +684,181 @@ class StreamingSGRAgent:
             "searches": [],
             "sources": {},
             "citation_counter": 0,
-            "clarification_used": False
+            "clarification_used": False,
+            # Workflow control
+            "tool_counts": {},
+            "recent_tools": [],
+            "report_generated": False
         }
+
+    def _format_markdown_report(self, md: str) -> str:
+        """Lightweight Markdown formatter for LLM-generated reports.
+        - Normalizes newlines and trims excessive blank lines
+        - Ensures blank lines around headings
+        - Removes redundant setext underlines when ATX headings are used
+        - Normalizes Key Findings section into bullet points
+        """
+        if not isinstance(md, str):
+            return md
+
+        text = md.replace("\r\n", "\n").replace("\r", "\n")
+
+        # Remove setext-style underline lines directly under ATX headings
+        lines = text.split("\n")
+        cleaned = []
+        for i, line in enumerate(lines):
+            if i > 0 and re.fullmatch(r"[=\-]{3,}\s*", line) and cleaned and cleaned[-1].lstrip().startswith("#"):
+                # skip underline line
+                continue
+            cleaned.append(line.rstrip())
+        text = "\n".join(cleaned)
+
+        # Ensure a blank line before and after headings
+        def ensure_spacing_around_headings(s: str) -> str:
+            out = []
+            prev_blank = True
+            lines2 = s.split("\n")
+            for idx, ln in enumerate(lines2):
+                is_heading = bool(re.match(r"^\s*#{1,6}\s+", ln))
+                if is_heading and not prev_blank and out:
+                    out.append("")
+                    prev_blank = True
+                out.append(ln)
+                # Peek next line to decide if we need a blank line after
+                if is_heading:
+                    # Add a blank line after heading unless next is already blank or end
+                    nxt = lines2[idx + 1] if idx + 1 < len(lines2) else None
+                    if nxt is not None and nxt.strip() != "":
+                        out.append("")
+                        prev_blank = True
+                        continue
+                prev_blank = (ln.strip() == "")
+            return "\n".join(out)
+
+        text = ensure_spacing_around_headings(text)
+
+        # Normalize Key Findings section into bullets (English and Russian)
+        def bulletize_key_findings(s: str) -> str:
+            lines3 = s.split("\n")
+            out = []
+            in_kf = False
+            for i, ln in enumerate(lines3):
+                if re.match(r"^\s*#{1,6}\s*(Key Findings|Ключевые выводы)\s*$", ln):
+                    in_kf = True
+                    out.append(ln)
+                    # ensure a blank line after heading
+                    if i + 1 < len(lines3) and lines3[i + 1].strip() != "":
+                        out.append("")
+                    continue
+                if in_kf:
+                    if re.match(r"^\s*#", ln):
+                        # next section starts; exit Key Findings mode
+                        in_kf = False
+                        out.append(ln)
+                        continue
+                    if ln.strip() == "":
+                        # collapse consecutive blanks within Key Findings
+                        continue
+                    # normalize existing bullet markers
+                    m = re.match(r"^\s*([\-\*•])\s*(.*)$", ln)
+                    content = m.group(2).strip() if m else ln.strip()
+                    out.append(f"- {content}")
+                    continue
+                out.append(ln)
+            return "\n".join(out)
+
+        text = bulletize_key_findings(text)
+
+        # Collapse 3+ blank lines into at most 2
+        text = re.sub(r"\n{3,}", "\n\n", text)
+        return text.strip() + "\n"
+
+    def _strip_json_wrapper(self, text: str) -> str:
+        """If text looks like a JSON object with a 'report' field, extract and return it.
+        Also handles code-fenced JSON blocks and optional leading 'md ---' markers.
+        """
+        if not isinstance(text, str):
+            return text
+        s = text.strip()
+        # Remove optional leading 'md ---' marker
+        s = re.sub(r"^\s*md\s*-{2,}\s*", "", s, flags=re.IGNORECASE)
+        s = re.sub(r"^\s*md\s*—+\s*", "", s, flags=re.IGNORECASE)
+        # Unwrap code fence if present
+        m = re.match(r"^```(?:json|JSON)?\s*([\s\S]*?)```\s*$", s)
+        if m:
+            s = m.group(1).strip()
+        # Try direct JSON parse
+        try:
+            data = json.loads(s)
+            if isinstance(data, dict) and isinstance(data.get('report'), str):
+                return data['report']
+        except Exception:
+            pass
+        # Try to extract first JSON object
+        try:
+            m2 = re.search(r"\{[\s\S]*\}", s)
+            if m2:
+                data = json.loads(m2.group(0))
+                if isinstance(data, dict) and isinstance(data.get('report'), str):
+                    return data['report']
+        except Exception:
+            pass
+        return text
+
+    # ==============================
+    # Prompt Budgeting Utilities
+    # ==============================
+    def _shrink_text(self, text: str, limit: int) -> str:
+        if not isinstance(text, str) or len(text) <= limit:
+            return text
+        head = max(0, int(limit * 0.7))
+        tail = max(0, limit - head - 20)
+        return text[:head] + "\n... [truncated] ...\n" + (text[-tail:] if tail > 0 else "")
+
+    def _prune_messages_for_budget(self, messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
+        budget = int(self.config.get('prompt_char_budget', 9000))
+        per_msg = int(self.config.get('message_char_limit', 1200))
+        max_hist = int(self.config.get('max_history_messages', 8))
+
+        if not messages:
+            return messages
+
+        # Always keep first two (system + initial user) if present
+        preserved_prefix = []
+        suffix_start = 0
+        if messages and messages[0].get('role') == 'system':
+            preserved_prefix.append({**messages[0], 'content': self._shrink_text(messages[0].get('content', ''), per_msg)})
+            suffix_start = 1
+        if len(messages) > 1 and messages[1].get('role') == 'user':
+            preserved_prefix.append({**messages[1], 'content': self._shrink_text(messages[1].get('content', ''), per_msg)})
+            suffix_start = 2
+
+        suffix = messages[suffix_start:]
+        # Keep only the last N messages from suffix
+        suffix = suffix[-max_hist:]
+        # Truncate each message content
+        pruned_suffix = []
+        for m in suffix:
+            pruned_suffix.append({**m, 'content': self._shrink_text(m.get('content', ''), per_msg)})
+
+        pruned = preserved_prefix + pruned_suffix
+        # Enforce total budget by dropping oldest non-preserved if needed
+        def total_chars(msgs):
+            return sum(len(m.get('content', '')) for m in msgs)
+        while pruned and total_chars(pruned) > budget:
+            # Drop from after preserved prefix
+            if len(pruned) > len(preserved_prefix):
+                pruned.pop(len(preserved_prefix))
+            else:
+                # As a last resort, shrink system/user further
+                for i in range(len(preserved_prefix)):
+                    preserved_prefix[i]['content'] = self._shrink_text(preserved_prefix[i]['content'], max(400, int(per_msg * 0.6)))
+                if total_chars(pruned) <= budget:
+                    break
+                else:
+                    # Can't do more
+                    break
+        return pruned
 
     def build_source_bank(self) -> dict:
         """
@@ -784,6 +980,42 @@ LANGUAGE ADAPTATION: Always respond and create reports in the SAME LANGUAGE as t
 
 🚨 REMEMBER: Respond ONLY with valid JSON. No explanatory text before or after the JSON.
         """.strip()
+
+    def _force_report_if_possible(self, task: str) -> bool:
+        """Attempt to synthesize and save a report if conditions allow.
+        Returns True if a report was generated and saved.
+        """
+        if not self.config.get('force_final_report'):
+            return False
+        if self.context.get('report_generated'):
+            return True
+        searches_count = len(self.context.get('searches', []))
+        sources_count = len(self.context.get('sources', {}))
+        min_searches = int(self.config.get('min_searches_for_report', 2))
+        min_sources = int(self.config.get('min_sources_for_force_report', 5))
+        if sources_count >= min_sources or (searches_count >= min_searches and sources_count > 0):
+            self.console.print("[yellow]⚠️ Early termination detected — synthesizing final report[/yellow]")
+            report_md = self.generate_report_content(task)
+            if not report_md:
+                return False
+            forced_cmd = CreateReport(
+                tool="create_report",
+                reasoning="force_final_report",
+                title=f"Research Report: {task}",
+                user_request_language_reference=task,
+                content=report_md,
+                confidence="medium"
+            )
+            # Create a step for UI clarity
+            if not self.simple_ui:
+                self.monitor.start_step("create_report_forced", "Creating report (forced)")
+            self.step_tracker.start_step("create_report_forced", "Creating report (forced)")
+            result = self.dispatch(forced_cmd)
+            self.step_tracker.complete_current_step(result)
+            if not self.simple_ui:
+                self.monitor.complete_step(result)
+            return bool(self.context.get('report_generated'))
+        return False
     
     def stream_next_step(self, messages: List[Dict[str, str]]) -> tuple:
         """
@@ -802,7 +1034,7 @@ LANGUAGE ADAPTATION: Always respond and create reports in the SAME LANGUAGE as t
             if self.simple_ui:
                 completion = self.client.chat.completions.create(
                     model=self.config['openai_model'],
-                    messages=messages,
+                    messages=self._prune_messages_for_budget(messages),
                     max_tokens=self.config['max_tokens'],
                     temperature=self.config['temperature']
                 )
@@ -834,7 +1066,7 @@ LANGUAGE ADAPTATION: Always respond and create reports in the SAME LANGUAGE as t
             try:
                 with self.client.beta.chat.completions.stream(
                     model=self.config['openai_model'],
-                    messages=messages,
+                    messages=self._prune_messages_for_budget(messages),
                     response_format=NextStep,
                     max_tokens=self.config['max_tokens'],
                     temperature=self.config['temperature']
@@ -992,7 +1224,7 @@ LANGUAGE ADAPTATION: Always respond and create reports in the SAME LANGUAGE as t
                 self.console.print("[yellow]🔁 Falling back to non-streaming structured request...[/yellow]")
                 completion = self.client.chat.completions.create(
                     model=self.config['openai_model'],
-                    messages=messages,
+                    messages=self._prune_messages_for_budget(messages),
                     max_tokens=self.config['max_tokens'],
                     temperature=self.config['temperature']
                 )
@@ -1824,10 +2056,10 @@ Content Length: {len(text)} characters
         if results:
             summary_parts.append(f"\nFOUND {len(results)} SOURCES:")
             
-            for i, result in enumerate(results[:5]):  # Limit to top 5 results
+            for i, result in enumerate(results[:3]):  # Limit to top 3 results for budget
                 citation_num = citation_numbers[i] if i < len(citation_numbers) else i+1
                 title = result.get('title', 'No title')
-                content = result.get('content', result.get('snippet', ''))[:200]  # First 200 chars
+                content = result.get('content', result.get('snippet', ''))[:160]  # First 160 chars
                 url = result.get('url', '')
                 
                 summary_parts.append(f"[{citation_num}] {title}")
@@ -1874,6 +2106,11 @@ Content Length: {len(text)} characters
             }
         
         elif isinstance(cmd, GeneratePlan):
+            # Guard: only allow a single plan per session (0 or 1)
+            if self.context.get("plan") is not None:
+                self.console.print("[yellow]ℹ️ Plan already exists — skipping re-generation[/yellow]")
+                return self.context["plan"]
+
             plan = {
                 "research_goal": cmd.research_goal,
                 "planned_steps": cmd.planned_steps,
@@ -1956,6 +2193,48 @@ Content Length: {len(text)} characters
                 error_msg = f"Search error: {str(e)}"
                 self.console.print(f"❌ {error_msg}")
                 return {"error": error_msg}
+
+        elif isinstance(cmd, AdaptPlan):
+            # Update existing plan or create a minimal one if missing
+            plan = self.context.get("plan") or {
+                "research_goal": cmd.new_goal or cmd.original_goal,
+                "planned_steps": [],
+                "search_strategies": []
+            }
+            plan["research_goal"] = cmd.new_goal or plan.get("research_goal")
+            # Replace planned_steps with next_steps provided by the model
+            plan["planned_steps"] = list(cmd.next_steps)
+            plan["updated_at"] = datetime.now().isoformat()
+            plan["plan_changes"] = list(cmd.plan_changes)
+            self.context["plan"] = plan
+
+            # Compact display
+            plan_table = Table(show_header=False, box=None, padding=(0, 1))
+            plan_table.add_column("", style="cyan", width=10)
+            plan_table.add_column("", style="white")
+            plan_table.add_row("🎯 Goal:", (plan["research_goal"] or "")[0:50] + ("..." if len(plan["research_goal"])>50 else ""))
+            plan_table.add_row("🔧 Changes:", ", ".join(plan["plan_changes"])[:50] + ("..." if len(", ".join(plan["plan_changes"]))>50 else ""))
+            plan_table.add_row("📝 Next:", f"{len(plan['planned_steps'])} steps")
+
+            self.console.print(Panel(plan_table, title="🛠 Plan Adapted", border_style="cyan", expand=False, width=70))
+            return plan
+
+        elif isinstance(cmd, ReportCompletion):
+            # Finalize session and summarize
+            summary = {
+                "completed_steps": cmd.completed_steps,
+                "status": cmd.status,
+                "sources_count": len(self.context.get("sources", {})),
+                "searches_count": len(self.context.get("searches", [])),
+            }
+            done_table = Table(show_header=False, box=None, padding=(0, 1))
+            done_table.add_column("", style="green", width=12)
+            done_table.add_column("", style="white")
+            done_table.add_row("📌 Status:", cmd.status)
+            done_table.add_row("📎 Sources:", str(summary["sources_count"]))
+            done_table.add_row("🔍 Searches:", str(summary["searches_count"]))
+            self.console.print(Panel(done_table, title="✅ Research Completed", border_style="green", expand=False, width=60))
+            return summary
         
         elif isinstance(cmd, CreateReport):
             self.console.print(f"📝 [bold cyan]Creating Report with Streaming...[/bold cyan]")
@@ -1967,19 +2246,98 @@ Content Length: {len(text)} characters
             filename = f"{timestamp}_{safe_title}.md"
             filepath = os.path.join(self.config['reports_directory'], filename)
             
-            # Convert [SRC#] → numeric [n] and append a Sources section
+            # Prepare body and sources handling
+            body = cmd.content or ""
+            # Strip JSON wrappers if present
+            body = self._strip_json_wrapper(body)
+            # If content is empty (e.g., enforced CreateReport), synthesize content now
+            if not body.strip():
+                synthesized = self.generate_report_content(self.current_task if hasattr(self, 'current_task') else "")
+                if synthesized:
+                    body = synthesized
+                    cmd.content = synthesized
             source_bank = self.build_source_bank()
-            processed_body = self.replace_src_with_numeric(cmd.content, source_bank)
-            
+
+            # Convert [SRC#] → numeric [n] and append Sources if [SRC] markers present
+            processed_body = self._format_markdown_report(body)
+            if "[SRC" in body:
+                processed_body = self.replace_src_with_numeric(processed_body, source_bank)
+            else:
+                # If numeric citations present, append a Sources section from context
+                if "[1]" in processed_body or re.search(r"\[(\d+)\]", processed_body):
+                    # Build sources from context order by assigned number
+                    entries = []
+                    for url, data in sorted(self.context.get("sources", {}).items(), key=lambda kv: kv[1].get("number", 0)):
+                        n = data.get("number")
+                        title = data.get("title") or "Untitled"
+                        entries.append(f"{n}. {title} — {url}")
+                    if entries:
+                        processed_body = processed_body.rstrip() + "\n\n## Sources\n" + "\n".join(entries) + "\n"
+
             full_content = (
                 f"# {cmd.title}\n\n"
                 f"*Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*\n\n"
                 f"{processed_body}"
             )
             
+            # Quality gate with configurable thresholds and flexible fallback
+            forced = (cmd.reasoning in {"force_final_report", "sufficient_evidence_collected"})
+            strict = bool(self.config.get('strict_report_quality', False))
+            min_words_cfg = int(self.config.get('min_report_words', 300))
+            min_words_forced_cfg = int(self.config.get('min_report_words_forced', 150))
+            min_words = min_words_forced_cfg if forced else min_words_cfg
+            has_citation = ("[SRC" in processed_body) or (re.search(r"\[(\d+)\]", processed_body) is not None)
+
+            word_count = len((processed_body or "").split())
+            missing_citations = bool(self.context["sources"]) and not has_citation
+
+            def append_sources_section_if_missing(md: str) -> str:
+                # If there are sources but no inline citations, at least append Sources section
+                if not self.context["sources"]:
+                    return md
+                entries = []
+                for url, data in sorted(self.context.get("sources", {}).items(), key=lambda kv: kv[1].get("number", 0)):
+                    n = data.get("number")
+                    title = data.get("title") or "Untitled"
+                    entries.append(f"{n}. {title} — {url}")
+                if entries and "\n## Sources\n" not in md:
+                    return md.rstrip() + "\n\n## Sources\n" + "\n".join(entries) + "\n"
+                return md
+
+            # Enforce thresholds, but be pragmatic in forced mode or when strict mode is off
+            if word_count < min_words or (missing_citations and not forced and strict):
+                if forced:
+                    self.console.print("[yellow]⚠️ Forced mode: report is short — saving as draft.[/yellow]")
+                    full_content = "> [!NOTE] Draft saved (forced mode; may be short)\n\n" + full_content
+                elif not strict:
+                    # Save anyway but warn and try to help by appending sources
+                    self.console.print("[yellow]⚠️ Report may be short or lacks citations — saving anyway (non-strict).[/yellow]")
+                    full_content = append_sources_section_if_missing(full_content)
+                else:
+                    self.console.print("[yellow]⚠️ Report content too short or missing citations — not saving. Continue research.[/yellow]")
+                    self.context["report_generated"] = False
+                    return {
+                        "status": "insufficient_report",
+                        "reason": "too_short_or_missing_citations",
+                        "word_count": word_count,
+                    }
+            elif missing_citations and not forced:
+                # Not strict but citations missing: append sources and warn
+                if not strict:
+                    self.console.print("[yellow]⚠️ Missing inline citations — appending Sources section and saving.[/yellow]")
+                    full_content = append_sources_section_if_missing(full_content)
+                else:
+                    self.console.print("[yellow]⚠️ Missing inline citations — not saving in strict mode.[/yellow]")
+                    self.context["report_generated"] = False
+                    return {
+                        "status": "insufficient_report",
+                        "reason": "missing_citations",
+                        "word_count": word_count,
+                    }
+
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(full_content)
-            
+
             report = {
                 "title": cmd.title,
                 "content": cmd.content,
@@ -1989,7 +2347,10 @@ Content Length: {len(text)} characters
                 "filepath": filepath,
                 "timestamp": datetime.now().isoformat()
             }
-            
+
+            # Mark report generated in this session
+            self.context["report_generated"] = True
+
             # Компактное отображение отчета
             report_table = Table(show_header=False, box=None, padding=(0, 1))
             report_table.add_column("", style="green", width=10)
@@ -2010,9 +2371,270 @@ Content Length: {len(text)} characters
             self.console.print(report_panel)
             
             return report
-        
+
         else:
             return f"Unknown command: {type(cmd)}"
+
+    # ==============================
+    # Report Synthesis (Final Step)
+    # ==============================
+    def generate_report_content(self, task: str) -> str:
+        """Ask the model to synthesize a full report directly using SOURCE_BANK and search summaries.
+        Returns markdown content expected to contain [SRC#] markers that map to SOURCE_BANK.
+        """
+        source_bank = self.build_source_bank()
+        # Limit bank exposure to top 10 to fit budget
+        items = list(source_bank.items())[:10]
+        bank_lines = "\n".join([f"- {k}: {v['title']} — {v['url']}" for k, v in items])
+        # Aggregate search summaries for additional context
+        summaries = []
+        for s in self.context.get("searches", []):
+            if s.get("summary_for_llm"):
+                summaries.append(s["summary_for_llm"])
+        summary_text = "\n\n".join(summaries[:5])  # keep it concise
+
+        system = (
+            "You are an expert researcher. Respond ONLY with a compact JSON object with two keys: "
+            "'report' (a Markdown string) and 'sources' (an array of URLs actually cited). "
+            "The entire 'report' must be in the SAME language as the user's request. "
+            "Use inline citations like [SRC1], [SRC2] that refer to SOURCE_BANK keys provided. "
+            "Do NOT invent keys and do NOT output anything except the JSON object."
+        )
+        user = (
+            f"TASK: {task}\n\n"
+            f"SOURCE_BANK (use only these keys in citations as [SRC#]):\n{bank_lines}\n\n"
+            f"SEARCH_SUMMARY (evidence excerpts):\n{summary_text}\n\n"
+            "FORMAT:\n"
+            "{\n  \"report\": \"# <Title>\\n\\n## Executive Summary\\n... with [SRC#] citations ...\\n\\n## Background / Analysis\\n...\\n\\n## Key Findings\\n- ... [SRC#]\\n\\n## Conclusion\\n...\",\n  \"sources\": [\"<url1>\", \"<url2>\"]\n}\n"
+            "REQUIREMENTS:\n"
+            "- 800+ words, technical but readable.\n"
+            "- Start with an H1 title, then sections: Executive Summary, Background/Analysis, Key Findings (bullets), Conclusion.\n"
+            "- Every factual claim should have an inline citation [SRC#] that maps to SOURCE_BANK.\n"
+            "- If evidence is weak, use [SRC?].\n"
+        )
+
+        try:
+            resp = self.client.chat.completions.create(
+                model=self.config['openai_model'],
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user}
+                ],
+                temperature=self.config['temperature'],
+                max_tokens=min(8192, self.config['max_tokens'])
+            )
+            raw = resp.choices[0].message.content or ""
+            # Try to parse JSON object and extract 'report'
+            try:
+                data = json.loads(raw)
+                if isinstance(data, dict) and isinstance(data.get('report'), str):
+                    return data['report']
+            except Exception:
+                # try to extract JSON payload between first { and last }
+                try:
+                    import re as _re
+                    m = _re.search(r"\{[\s\S]*\}", raw)
+                    if m:
+                        data = json.loads(m.group(0))
+                        if isinstance(data, dict) and isinstance(data.get('report'), str):
+                            return data['report']
+                except Exception:
+                    pass
+            # Fallback: return raw content
+            return raw
+        except Exception as e:
+            self.console.print(f"[red]Failed to synthesize report: {e}[/red]")
+            return ""
+
+    # ==============================
+    # Workflow Logic Gate Enforcement
+    # ==============================
+    def _inc_tool_count(self, tool: str) -> None:
+        counts = self.context.setdefault("tool_counts", {})
+        counts[tool] = counts.get(tool, 0) + 1
+        recent = self.context.setdefault("recent_tools", [])
+        recent.append(tool)
+        # keep last 5
+        self.context["recent_tools"] = recent[-5:]
+
+    def _first_search_query(self) -> str:
+        # Derive a reasonable first query from current task or plan
+        goal = (self.context.get("plan") or {}).get("research_goal")
+        base = goal or getattr(self, "current_task", "research topic")
+        return f"{base} latest information"
+
+    def _enforce_logic_gates(self, job, searches_count: int):
+        """Enforce simple state-machine gates to prevent generation loops.
+        - Only one generate_plan per session.
+        - Require a plan before web_search.
+        - Require ≥2 searches and at least 1 source before create_report/report_completion.
+        - Discourage repeated identical web_search queries.
+        """
+        try:
+            func = getattr(job, "function", None)
+            if func is None or not hasattr(func, "tool"):
+                return job
+
+            tool = func.tool
+            plan_exists = bool(self.context.get("plan"))
+            sources_count = len(self.context.get("sources", {}))
+            counts = self.context.get("tool_counts", {})
+
+            # 1) No plan yet → force generate_plan
+            if tool == "web_search" and not plan_exists:
+                self.console.print("[yellow]⚠️ Gate: No plan yet → forcing generate_plan[/yellow]")
+                job.function = GeneratePlan(
+                    tool="generate_plan",
+                    reasoning="Web search needs a plan. Creating initial plan.",
+                    research_goal=(getattr(self, "current_task", "Research topic").strip() or "Research topic"),
+                    planned_steps=[
+                        "Conduct initial web search",
+                        "Gather authoritative sources",
+                        "Synthesize findings"
+                    ],
+                    search_strategies=[
+                        "Use specific topical queries",
+                        "Prefer recent, authoritative sources"
+                    ]
+                )
+                return job
+
+            # 1a) Adapt plan requires an existing plan and fresh data
+            if tool == "adapt_plan":
+                if not plan_exists:
+                    self.console.print("[yellow]⚠️ Gate: No plan to adapt → forcing generate_plan[/yellow]")
+                    job.function = GeneratePlan(
+                        tool="generate_plan",
+                        reasoning="Need a baseline plan before adaptation.",
+                        research_goal=(getattr(self, "current_task", "Research topic").strip() or "Research topic"),
+                        planned_steps=[
+                            "Conduct initial web search",
+                            "Gather authoritative sources",
+                            "Synthesize findings"
+                        ],
+                        search_strategies=[
+                            "Use specific topical queries",
+                            "Prefer recent, authoritative sources"
+                        ]
+                    )
+                    return job
+                # Require that the last action was a web_search (adapt after new evidence)
+                recent = self.context.get("recent_tools", [])
+                if not recent or recent[-1] != "web_search":
+                    self.console.print("[yellow]⚠️ Gate: Adaptation needs fresh search → forcing web_search[/yellow]")
+                    job.function = WebSearch(
+                        tool="web_search",
+                        reasoning="Run a search to provide evidence for plan adaptation.",
+                        query=self._first_search_query(),
+                        max_results=min(10, self.config.get("max_search_results", 10)),
+                        plan_adapted=True
+                    )
+                    return job
+
+            # 2) Plan exists → avoid repeated generate_plan
+            if tool == "generate_plan" and plan_exists:
+                self.console.print("[yellow]⚠️ Gate: Plan already exists → forcing web_search[/yellow]")
+                job.function = WebSearch(
+                    tool="web_search",
+                    reasoning="Proceeding to execute the existing plan.",
+                    query=self._first_search_query(),
+                    max_results=min(10, self.config.get("max_search_results", 10)),
+                    plan_adapted=False
+                )
+                return job
+
+            # 3) Create report only when we have enough material
+            min_searches = int(self.config.get("min_searches_for_report", 2))
+            if tool == "create_report" and (searches_count < min_searches or sources_count == 0):
+                self.console.print("[yellow]⚠️ Gate: Not enough material for report → forcing web_search[/yellow]")
+                job.function = WebSearch(
+                    tool="web_search",
+                    reasoning="Need more sources before creating report.",
+                    query=self._first_search_query(),
+                    max_results=min(10, self.config.get("max_search_results", 10)),
+                    plan_adapted=False
+                )
+                return job
+
+            # 4) Report completion should follow report creation and have sources
+            if tool == "report_completion" and (not self.context.get("report_generated") or sources_count == 0):
+                self.console.print("[yellow]⚠️ Gate: Completion blocked → not enough evidence[/yellow]")
+                job.function = WebSearch(
+                    tool="web_search",
+                    reasoning="Gathering more evidence before completion.",
+                    query=self._first_search_query(),
+                    max_results=min(10, self.config.get("max_search_results", 10)),
+                    plan_adapted=False
+                )
+                return job
+
+            # 5a) Limit adapt_plan churn
+            if tool == "adapt_plan" and counts.get("adapt_plan", 0) >= 2:
+                self.console.print("[yellow]⚠️ Gate: Too many plan adaptations → forcing web_search[/yellow]")
+                job.function = WebSearch(
+                    tool="web_search",
+                    reasoning="Executing plan after multiple adaptations.",
+                    query=self._first_search_query(),
+                    max_results=min(10, self.config.get("max_search_results", 10)),
+                    plan_adapted=True
+                )
+                return job
+
+            # 5) Basic anti-loop: avoid 3x same decision in a row
+            recent = self.context.get("recent_tools", [])
+            if len(recent) >= 2 and recent[-1:] == [tool] and recent[-2:-1] == [tool]:
+                # Nudge towards progress: if stuck on generate_plan → web_search; if web_search → create_report (if enough)
+                if tool == "generate_plan" and plan_exists:
+                    self.console.print("[yellow]⚠️ Anti-loop: Repeated generate_plan → forcing web_search[/yellow]")
+                    job.function = WebSearch(
+                        tool="web_search",
+                        reasoning="Advancing execution to avoid planning loop.",
+                        query=self._first_search_query(),
+                        max_results=min(10, self.config.get("max_search_results", 10)),
+                        plan_adapted=False
+                    )
+                elif tool == "web_search":
+                    # If we already have enough evidence, pivot to report; otherwise vary query
+                    min_searches = int(self.config.get('min_searches_for_report', 2))
+                    if searches_count >= min_searches and sources_count > 0:
+                        self.console.print("[yellow]⚠️ Anti-loop: Repeated web_search with enough evidence → forcing create_report[/yellow]")
+                        job.function = CreateReport(
+                            tool="create_report",
+                            reasoning="sufficient_evidence_collected",
+                            title=f"Research Report: {getattr(self, 'current_task', 'Topic')}",
+                            user_request_language_reference=getattr(self, 'current_task', ''),
+                            content="",  # content will be synthesized or produced by model next
+                            confidence="medium"
+                        )
+                    else:
+                        self.console.print("[yellow]⚠️ Anti-loop: Repeated web_search → varying query[/yellow]")
+                        job.function = WebSearch(
+                            tool="web_search",
+                            reasoning="Varying search to reduce duplication.",
+                            query=self._first_search_query() + " sources and timeline",
+                            max_results=min(10, self.config.get("max_search_results", 10)),
+                            plan_adapted=True
+                        )
+                return job
+
+            return job
+        except Exception:
+            # Fail open: if gates error, don't block flow
+            return job
+
+    def _can_complete_task(self, job, searches_count: int) -> bool:
+        """Return True if it's appropriate to complete the task now."""
+        func = getattr(job, "function", None)
+        if func is None or not hasattr(func, "tool"):
+            return False
+        tool = func.tool
+        sources_count = len(self.context.get("sources", {}))
+
+        if tool == "create_report":
+            return searches_count >= 2 and sources_count > 0
+        if tool == "report_completion":
+            return self.context.get("report_generated") and sources_count > 0
+        return True
     
     def execute_research_task(self, task: str) -> str:
         """Execute research task using SGR with streaming"""
@@ -2064,6 +2686,7 @@ Content Length: {len(text)} characters
                     context_msg = "GUIDANCE: Only use clarification for truly ambiguous requests (single words, unclear topics). For reasonable research topics, proceed directly with generate_plan."
                 
                 searches_count = len(self.context.get("searches", []))
+                sources_count = len(self.context.get("sources", {}))
                 user_request_info = f"\nORIGINAL USER REQUEST: '{task}'\n(Use this for language consistency)"
                 search_count_info = f"\nSEARCHES COMPLETED: {searches_count} (MAX 3-4 searches)"
                 
@@ -2079,12 +2702,37 @@ Content Length: {len(text)} characters
                 
                 if self.context["sources"]:
                     sources_info = "\nAVAILABLE SOURCES FOR CITATIONS:\n"
-                    for url, data in self.context["sources"].items():
+                    # Limit to first 10 sources to avoid prompt bloat
+                    for idx, (url, data) in enumerate(self.context["sources"].items()):
+                        if idx >= 10:
+                            sources_info += "... (truncated)\n"
+                            break
                         number = data["number"]
                         title = data["title"] or "Untitled"
                         sources_info += f"[{number}] {title} - {url}\n"
                     sources_info += "\nUSE THESE EXACT NUMBERS [1], [2], [3] etc. in your report citations."
                     context_msg = context_msg + "\n" + sources_info if context_msg else sources_info
+
+                # Encourage report creation when enough evidence exists
+                readiness_hint = ""
+                min_searches = int(self.config.get('min_searches_for_report', 2))
+                if searches_count >= min_searches and sources_count > 0 and not self.context.get("report_generated"):
+                    readiness_hint = (
+                        "\nREPORT READINESS: You appear to have enough evidence. "
+                        "If feasible, proceed with create_report now using the sources above."
+                    )
+                # On final iteration, strongly request report creation
+                if (
+                    self.config.get('force_final_report')
+                    and i == self.config['max_execution_steps'] - 1
+                    and not self.context.get("report_generated")
+                ):
+                    readiness_hint += (
+                        "\nFINAL STEP: You MUST create_report now (no further web_search). "
+                        "Include inline citations using the provided sources."
+                    )
+                if readiness_hint:
+                    context_msg = (context_msg + "\n" + readiness_hint) if context_msg else readiness_hint
 
                 # Build and inject SOURCE_BANK every turn (after searches accumulate)
                 source_bank = self.build_source_bank()
@@ -2110,23 +2758,67 @@ Content Length: {len(text)} characters
                         self.monitor.stop_monitoring()  # Pause dashboard to show schema generation
                     
                     job, raw_content, metrics = self.stream_next_step(log)
-                    
+
                     # Resume dashboard after schema generation
                     if not self.simple_ui:
                         self.monitor.start_monitoring()
-                    
+
                     if job is None:
                         self.console.print("[bold red]❌ Failed to parse LLM response[/bold red]")
+                        # Try to force a report before exiting this iteration
+                        if self._force_report_if_possible(task):
+                            break
                         break
-                    
-                    # Complete schema generation step
-                    self.step_tracker.complete_current_step(f"Generated: {job.function.tool}")
+
+                    # Enforce workflow logic gates BEFORE completing schema generation step
+                    original_tool = job.function.tool
+                    searches_count = len(self.context.get("searches", []))
+                    sources_count = len(self.context.get("sources", {}))
+                    job = self._enforce_logic_gates(job, searches_count)
+
+                    # If this is the final iteration and we have enough evidence,
+                    # but the model still didn't choose create_report, issue a final
+                    # directive and re-generate once to obtain a CreateReport tool.
+                    if (
+                        self.config.get('force_final_report')
+                        and i == self.config['max_execution_steps'] - 1
+                        and not self.context.get("report_generated")
+                        and searches_count >= int(self.config.get('min_searches_for_report', 2))
+                        and sources_count > 0
+                        and not isinstance(job.function, CreateReport)
+                    ):
+                        self.console.print("[yellow]⚠️ Final step: requesting create_report from model[/yellow]")
+                        log.append({
+                            "role": "system",
+                            "content": (
+                                "FINAL INSTRUCTION: You MUST produce a NextStep JSON where function.tool is 'create_report' "
+                                "with a detailed report (≥800 words) using inline citations [1],[2] that map to the AVAILABLE SOURCES."
+                            )
+                        })
+                        if not self.simple_ui:
+                            self.monitor.stop_monitoring()
+                        job2, raw_content2, _ = self.stream_next_step(log)
+                        if not self.simple_ui:
+                            self.monitor.start_monitoring()
+                        if job2 is not None:
+                            job = job2
+
+                    effective_tool = job.function.tool
+
+                    # Complete schema generation step (reflect effective tool)
+                    self.step_tracker.complete_current_step(f"Generated: {effective_tool}")
                     if not self.simple_ui:
-                        self.monitor.complete_step(f"Generated: {job.function.tool}")
-                    
-                    # Показываем только финальное решение после парсинга
-                    self.console.print(f"🤖 [bold magenta]LLM Decision:[/bold magenta] {job.function.tool}")
-                    
+                        self.monitor.complete_step(f"Generated: {effective_tool}")
+
+                    # Show both raw decision and enforced action if different
+                    if effective_tool != original_tool:
+                        self.console.print(f"🤖 [bold magenta]LLM Decision:[/bold magenta] {original_tool}  →  [green]Action:[/green] {effective_tool}")
+                    else:
+                        self.console.print(f"🤖 [bold magenta]LLM Decision:[/bold magenta] {effective_tool}")
+
+                    # Track chosen tool for anti-loop logic
+                    self._inc_tool_count(effective_tool)
+
                     # Начинаем этап выполнения в трекере (монитор использует те же данные)
                     # Note: clarification is handled separately below
                     if not isinstance(job.function, Clarification):
@@ -2134,6 +2826,38 @@ Content Length: {len(text)} characters
                         self.step_tracker.start_step(tool_step_name, f"Executing {job.function.tool}")
                         if not self.simple_ui:
                             self.monitor.start_step(tool_step_name, f"Executing {job.function.tool}")
+
+                    # Final-step hard guarantee: synthesize and save a report if forced and ready
+                    if (
+                        self.config.get('force_final_report')
+                        and i == self.config['max_execution_steps'] - 1
+                        and not self.context.get("report_generated")
+                    ):
+                        min_searches = int(self.config.get('min_searches_for_report', 2))
+                        if searches_count >= min_searches and len(self.context.get('sources', {})) > 0 and not isinstance(job.function, CreateReport):
+                            self.console.print("[yellow]⚠️ Forcing final report synthesis...[/yellow]")
+                            report_md = self.generate_report_content(task)
+                            if report_md:
+                                forced_cmd = CreateReport(
+                                    tool="create_report",
+                                    reasoning="force_final_report",
+                                    title=f"Research Report: {task}",
+                                    user_request_language_reference=task,
+                                    content=report_md,
+                                    confidence="medium"
+                                )
+                                # Start explicit step for UI clarity
+                                if not self.simple_ui:
+                                    self.monitor.start_step("create_report_forced", "Creating report (forced)")
+                                self.step_tracker.start_step("create_report_forced", "Creating report (forced)")
+                                result = self.dispatch(forced_cmd)
+                                self.step_tracker.complete_current_step(result)
+                                if not self.simple_ui:
+                                    self.monitor.complete_step(result)
+                                # If saved successfully, exit
+                                if self.context.get("report_generated"):
+                                    self.console.print(f"\n✅ [bold green]Auto-completing after forced report creation[/bold green]")
+                                    break
                     
                 except Exception as e:
                     self.console.print(f"[bold red]❌ LLM request error: {str(e)}[/bold red]")
@@ -2167,15 +2891,13 @@ Content Length: {len(text)} characters
                 
                 # Add to conversation log with full NextStep reasoning
                 # Include the reasoning schema so the agent can see its previous thoughts
-                reasoning_content = f"""Previous reasoning:
-Reasoning steps: {job.reasoning_steps}
-Current situation: {job.current_situation}
-Plan status: {job.plan_status}
-Searches done: {job.searches_done}
-Enough data: {job.enough_data}
-Remaining steps: {job.remaining_steps}
-
-Next action: {job.function.tool}"""
+                # Compact previous reasoning to reduce token usage
+                reasoning_content = (
+                    "Previous reasoning (compact):\n"
+                    f"Plan status: {job.plan_status}\n"
+                    f"Searches done: {job.searches_done}, Enough data: {job.enough_data}\n"
+                    f"Next action: {job.function.tool}"
+                )
                 
                 log.append({
                     "role": "assistant", 
@@ -2216,11 +2938,15 @@ Next action: {job.function.tool}"""
                 
                 log.append({"role": "tool", "content": result_text, "tool_call_id": step_id})
                 
-                # Auto-complete after report creation
-                if isinstance(job.function, CreateReport):
+                # Auto-complete after report creation only if a valid report was saved
+                if isinstance(job.function, CreateReport) and self.context.get("report_generated"):
                     self.console.print(f"\n✅ [bold green]Auto-completing after report creation[/bold green]")
                     break
         
+            # End of main loop — if we didn't produce a report, try forced synthesis
+            if not self.context.get("report_generated"):
+                self._force_report_if_possible(task)
+
         finally:
             # Останавливаем мониторинг
             if not self.simple_ui:
@@ -2326,7 +3052,11 @@ def main():
                     "searches": [],
                     "sources": {},
                     "citation_counter": 0,
-                    "clarification_used": False
+                    "clarification_used": False,
+                    # Workflow control
+                    "tool_counts": {},
+                    "recent_tools": [],
+                    "report_generated": False
                 }
                 original_task = task
             

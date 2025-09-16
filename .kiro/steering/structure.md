@@ -96,6 +96,14 @@ All configuration supports environment variable overrides:
 - `MAX_SEARCH_RESULTS`, `MAX_EXECUTION_STEPS`
 - `REPORTS_DIRECTORY`
 
+### Reporting Quality Controls (Streaming)
+- `execution.reports_dir` — directory for saved reports.
+- `execution.force_final_report` — may trigger a forced final report if early termination is detected.
+- Optional knobs (defaults are applied if keys are absent):
+  - `execution.strict_report_quality` (bool) — if true, short/missing-citation reports are not saved.
+  - `execution.min_report_words` (int) — min words to save normal reports (default 300).
+  - `execution.min_report_words_forced` (int) — min words to save forced reports (default 150).
+
 ## Development Workflow
 
 ### Adding New Features

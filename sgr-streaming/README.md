@@ -81,6 +81,10 @@ tavily:
 execution:
   max_steps: 6
   reports_dir: "reports"
+  # Optional quality knobs
+  strict_report_quality: false         # if true, require citations and min words
+  min_report_words: 300                # min words to save normal reports
+  min_report_words_forced: 150         # min words to save forced final reports
 ```
 
 ## 🧩 LiteLLM + Ollama (optional)

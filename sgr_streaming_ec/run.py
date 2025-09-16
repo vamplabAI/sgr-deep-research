@@ -3,14 +3,47 @@ import argparse, os, yaml
 from .llm_adapters import CallableAdapter
 from .loop import run, LoopConfig
 from .synthesize import report_from_state
+import re
+from datetime import datetime
 
 def load_config():
-    """Load configuration from SGR streaming config file"""
-    config_path = "sgr-streaming/config.yaml"
-    if os.path.exists(config_path):
-        with open(config_path, 'r') as f:
-            return yaml.safe_load(f)
+    """Load configuration with sensible fallbacks.
+
+    Preference order:
+    1) sgr-streaming/config.yaml (version-specific)
+    2) config.yaml at repository root
+    """
+    for config_path in ("sgr-streaming/config.yaml", "config.yaml"):
+        if os.path.exists(config_path):
+            with open(config_path, "r") as f:
+                try:
+                    return yaml.safe_load(f) or {}
+                except Exception:
+                    return {}
     return {}
+
+
+def _slugify(text: str, max_len: int = 60) -> str:
+    """Create a filesystem-friendly slug from text."""
+    slug = re.sub(r"[^A-Za-z0-9]+", "_", text).strip("_")
+    if len(slug) > max_len:
+        slug = slug[:max_len].rstrip("_")
+    return slug or "report"
+
+
+def save_report(content: str, query: str, cfg: dict) -> str:
+    """Save report content to the configured reports directory and return the filepath."""
+    exec_cfg = (cfg or {}).get("execution", {})
+    reports_dir = exec_cfg.get("reports_dir", "reports")
+    os.makedirs(reports_dir, exist_ok=True)
+
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    name = _slugify(query)
+    filename = f"{ts}_{name}.md"
+    path = os.path.join(reports_dir, filename)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
+    return path
 
 def env_llm(prompt: str, **params):
     from openai import OpenAI
@@ -55,7 +88,15 @@ def main():
     base_params = {"temperature":0.3, "top_p":0.85, "repetition_penalty":1.12}
 
     state = run(llm, args.query, cfg, base_params)
-    print(report_from_state(state))
+    report = report_from_state(state)
+
+    # Always show the report in the console
+    print(report)
+
+    # Persist the report to file for later reference
+    config = load_config()
+    out_path = save_report(report, args.query, config)
+    print(f"\nSaved report to: {out_path}")
 
 if __name__ == "__main__":
     main()
