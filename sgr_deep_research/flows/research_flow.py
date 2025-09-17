@@ -20,7 +20,6 @@ async def run_research_agent_task(
     query: str,
     deep_level: int = 0,
     result_dir: Optional[str] = None,
-    clarifications: bool = False,
 ) -> Dict[str, Any]:
     """Task для выполнения одного исследовательского запроса."""
 
@@ -134,7 +133,6 @@ async def research_flow(
         query=query,
         deep_level=deep_level,
         result_dir=result_dir,
-        clarifications=clarifications,
     )
 
     # Сохраняем результат в файл если указан
@@ -173,7 +171,7 @@ if __name__ == "__main__":
         result = await research_flow(
             query=query,
             deep_level=1,
-            output_file="bashkir_history_research.md",
+            output_file="reports/bashkir_history_research.md",
             result_dir="reports",
         )
 

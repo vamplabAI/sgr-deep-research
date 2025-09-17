@@ -467,8 +467,182 @@ async def create_batch_plan(
         return None
 
 
+async def run_agent_direct(
+    query: str,
+    deep_level: int = 0,
+    output_file: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    """Запускает SGR tools агента напрямую без Prefect."""
+    
+    try:
+        console.print(f"\n[bold cyan]🔄 Запуск исследования:[/bold cyan] {query}")
+        console.print(f"[cyan]Агент:[/cyan] {DEFAULT_AGENT}")
+        if deep_level > 0:
+            console.print(f"[yellow]🔍 Глубокий режим уровня {deep_level}[/yellow]")
+        
+        # Базовые параметры для масштабирования
+        base_steps = 5
+        base_searches = 3
+        
+        # Динамическое масштабирование для deep режима
+        max_iterations = base_steps * (deep_level * 3 + 1) if deep_level > 0 else base_steps
+        max_searches = base_searches * (deep_level + 1) if deep_level > 0 else base_searches
+        
+        console.print(f"[dim]Максимум шагов: {max_iterations}, поисков: {max_searches}[/dim]")
+        
+        # Создаем SGR tools агента
+        agent = SGRToolCallingResearchAgent(
+            task=query,
+            max_iterations=max_iterations,
+            max_searches=max_searches,
+            use_streaming=False,  # CLI использует non-streaming
+        )
+        
+        # Запуск агента
+        console.print("\n[bold green]▶️ Начинаем выполнение агента...[/bold green]")
+        
+        # Выполнение с обработкой уточнений
+        from sgr_deep_research.core.models import AgentStatesEnum
+        
+        while True:
+            result = await agent.execute()
+            
+            if agent._context.state == AgentStatesEnum.WAITING_FOR_CLARIFICATION:
+                # Показываем вопросы пользователю через Rich панель
+                clarification_question = agent._context.clarification_question
+                
+                # Создаем красивую панель для вопроса
+                question_panel = Panel(
+                    clarification_question,
+                    title="[bold yellow]❓ Агент запрашивает уточнение[/bold yellow]",
+                    title_align="left",
+                    border_style="yellow",
+                    padding=(1, 2)
+                )
+                console.print(question_panel)
+                
+                # Запрашиваем ответ у пользователя
+                user_response = Prompt.ask(
+                    "\n[bold cyan]Ваш ответ[/bold cyan]",
+                    console=console
+                )
+                
+                if user_response.lower() in ['quit', 'exit', 'q']:
+                    console.print("\n[bold yellow]⏹️  Исследование прервано пользователем[/bold yellow]")
+                    return None
+                
+                # Отправляем ответ агенту
+                console.print(f"[dim]📤 Отправка ответа агенту...[/dim]")
+                await agent.handle_clarification(user_response)
+                console.print(f"[dim]✅ Ответ отправлен, продолжаем исследование...[/dim]")
+                continue
+                
+            elif agent._context.state == AgentStatesEnum.COMPLETED:
+                # Агент завершил работу успешно
+                break
+                
+            elif agent._context.state == AgentStatesEnum.ERROR:
+                console.print(f"[red]❌ Ошибка агента:[/red] {agent._context.error_message}")
+                return None
+                
+            else:
+                console.print(f"[yellow]⚠️ Неожиданное состояние агента:[/yellow] {agent._context.state}")
+                break
+        
+        # Получаем результаты
+        final_answer = "Исследование завершено."
+        
+        # Ищем последний отчет
+        from pathlib import Path
+        from datetime import datetime
+        
+        reports_dir = Path("reports")
+        if reports_dir.exists():
+            report_files = list(reports_dir.glob("*.md"))
+            if report_files:
+                # Берем самый новый файл отчета
+                latest_report = max(report_files, key=lambda p: p.stat().st_mtime)
+                # Проверяем что файл создан недавно (в течение 5 минут)
+                if (datetime.now().timestamp() - latest_report.stat().st_mtime) < 300:
+                    try:
+                        with open(latest_report, "r", encoding="utf-8") as f:
+                            final_answer = f.read()
+                        console.print(f"[dim]📄 Найден отчет: {latest_report.name}[/dim]")
+                    except Exception as e:
+                        console.print(f"[yellow]⚠️ Не удалось прочитать отчет: {e}[/yellow]")
+        
+        # Сохраняем в output_file если указан
+        if output_file:
+            output_path = Path(output_file)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.write("# Результат исследования\n\n")
+                f.write(f"**Запрос:** {query}\n\n")
+                f.write(f"**Агент:** {DEFAULT_AGENT}\n\n")
+                if deep_level > 0:
+                    f.write(f"**Глубина исследования:** {deep_level}\n\n")
+                f.write("## Ответ\n\n")
+                f.write(final_answer)
+            
+            console.print(f"\n[green]📁 Результат сохранен в:[/green] {output_path}")
+        
+        # Показываем красивую панель с результатами
+        sources = list(agent._context.sources.values())
+        stats = agent.metrics.format_stats()
+        
+        # Создаем панель с итогами
+        stats_text = f"""[green]📊 Источников найдено:[/green] {len(sources)}
+[green]⏱️  Время выполнения:[/green] {stats.get('Время выполнения', 'N/A')}
+[green]🔍 Поисковых запросов:[/green] {stats.get('Поисковые запросы', 'N/A')}
+[green]💰 Стоимость:[/green] {stats.get('Стоимость (общая)', 'N/A')}
+[green]🧠 Шагов выполнено:[/green] {stats.get('Шаги выполнения', 'N/A')}"""
+
+        results_panel = Panel(
+            stats_text,
+            title="[bold green]✅ Исследование завершено![/bold green]",
+            title_align="left",
+            border_style="green",
+            padding=(1, 2)
+        )
+        console.print(results_panel)
+        
+        # Показываем источники если их много
+        if len(sources) > 0:
+            sources_text = "\n".join([
+                f"[cyan]{i+1}.[/cyan] [link={source.url}]{source.title or 'Источник'}[/link]"
+                for i, source in enumerate(sources[:5])  # Показываем первые 5
+            ])
+            
+            if len(sources) > 5:
+                sources_text += f"\n[dim]... и ещё {len(sources) - 5} источников[/dim]"
+            
+            sources_panel = Panel(
+                sources_text,
+                title=f"[bold blue]📚 Источники ({len(sources)})[/bold blue]",
+                title_align="left", 
+                border_style="blue",
+                padding=(1, 2)
+            )
+            console.print(sources_panel)
+        
+        return {
+            "status": "COMPLETED",
+            "answer": final_answer,
+            "sources": [{"number": s.number, "url": s.url, "title": s.title} for s in sources],
+            "stats": stats,
+            "agent_type": DEFAULT_AGENT,
+            "deep_level": deep_level,
+        }
+        
+    except Exception as e:
+        console.print(f"[red]❌ Ошибка при выполнении агента:[/red] {e}")
+        import traceback
+        console.print(f"[red]Traceback:[/red]\n{traceback.format_exc()}")
+        return None
+
+
 async def run_agent_with_prefect(
-    agent_type: str,
     query: str,
     deep_level: int = 0,
     output_file: Optional[str] = None,
@@ -477,13 +651,12 @@ async def run_agent_with_prefect(
     
     try:
         console.print(f"\n[bold cyan]🔄 Запуск исследования через Prefect:[/bold cyan] {query}")
-        console.print(f"[cyan]Агент:[/cyan] {agent_type}")
+        console.print(f"[cyan]Агент:[/cyan] {DEFAULT_AGENT}")
         if deep_level > 0:
             console.print(f"[yellow]🔍 Глубокий режим уровня {deep_level}[/yellow]")
         
         # Запускаем Prefect flow для исследования
         result = await research_flow(
-            agent_type=agent_type,
             query=query,
             deep_level=deep_level,
             output_file=output_file,
@@ -1106,7 +1279,7 @@ async def interactive_mode():
                 if deep_level > 0:
                     console.print(f"[yellow]🔍 Глубокий режим уровня {deep_level} (время: ~{deep_level * 10}-{deep_level * 30} мин)[/yellow]")
             
-            await run_agent_with_prefect(current_agent, command, deep_level=deep_level)
+            await run_agent_direct(command, deep_level=deep_level)
             console.print()
             
         except KeyboardInterrupt:
@@ -1162,8 +1335,8 @@ def cli(ctx, query, agent, output, deep, system_prompt, debug, interactive):
         if interactive or not query:
             asyncio.run(interactive_mode())
         else:
-            # Выполнить одиночный запрос через Prefect
-            asyncio.run(run_agent_with_prefect(agent, query, deep, output))
+            # Выполнить одиночный запрос напрямую
+            asyncio.run(run_agent_direct(query, deep, output))
 
 
 @cli.command()
@@ -1184,7 +1357,7 @@ def agents():
               help='Имя пресета из config.prompts.available_prompts или имя файла из папки prompts')
 def deep(query, level, agent, output, system_prompt):
     """Глубокое исследование с указанным уровнем."""
-    asyncio.run(run_agent_with_prefect(agent, query, level, output))
+    asyncio.run(run_agent_direct(query, level, output))
 
 
 @cli.command()
@@ -1198,7 +1371,7 @@ def deep(query, level, agent, output, system_prompt):
               help='Имя пресета из config.prompts.available_prompts или имя файла из папки prompts')
 def deep1(query, agent, output, system_prompt):
     """Глубокое исследование уровня 1 (20 шагов, ~10-30 мин)."""
-    asyncio.run(run_agent_with_prefect(agent, query, 1, output))
+    asyncio.run(run_agent_direct(query, 1, output))
 
 
 @cli.command()
@@ -1212,7 +1385,7 @@ def deep1(query, agent, output, system_prompt):
               help='Имя пресета из config.prompts.available_prompts или имя файла из папки prompts')
 def deep2(query, agent, output, system_prompt):
     """Очень глубокое исследование уровня 2 (40 шагов, ~20-60 мин)."""
-    asyncio.run(run_agent_with_prefect(agent, query, 2, output))
+    asyncio.run(run_agent_direct(query, 2, output))
 
 
 @cli.command()
@@ -1226,7 +1399,7 @@ def deep2(query, agent, output, system_prompt):
               help='Имя пресета из config.prompts.available_prompts или имя файла из папки prompts')
 def deep3(query, agent, output, system_prompt):
     """Экстремально глубокое исследование уровня 3 (60 шагов, ~30-90 мин)."""
-    asyncio.run(run_agent_with_prefect(agent, query, 3, output))
+    asyncio.run(run_agent_direct(query, 3, output))
 
 
 @cli.group()
