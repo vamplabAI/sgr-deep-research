@@ -5,7 +5,7 @@ from typing import Literal, Type
 from openai import pydantic_function_tool
 from openai.types.chat import ChatCompletionFunctionToolParam
 
-from sgr_deep_research.core.agents.sgr_agent import SGRResearchAgent
+from sgr_deep_research.core.agents.no_need_now.sgr_agent import SGRResearchAgent
 from sgr_deep_research.core.tools import (
     AgentCompletionTool,
     BaseTool,

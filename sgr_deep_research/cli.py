@@ -7,7 +7,7 @@ import re
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Type, Optional, List
+from typing import Dict, Type, Optional, List, Any
 
 import click
 from rich.console import Console
@@ -22,24 +22,14 @@ from rich.text import Text
 from sgr_deep_research.core.agents import (
     BaseAgent,
     BatchGeneratorAgent,
-    SGRAutoToolCallingResearchAgent,
-    SGRResearchAgent,
-    SGRSOToolCallingResearchAgent,
     SGRToolCallingResearchAgent,
-    ToolCallingResearchAgent,
+    AGENTS,
+    DEFAULT_AGENT,
 )
 from sgr_deep_research.settings import get_config
+from sgr_deep_research.flows import research_flow, batch_create_flow, batch_run_flow
 
 console = Console()
-
-# Доступные агенты
-AGENTS: Dict[str, Type[BaseAgent]] = {
-    "sgr": SGRResearchAgent,
-    "sgr-tools": SGRToolCallingResearchAgent,
-    "sgr-auto-tools": SGRAutoToolCallingResearchAgent,
-    "sgr-so-tools": SGRSOToolCallingResearchAgent,
-    "tools": ToolCallingResearchAgent,
-}
 
 
 def setup_logging(debug: bool = False):
@@ -452,75 +442,93 @@ async def create_batch_plan(
     count: int,
     languages: List[str] = None,
 ) -> Path:
-    """Создает план batch-исследования."""
+    """Создает план batch-исследования используя Prefect flow."""
     
-    # Добавляем timestamp для уникальности
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    full_batch_name = f"{batch_name}_{timestamp}"
-    
-    console.print(f"[bold cyan]🎯 Генерация плана для batch '{full_batch_name}'[/bold cyan]")
+    console.print(f"[bold cyan]🎯 Генерация плана для batch '{batch_name}'[/bold cyan]")
     console.print(f"[cyan]Тема:[/cyan] {topic}")
     console.print(f"[cyan]Количество запросов:[/cyan] {count}")
     
-    # Создаем папку для batch
-    batch_dir = Path("batches") / full_batch_name
-    batch_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Генерируем план с помощью специализированного агента
     try:
-        generator = BatchGeneratorAgent(
+        console.print("[yellow]⚡ Запускаем Prefect flow для генерации плана...[/yellow]")
+        
+        # Запускаем Prefect flow для создания batch плана
+        batch_dir = await batch_create_flow(
             topic=topic,
+            batch_name=batch_name,
             count=count,
             languages=languages or ["ru", "en"],
         )
         
-        console.print("[yellow]⚡ Генерируем разнообразные исследовательские запросы...[/yellow]")
-        batch_plan = await generator.execute()
-        
-        # Создаем простой план - одна строка = один запрос
-        plan_file = batch_dir / "plan.txt"
-        with open(plan_file, "w", encoding="utf-8") as f:
-            f.write(f"# Batch: {full_batch_name}\n")
-            f.write(f"# Topic: {topic}\n")
-            f.write(f"# Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write(f"# Total queries: {len(batch_plan.queries)}\n\n")
-            
-            for query in batch_plan.queries:
-                f.write(f"{query.query}\n")
-        
-        # Создаем метаданные в JSON для глубины и языков
-        meta_file = batch_dir / "metadata.json"
-        with open(meta_file, "w", encoding="utf-8") as f:
-            meta = {
-                "batch_name": full_batch_name,
-                "original_name": batch_name,
-                "topic": topic,
-                "created": datetime.now().isoformat(),
-                "total_queries": len(batch_plan.queries),
-                "languages": batch_plan.languages,
-                "queries_meta": [
-                    {
-                        "line": i+1,
-                        "query": query.query,
-                        "query_en": query.query_en,
-                        "aspect": query.aspect,
-                        "scope": query.scope,
-                        "suggested_depth": query.suggested_depth,
-                    }
-                    for i, query in enumerate(batch_plan.queries)
-                ]
-            }
-            json.dump(meta, f, ensure_ascii=False, indent=2)
-        
-        console.print(f"[green]✅ План создан:[/green] {batch_dir}")
-        console.print(f"[green]📊 Сгенерировано запросов:[/green] {len(batch_plan.queries)}")
-        console.print(f"[green]📁 План:[/green] {plan_file}")
-        console.print(f"[green]📋 Метаданные:[/green] {meta_file}")
-        
+        console.print(f"[green]✅ План создан через Prefect:[/green] {batch_dir}")
         return batch_dir
         
     except Exception as e:
         console.print(f"[red]❌ Ошибка создания плана:[/red] {e}")
+        return None
+
+
+async def run_agent_with_prefect(
+    agent_type: str,
+    query: str,
+    deep_level: int = 0,
+    output_file: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    """Запускает агента через Prefect flow."""
+    
+    try:
+        console.print(f"\n[bold cyan]🔄 Запуск исследования через Prefect:[/bold cyan] {query}")
+        console.print(f"[cyan]Агент:[/cyan] {agent_type}")
+        if deep_level > 0:
+            console.print(f"[yellow]🔍 Глубокий режим уровня {deep_level}[/yellow]")
+        
+        # Запускаем Prefect flow для исследования
+        result = await research_flow(
+            agent_type=agent_type,
+            query=query,
+            deep_level=deep_level,
+            output_file=output_file,
+        )
+        
+        if result.get("status") == "COMPLETED":
+            # Отображение результата
+            console.print("\n" + "="*80 + "\n")
+            console.print(Panel(
+                Markdown(result.get("answer", "")),
+                title="[bold green]Результат исследования (Prefect)[/bold green]",
+                border_style="green"
+            ))
+            
+            # Отображение источников
+            sources = result.get("sources", [])
+            if sources:
+                console.print(f"\n[bold cyan]Источники ({len(sources)}):[/bold cyan]")
+                for source in sources:
+                    console.print(f"  {source['number']}. [link]{source['url']}[/link]")
+                    if source['title']:
+                        console.print(f"     {source['title']}")
+            
+            # Отображение статистики выполнения
+            console.print(f"\n[bold yellow]📊 Статистика выполнения:[/bold yellow]")
+            stats = result.get("stats", {})
+            console.print(f"  [cyan]Агент:[/cyan] {result.get('agent_type', 'Unknown')}")
+            console.print(f"  [cyan]Модель:[/cyan] {result.get('model', 'Unknown')}")
+            if deep_level > 0:
+                console.print(f"  [cyan]Глубина:[/cyan] {deep_level}")
+            for key, value in stats.items():
+                console.print(f"  [cyan]{key}:[/cyan] {value}")
+            
+            if output_file:
+                console.print(f"\n[green]Результат сохранен в:[/green] {output_file}")
+            
+            return result
+        else:
+            console.print(f"[red]Агент завершился с ошибкой:[/red] {result.get('error', 'Unknown error')}")
+            return None
+    
+    except Exception as e:
+        console.print(f"\n[red]Ошибка при выполнении через Prefect:[/red] {e}")
+        import traceback
+        console.print(f"[red]Traceback:[/red]\n{traceback.format_exc()}")
         return None
 
 
@@ -598,134 +606,48 @@ async def _execute_query_impl(
 
 async def run_batch_parallel(
     batch_name: str,
-    agent_type: str = "sgr-tools",
+    agent_type: str = DEFAULT_AGENT,
     max_concurrent: int = 3,
     force_restart: bool = False,
     clarifications: bool = False,
 ) -> None:
-    """Выполняет batch-исследование параллельно."""
-    batch_dir = Path("batches") / batch_name
+    """Выполняет batch-исследование параллельно используя Prefect flow."""
     
-    if not batch_dir.exists():
-        console.print(f"[red]❌ Batch '{batch_name}' не найден в:[/red] {batch_dir}")
-        return
-    
-    plan_file = batch_dir / "plan.txt"
-    meta_file = batch_dir / "metadata.json"
-    
-    if not plan_file.exists():
-        console.print(f"[red]❌ Файл плана не найден:[/red] {plan_file}")
-        return
-    
-    # Загружаем план и метаданные
-    queries = []
-    with open(plan_file, "r", encoding="utf-8") as f:
-        actual_line_num = 0
-        for line_num, line in enumerate(f, 1):
-            line = line.strip()
-            if line and not line.startswith("#"):
-                actual_line_num += 1
-                queries.append((actual_line_num, line))
-    
-    # Загружаем метаданные для глубины
-    queries_meta = {}
-    if meta_file.exists():
-        try:
-            with open(meta_file, "r", encoding="utf-8") as f:
-                meta = json.load(f)
-                for qmeta in meta.get("queries_meta", []):
-                    queries_meta[qmeta["line"]] = qmeta
-        except Exception as e:
-            console.print(f"[yellow]⚠️ Не удалось загрузить метаданные: {e}[/yellow]")
-    
-    if not queries:
-        console.print("[red]❌ Не найдены запросы для выполнения[/red]")
-        return
-    
-    # Проверяем что уже выполнено (если не force_restart)
-    completed_queries = set()
-    if not force_restart:
-        for line_num, _ in queries:
-            result_dir = batch_dir / f"{line_num:02d}_result"
-            exec_file = result_dir / "execution.json"
-            if exec_file.exists():
-                try:
-                    with open(exec_file, "r", encoding="utf-8") as f:
-                        exec_data = json.load(f)
-                        if exec_data.get("status") == "COMPLETED":
-                            completed_queries.add(line_num)
-                except:
-                    pass
-    
-    # Определяем запросы для выполнения
-    queries_to_run = [(ln, q) for ln, q in queries if ln not in completed_queries]
-    
-    if not queries_to_run:
-        console.print("[green]✅ Все запросы уже выполнены![/green]")
-        return
-    
-    console.print(f"[bold cyan]🚀 Параллельное выполнение batch '{batch_name}'[/bold cyan]")
-    console.print(f"[cyan]К выполнению:[/cyan] {len(queries_to_run)} из {len(queries)} запросов")
+    console.print(f"[bold cyan]🚀 Параллельное выполнение batch '{batch_name}' через Prefect[/bold cyan]")
     console.print(f"[cyan]Агент:[/cyan] {agent_type}")
-    console.print(f"[cyan]Параллельность:[/cyan] {max_concurrent}")
+    console.print(f"[cyan]Максимум параллельных задач:[/cyan] {max_concurrent}")
     
-    if completed_queries:
-        console.print(f"[dim]Пропускаем {len(completed_queries)} уже выполненных[/dim]")
-    
-    # Создаем семафор для ограничения параллельности
-    semaphore = asyncio.Semaphore(max_concurrent)
-    
-    # Создаем задачи для всех запросов
-    tasks = []
-    for line_num, query in queries_to_run:
-        # Получаем suggested_depth из метаданных
-        suggested_depth = queries_meta.get(line_num, {}).get("suggested_depth", 0)
+    try:
+        console.print("[yellow]⚡ Запускаем Prefect flow для batch выполнения...[/yellow]")
         
-        task = execute_single_query(
-            line_num=line_num,
-            query=query,
-            batch_dir=batch_dir,
+        # Запускаем Prefect flow для выполнения batch
+        result = await batch_run_flow(
+            batch_name=batch_name,
             agent_type=agent_type,
-            suggested_depth=suggested_depth,
-            semaphore=semaphore,
-            clarifications=clarifications,
+            force_restart=force_restart,
+            max_concurrent=max_concurrent,
         )
-        tasks.append(task)
-    
-    # Выполняем все задачи параллельно
-    console.print(f"\n[yellow]⚡ Запускаем {len(tasks)} задач параллельно...[/yellow]")
-    
-    with Progress(
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        "[progress.percentage]{task.percentage:>3.1f}%",
-        "•",
-        TimeRemainingColumn(),
-        console=console,
-    ) as progress:
         
-        task_progress = progress.add_task(f"Batch {batch_name}", total=len(tasks))
+        if result.get("status") == "COMPLETED":
+            console.print(f"\n[bold green]🎉 Batch '{batch_name}' завершен через Prefect![/bold green]")
+            console.print(f"[green]✅ Успешно:[/green] {result['successful_queries']}/{result['executed_queries']}")
+            if result['failed_queries'] > 0:
+                console.print(f"[red]❌ Ошибок:[/red] {result['failed_queries']}")
+            if result['skipped_queries'] > 0:
+                console.print(f"[yellow]⏭️ Пропущено:[/green] {result['skipped_queries']}")
+            console.print(f"[green]📁 Результаты в:[/green] {result['batch_dir']}")
+        else:
+            console.print(f"[red]❌ Batch завершился с ошибкой: {result.get('error', 'Unknown error')}[/red]")
         
-        # Используем asyncio.as_completed для отображения прогресса
-        completed_count = 0
-        success_count = 0
-        
-        for coro in asyncio.as_completed(tasks):
-            line_num, success = await coro
-            completed_count += 1
-            if success:
-                success_count += 1
-            
-            progress.update(task_progress, advance=1)
-    
-    console.print(f"\n[bold green]🎉 Batch '{batch_name}' завершен![/bold green]")
-    console.print(f"[green]✅ Успешно:[/green] {success_count}/{len(tasks)}")
-    console.print(f"[green]📁 Результаты в:[/green] {batch_dir}")
+    except Exception as e:
+        console.print(f"[red]❌ Ошибка выполнения batch через Prefect:[/red] {e}")
+        import traceback
+        console.print(f"[red]Traceback:[/red]\n{traceback.format_exc()}")
 
 
 async def run_batch(
     batch_name: str,
-    agent_type: str = "sgr-tools",
+    agent_type: str = DEFAULT_AGENT,
     force_restart: bool = False,
 ) -> None:
     """Выполняет batch-исследование."""
@@ -1059,7 +981,7 @@ async def interactive_mode():
     console.print("[bold cyan]🔍 SGR Deep Research - Интерактивный режим[/bold cyan]")
     console.print("Введите 'help' для справки, 'quit' для выхода\n")
     
-    current_agent = "sgr-tools"  # По умолчанию
+    current_agent = DEFAULT_AGENT  # По умолчанию
     
     while True:
         try:
@@ -1184,7 +1106,7 @@ async def interactive_mode():
                 if deep_level > 0:
                     console.print(f"[yellow]🔍 Глубокий режим уровня {deep_level} (время: ~{deep_level * 10}-{deep_level * 30} мин)[/yellow]")
             
-            await run_agent(current_agent, command, deep_level=deep_level)
+            await run_agent_with_prefect(current_agent, command, deep_level=deep_level)
             console.print()
             
         except KeyboardInterrupt:
@@ -1240,8 +1162,8 @@ def cli(ctx, query, agent, output, deep, system_prompt, debug, interactive):
         if interactive or not query:
             asyncio.run(interactive_mode())
         else:
-            # Выполнить одиночный запрос
-            asyncio.run(run_agent(agent, query, output, deep, system_prompt=system_prompt))
+            # Выполнить одиночный запрос через Prefect
+            asyncio.run(run_agent_with_prefect(agent, query, deep, output))
 
 
 @cli.command()
@@ -1262,7 +1184,7 @@ def agents():
               help='Имя пресета из config.prompts.available_prompts или имя файла из папки prompts')
 def deep(query, level, agent, output, system_prompt):
     """Глубокое исследование с указанным уровнем."""
-    asyncio.run(run_agent(agent, query, output, level, system_prompt=system_prompt))
+    asyncio.run(run_agent_with_prefect(agent, query, level, output))
 
 
 @cli.command()
@@ -1276,7 +1198,7 @@ def deep(query, level, agent, output, system_prompt):
               help='Имя пресета из config.prompts.available_prompts или имя файла из папки prompts')
 def deep1(query, agent, output, system_prompt):
     """Глубокое исследование уровня 1 (20 шагов, ~10-30 мин)."""
-    asyncio.run(run_agent(agent, query, output, 1, system_prompt=system_prompt))
+    asyncio.run(run_agent_with_prefect(agent, query, 1, output))
 
 
 @cli.command()
@@ -1290,7 +1212,7 @@ def deep1(query, agent, output, system_prompt):
               help='Имя пресета из config.prompts.available_prompts или имя файла из папки prompts')
 def deep2(query, agent, output, system_prompt):
     """Очень глубокое исследование уровня 2 (40 шагов, ~20-60 мин)."""
-    asyncio.run(run_agent(agent, query, output, 2, system_prompt=system_prompt))
+    asyncio.run(run_agent_with_prefect(agent, query, 2, output))
 
 
 @cli.command()
@@ -1304,7 +1226,7 @@ def deep2(query, agent, output, system_prompt):
               help='Имя пресета из config.prompts.available_prompts или имя файла из папки prompts')
 def deep3(query, agent, output, system_prompt):
     """Экстремально глубокое исследование уровня 3 (60 шагов, ~30-90 мин)."""
-    asyncio.run(run_agent(agent, query, output, 3, system_prompt=system_prompt))
+    asyncio.run(run_agent_with_prefect(agent, query, 3, output))
 
 
 @cli.group()

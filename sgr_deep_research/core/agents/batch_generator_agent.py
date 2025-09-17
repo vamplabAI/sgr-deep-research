@@ -126,7 +126,7 @@ class BatchGeneratorAgent(BaseAgent):
         """Генерирует план batch-исследования."""
         try:
             # Выполняем поиск для получения актуального контекста
-            search_context = await self._perform_research_search()
+            search_context = self._perform_research_search()
 
             # Получаем клиент OpenAI
             config = get_config()
@@ -167,8 +167,8 @@ class BatchGeneratorAgent(BaseAgent):
 
         except Exception as e:
             logger.error(f"Ошибка при генерации batch-плана: {e}")
-            # Создаем fallback план
-            return Exception(f"Ошибка при генерации batch-плана: {e}")
+            # Возвращаем исключение
+            raise e
 
     async def execute(self) -> BatchPlan:
         """Выполняет генерацию batch-плана."""

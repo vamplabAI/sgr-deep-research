@@ -6,31 +6,19 @@ from typing import Any, Dict, List, Literal
 from pydantic import BaseModel, Field
 
 from sgr_deep_research.core.agents import (
-    SGRAutoToolCallingResearchAgent,
-    SGRResearchAgent,
-    SGRSOToolCallingResearchAgent,
     SGRToolCallingResearchAgent,
-    ToolCallingResearchAgent,
 )
 
 
 class AgentModel(str, Enum):
     """Available agent models for chat completion."""
 
-    SGR_AGENT = "sgr-agent"
     SGR_TOOLS_AGENT = "sgr-tools-agent"
-    SGR_AUTO_TOOLS_AGENT = "sgr-auto-tools-agent"
-    SGR_SO_TOOLS_AGENT = "sgr-so-tools-agent"
-    TOOLS_AGENT = "tools-agent"
 
 
 # Mapping of agent types to their classes
 AGENT_MODEL_MAPPING = {
-    AgentModel.SGR_AGENT: SGRResearchAgent,
     AgentModel.SGR_TOOLS_AGENT: SGRToolCallingResearchAgent,
-    AgentModel.SGR_AUTO_TOOLS_AGENT: SGRAutoToolCallingResearchAgent,
-    AgentModel.SGR_SO_TOOLS_AGENT: SGRSOToolCallingResearchAgent,
-    AgentModel.TOOLS_AGENT: ToolCallingResearchAgent,
 }
 
 
@@ -45,9 +33,9 @@ class ChatCompletionRequest(BaseModel):
     """Request for creating chat completion."""
 
     model: str | None = Field(
-        default=AgentModel.SGR_AGENT,
+        default=AgentModel.SGR_TOOLS_AGENT,
         description="Agent type or existing agent identifier",
-        example="sgr-agent",
+        example="sgr-tools-agent",
     )
     messages: List[ChatMessage] = Field(description="List of messages")
     stream: bool = Field(default=True, description="Enable streaming mode")
