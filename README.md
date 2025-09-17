@@ -20,12 +20,12 @@ This fork includes several significant enhancements over the original project:
 - **Production-ready configuration** with `config.yaml.example` template
 - **Automatic model detection** and parameter optimization for Azure deployments
 
-### 2. 💻 Command Line Interface (CLI)
-- **Interactive CLI mode** with rich terminal interface
-- **Multiple agent types** support (sgr, sgr-tools, sgr-auto-tools, etc.)
-- **Deep research modes** with configurable complexity levels
-- **Real-time progress monitoring** and agent state tracking
-- **Easy configuration** and one-command execution
+### 2. 💻 Simplified Command Line Interface (CLI)
+- **Three streamlined modes**: Single research (no Prefect), Batch research (with Prefect), Deep research (1-5+ levels)
+- **Interactive CLI mode** with rich terminal interface and intuitive commands
+- **Simplified batch processing** with automatic query generation and parallel execution
+- **Deep mode integration** for both single and batch research with exponential scaling
+- **Real-time progress monitoring** via Prefect UI and agent state tracking
 
 ### 3. 🔍 Deep Research Modes
 - **Extended system prompts** for comprehensive 10-100 page reports
@@ -52,11 +52,81 @@ cp config.yaml.example config.yaml
 uv sync
 uv run python -m sgr_deep_research.cli
 
-# 3. Try deep research mode
-deep2 "Comprehensive analysis of quantum computing trends 2024"
+# 3. Try different modes
+# Single research (no Prefect)
+uv run python -m sgr_deep_research.cli "AI trends 2025"
+
+# Deep research (no Prefect)
+uv run python -m sgr_deep_research.cli deep "quantum computing" --level 2
+
+# Batch research (with Prefect)
+uv run python -m sgr_deep_research.cli batch "AI technologies" --count 5 --deep 1
 ```
 
 **Note**: These enhancements maintain full compatibility with the original API while adding powerful new capabilities for advanced research workflows.
+
+## 💻 Simplified CLI Interface
+
+The redesigned CLI provides three streamlined modes for different research needs:
+
+### 🔍 Single Mode (Direct Execution)
+```bash
+# Basic research (no Prefect overhead)
+uv run python -m sgr_deep_research.cli "research query"
+
+# With file output
+uv run python -m sgr_deep_research.cli "AI trends" --output report.md
+
+# Interactive mode
+uv run python -m sgr_deep_research.cli -i
+```
+
+### 🧠 Deep Mode (Enhanced Research)
+```bash
+# Deep research with levels 1-5+ (exponential scaling)
+uv run python -m sgr_deep_research.cli deep "complex topic" --level 2    # ~40 steps
+uv run python -m sgr_deep_research.cli deep "analysis" --level 3         # ~60 steps
+
+# Interactive deep mode
+uv run python -m sgr_deep_research.cli -i
+deep 2 "quantum computing trends"
+```
+
+### 🚀 Batch Mode (Prefect Orchestration)
+```bash
+# Simple batch research (generates 5 diverse queries)
+uv run python -m sgr_deep_research.cli batch "AI technologies"
+
+# Advanced batch with deep mode
+uv run python -m sgr_deep_research.cli batch "fintech innovations" --deep 2 --count 8 --concurrent 2
+
+# Interactive batch mode
+uv run python -m sgr_deep_research.cli -i
+batch-deep 1 "blockchain technology"    # Deep level 1 batch
+```
+
+### ⚙️ CLI Command Options
+```bash
+# Single/Deep modes
+--agent [sgr-tools]     # Agent type selection
+--output TEXT          # Save results to file
+--debug                # Debug mode with detailed logs
+
+# Batch mode  
+--count INTEGER        # Number of queries to generate (default: 5)
+--concurrent INTEGER   # Parallel processing limit (default: 3)
+--output-dir TEXT      # Results directory (default: batch_results)
+--deep INTEGER         # Deep research level 0-5+ (default: 0)
+```
+
+### 📊 Research Depth Scaling
+- **Level 0**: ~5 steps, 3 searches, 1-2 min (normal mode)
+- **Level 1**: ~20 steps, 8 searches, 10-30 min
+- **Level 2**: ~40 steps, 12 searches, 20-60 min
+- **Level 3**: ~60 steps, 16 searches, 30-90 min
+- **Level 4+**: ~80+ steps, 20+ searches, 40+ min
+
+*Formula: steps = 5 × (3×level + 1), searches = 4 × (level + 1)*
 
 ## 📊 Summary Table of Agents
 

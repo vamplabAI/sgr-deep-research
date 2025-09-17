@@ -20,6 +20,7 @@ async def run_research_agent_task(
     query: str,
     deep_level: int = 0,
     result_dir: Optional[str] = None,
+    no_clarifications: bool = False,
 ) -> Dict[str, Any]:
     """Task для выполнения одного исследовательского запроса."""
 
@@ -53,6 +54,16 @@ async def run_research_agent_task(
         try:
             # Запуск агента
             logger.info(f"▶️ Начинаем выполнение агента...")
+            
+            # Если no_clarifications=True, принудительно отключаем уточнения
+            if no_clarifications:
+                # Устанавливаем флаг что уточнения не нужны (пропускаем если поле не существует)
+                try:
+                    agent._context.disable_clarifications = True
+                    logger.info(f"🚫 Режим без уточнений - агент будет работать с имеющейся информацией")
+                except (ValueError, AttributeError):
+                    logger.info(f"🚫 Режим без уточнений (автоматически - поле disable_clarifications недоступно)")
+            
             await agent.execute()
 
             # Обработка состояния агента
@@ -123,6 +134,7 @@ async def research_flow(
     output_file: Optional[str] = None,
     result_dir: Optional[str] = None,
     clarifications: bool = False,
+    no_clarifications: bool = False,
 ) -> Dict[str, Any]:
     """Prefect flow для выполнения одного исследования."""
 
@@ -133,6 +145,7 @@ async def research_flow(
         query=query,
         deep_level=deep_level,
         result_dir=result_dir,
+        no_clarifications=no_clarifications,
     )
 
     # Сохраняем результат в файл если указан

@@ -54,13 +54,11 @@ uv run python -m sgr_deep_research.cli --list-agents
 # Debug mode
 uv run python -m sgr_deep_research.cli --debug --query "Your question"
 
-# Batch исследования - множественные запросы по теме (упрощенный интерфейс)
-uv run python -m sgr_deep_research.cli batch create batch_name 10 "тема исследования"
-uv run python -m sgr_deep_research.cli batch run batch_name                # Простой запуск
-uv run python -m sgr_deep_research.cli batch run batch_name --restart      # Перезапуск
-uv run python -m sgr_deep_research.cli batch run batch_name --clarifications  # С уточнениями
-uv run python -m sgr_deep_research.cli batch list
-uv run python -m sgr_deep_research.cli batch status batch_name
+# Batch исследования - упрощенный интерфейс (с Prefect)
+uv run python -m sgr_deep_research.cli batch "современные AI технологии"         # Простой запуск
+uv run python -m sgr_deep_research.cli batch "история башкир" --count 10         # Больше запросов
+uv run python -m sgr_deep_research.cli batch "AI research" --deep 2 --count 3    # С deep режимом
+uv run python -m sgr_deep_research.cli batch "финтех" --concurrent 2 --output-dir results  # Настройки
 ```
 
 **Available agent types:**
@@ -74,11 +72,9 @@ uv run python -m sgr_deep_research.cli batch status batch_name
 - `help` - Show help
 - `agents` - List available agents
 - `agent <type>` - Switch agent type
-- `deep <question>` - Deep research mode (20+ steps)
-- `batches` - Show list of batch research projects
-- `batch create <name> <count> <topic>` - Create batch research plan
-- `batch run <name>` - Execute batch research
-- `batch status <name>` - Show batch status
+- `deep <уровень> <запрос>` - Deep research mode (уровни 1-5+)
+- `batch <тема>` - Batch исследование (Prefect)
+- `batch-deep <уровень> <тема>` - Batch с глубоким исследованием
 - `quit/exit/q` - Exit
 - `<your question>` - Start research
 
@@ -229,71 +225,75 @@ Using the test-runner agent ensures:
 ## BATCH RESEARCH MODE
 
 ### Overview
-The Batch Research feature allows you to automatically generate and execute multiple research queries on different aspects of a single topic. This is perfect for comprehensive analysis of complex subjects, competitor research, or multi-faceted investigation.
+The simplified Batch Research feature allows you to automatically generate and execute multiple research queries on different aspects of a single topic using Prefect flows. This is perfect for comprehensive analysis of complex subjects, competitor research, or multi-faceted investigation.
 
 ### Key Features
 1. **Intelligent Query Generation**: Uses specialized SGR agent to create diverse research angles
-2. **Structured Organization**: Each batch creates organized folder structure with progress tracking
-3. **Resume Capability**: Interrupted batches can be resumed from where they stopped
-4. **Multi-language Support**: Generates queries in multiple languages for broader coverage
-5. **Progress Monitoring**: Real-time status tracking and completion reporting
+2. **Prefect Integration**: Orchestrated execution with parallel processing and monitoring
+3. **Deep Mode Support**: Optional deep research levels (1-5+) for thorough investigation
+4. **Concurrent Processing**: Configurable parallel execution with resource limits
+5. **Auto-Generated Reports**: Markdown reports with citations saved to specified directories
 
 ### Usage Examples
 
-**Historical Research:**
+**Basic Batch Research:**
 ```bash
-# Generate 20 diverse queries about Bashkir history
-uv run python -m sgr_deep_research.cli batch create bashkir_history 20 "история башкир"
-uv run python -m sgr_deep_research.cli batch run bashkir_history --agent sgr-tools
+# Simple batch research (5 queries, default settings)
+uv run python -m sgr_deep_research.cli batch "современные AI технологии"
+
+# More queries with custom settings
+uv run python -m sgr_deep_research.cli batch "история башкир" --count 10 --concurrent 2
 ```
 
-**Competitor Analysis:**
+**Deep Batch Research:**
 ```bash
-# Research 10 different aspects of each competitor
-uv run python -m sgr_deep_research.cli batch create competitor_openai 10 "OpenAI business model"
-uv run python -m sgr_deep_research.cli batch create competitor_anthropic 10 "Anthropic strategy"
+# Batch with deep research mode (level 2 = ~40 steps per query)
+uv run python -m sgr_deep_research.cli batch "AI research trends" --deep 2 --count 3
+
+# Maximum depth for thorough investigation
+uv run python -m sgr_deep_research.cli batch "финтех инновации" --deep 3 --count 5 --concurrent 1
 ```
 
-**YouTube Content Analysis:**
+**Advanced Configuration:**
 ```bash
-# Analyze trending topics in AI niche
-uv run python -m sgr_deep_research.cli batch create ai_youtube_trends 15 "AI YouTube content trends 2025"
+# Custom output directory and agent
+uv run python -m sgr_deep_research.cli batch "blockchain technology" --agent sgr-tools --output-dir blockchain_research --count 8
 ```
 
 ### File Structure
 ```
-batches/
-└── batch_name/
-    ├── plan.json              # Generated research plan
-    ├── status.txt             # Progress tracking
-    ├── query_01_история/      # Individual query results
-    │   ├── result.md
-    │   └── metadata.json
-    ├── query_02_экономика/
-    │   ├── result.md
-    │   └── metadata.json
-    └── ...
+batch_results/                # Default output directory
+├── 01_AI_инструменты.md     # Generated research reports
+├── 02_Тестирование_AI.md    # Each query gets its own file
+├── 03_Автоматизация.md      # Named based on query content
+└── ...
 ```
 
-### Batch Commands
-- `batch create <name> <count> <topic>` - Generate research plan
-- `batch list` - Show all batch projects
-- `batch run <name>` - Execute batch research
-- `batch status <name>` - Check progress
-- `batch run <name> --restart` - Start over ignoring progress
+### CLI Command Options
+```bash
+uv run python -m sgr_deep_research.cli batch [OPTIONS] TOPIC
+
+Options:
+  -c, --count INTEGER       Количество запросов для генерации (default: 5)
+  -a, --agent [sgr-tools]   Тип агента (default: sgr-tools)
+  -j, --concurrent INTEGER  Максимум параллельных задач (default: 3)
+  -o, --output-dir TEXT     Папка для результатов (default: batch_results)
+  -d, --deep INTEGER        Уровень глубины исследования 0-5+ (default: 0)
+```
 
 ### Interactive Mode
 ```bash
-uv run python -m sgr_deep_research.cli
-batches                                    # List all batches
-batch create startup_research 15 "fintech startups 2025"
-batch run startup_research
-batch status startup_research
+uv run python -m sgr_deep_research.cli -i
+
+# Basic batch commands
+batch AI технологии                    # Simple batch (5 queries)
+batch-deep 2 "финтех инновации"        # Deep batch research
 ```
 
-### Advanced Features
-- **Smart Query Diversity**: Covers history, economics, technology, culture, geography, etc.
-- **Depth Recommendations**: Each query gets suggested depth level (0-5)
-- **Multi-language Coverage**: Ensures comprehensive international perspective
-- **Resumable Execution**: Can stop and resume large batch jobs
-- **Error Handling**: Failed queries marked separately, successful ones preserved
+### Batch Features
+- **Smart Query Diversity**: Covers different aspects - history, technology, economics, culture, etc.
+- **Deep Mode Integration**: Optional deep research levels (1-5+) with exponential scaling
+- **Prefect Orchestration**: Full monitoring with Prefect UI at http://localhost:4200
+- **Parallel Processing**: Configurable concurrency with resource management
+- **Auto-Generated Reports**: Markdown files with citations and structured content
+- **No Clarifications**: Autonomous execution without user prompts during batch processing
