@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class BatchQuery(BaseModel):
     """Модель одного исследовательского запроса."""
-    
+
     id: int = Field(description="Номер запроса (1-N)")
     query: str = Field(description="Исследовательский запрос на языке темы")
     query_en: str = Field(description="Тот же запрос на английском языке")
@@ -24,7 +24,7 @@ class BatchQuery(BaseModel):
 
 class BatchPlan(BaseModel):
     """План batch-исследования."""
-    
+
     topic: str = Field(description="Исходная тема исследования")
     total_queries: int = Field(description="Общее количество запросов")
     languages: List[str] = Field(description="Языки для исследования")
@@ -44,7 +44,7 @@ class BatchGeneratorAgent(BaseAgent):
     ):
         """
         Инициализация агента генерации batch-запросов.
-        
+
         Args:
             topic: Основная тема для исследования
             count: Количество запросов для генерации
@@ -57,7 +57,7 @@ class BatchGeneratorAgent(BaseAgent):
         self.languages = languages or ["ru", "en"]
         self.with_search = with_search
         self._search_service = TavilySearchService() if with_search else None
-        
+
         # Используем простую задачу для базового класса
         super().__init__(
             task=f"Генерация {count} исследовательских запросов по теме: {topic}",
@@ -66,22 +66,22 @@ class BatchGeneratorAgent(BaseAgent):
             use_streaming=use_streaming,
         )
 
-    async def _perform_research_search(self) -> str:
+    def _perform_research_search(self) -> str:
         """Выполняет поиск для получения актуальной информации по теме."""
         if not self.with_search or not self._search_service:
             return ""
-        
+
         try:
             logger.info(f"🔍 Выполняем поиск по теме: {self.topic}")
-            # TavilySearchService.search() синхронная функция, возвращает list[SourceData]
+            # Простой вызов поиска, как в WebSearchTool
             search_results = self._search_service.search(
                 query=self.topic,
-                max_results=8,  # Достаточно для контекста
+                max_results=8,
             )
-            
+
             if not search_results:
                 return ""
-            
+
             # Формируем краткий контекст из результатов поиска
             context = "АКТУАЛЬНАЯ ИНФОРМАЦИЯ ПО ТЕМЕ:\n\n"
             for i, source in enumerate(search_results[:5], 1):  # Топ-5 результатов
@@ -93,9 +93,9 @@ class BatchGeneratorAgent(BaseAgent):
                     snippet = content[:200] + "..." if len(content) > 200 else content
                     context += f"   {snippet}\n"
                 context += f"   Источник: {source.url}\n\n"
-            
+
             return context
-            
+
         except Exception as e:
             logger.warning(f"Поиск не удался: {e}")
             return ""
@@ -114,28 +114,12 @@ class BatchGeneratorAgent(BaseAgent):
 5. Предпочитай вопросы "Что", "Когда", "Где", "Как" вместо сложного анализа
 6. Уровень глубины: 0-2 (простые и средние вопросы)
 
-АСПЕКТЫ ДЛЯ ПОКРЫТИЯ:
-- История и хронология
-- География и расселение
-- Культура и традиции
-- Язык и письменность
-- Экономика и хозяйство
-- Современное состояние
-
 ЯЗЫКИ: {', '.join(self.languages)}
-
-ПРИМЕРЫ ПРОСТЫХ ЗАПРОСОВ:
-- "История происхождения башкирского народа"
-- "Традиционные промыслы башкир"
-- "Башкирский язык и его диалекты"
-- "Территория расселения башкир"
-- "Башкирские национальные праздники"
-- "Современная культура башкир"
 
 НЕ СОЗДАВАЙ сложные академические вопросы с множественными подвопросами или требующие глубокого анализа.
 
 Создай план исследования в формате JSON согласно схеме BatchPlan."""
-        
+
         return base_prompt
 
     async def generate_batch_plan(self) -> BatchPlan:
@@ -143,11 +127,11 @@ class BatchGeneratorAgent(BaseAgent):
         try:
             # Выполняем поиск для получения актуального контекста
             search_context = await self._perform_research_search()
-            
+
             # Получаем клиент OpenAI
             config = get_config()
             from openai import AsyncOpenAI, AsyncAzureOpenAI
-            
+
             if config.azure and config.azure.api_key:
                 # Azure OpenAI configuration
                 client = AsyncAzureOpenAI(
@@ -167,47 +151,24 @@ class BatchGeneratorAgent(BaseAgent):
                 model=model,
                 messages=[
                     {"role": "system", "content": self._get_system_prompt(search_context)},
-                    {"role": "user", "content": f"Создай план для {self.count} исследовательских запросов по теме: {self.topic}"}
+                    {
+                        "role": "user",
+                        "content": f"Создай план для {self.count} исследовательских запросов по теме: {self.topic}",
+                    },
                 ],
                 response_format=BatchPlan,
                 # Убираем temperature для GPT-5 - поддерживает только default (1)
             )
 
             batch_plan = completion.choices[0].message.parsed
-            
+
             logger.info(f"Сгенерирован план из {len(batch_plan.queries)} запросов по теме: {self.topic}")
             return batch_plan
 
         except Exception as e:
             logger.error(f"Ошибка при генерации batch-плана: {e}")
             # Создаем fallback план
-            return self._create_fallback_plan()
-
-    def _create_fallback_plan(self) -> BatchPlan:
-        """Создает простой план в случае ошибки."""
-        queries = []
-        aspects = ["история", "экономика", "культура", "современность", "технологии", "география", "социология", "политика", "образование", "экология"]
-        
-        for i in range(min(self.count, len(aspects))):
-            aspect = aspects[i]
-            query = f"{self.topic}: {aspect}"
-            query_en = f"{self.topic}: {aspect} analysis"
-            
-            queries.append(BatchQuery(
-                id=i + 1,
-                query=query,
-                query_en=query_en,
-                aspect=aspect,
-                scope="обзор",
-                suggested_depth=1,
-            ))
-        
-        return BatchPlan(
-            topic=self.topic,
-            total_queries=len(queries),
-            languages=self.languages,
-            queries=queries,
-        )
+            return Exception(f"Ошибка при генерации batch-плана: {e}")
 
     async def execute(self) -> BatchPlan:
         """Выполняет генерацию batch-плана."""

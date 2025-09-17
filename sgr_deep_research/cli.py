@@ -69,6 +69,7 @@ async def run_agent(
     system_prompt: Optional[str] = None,
     clarifications: bool = False,
     log_file: Optional[str] = None,
+    result_dir: Optional[str] = None,
 ):
     """Запустить агента с заданным запросом."""
     if agent_type not in AGENTS:
@@ -201,6 +202,14 @@ async def run_agent(
         
         # Запуск агента с интерактивной обработкой уточнений
         from sgr_deep_research.core.models import AgentStatesEnum
+        
+        # Временно изменяем конфигурацию для batch-режима если передан result_dir
+        original_reports_dir = None
+        if result_dir:
+            from sgr_deep_research.settings import get_config
+            config = get_config()
+            original_reports_dir = config.execution.reports_dir
+            config.execution.reports_dir = result_dir
         
         # Запуск агента в фоновом режиме
         agent_task = asyncio.create_task(agent.execute())
@@ -429,6 +438,12 @@ async def run_agent(
             import traceback
             console.print(f"[red]Traceback:[/red]\n{traceback.format_exc()}")
         return None
+    finally:
+        # Восстанавливаем исходную конфигурацию
+        if original_reports_dir is not None:
+            from sgr_deep_research.settings import get_config
+            config = get_config()
+            config.execution.reports_dir = original_reports_dir
 
 
 async def create_batch_plan(
@@ -553,6 +568,7 @@ async def _execute_query_impl(
             deep_level=suggested_depth,
             clarifications=clarifications,
             log_file=str(log_file),
+            result_dir=str(result_dir),  # Передаем путь для сохранения отчетов
         )
         
         if result:
