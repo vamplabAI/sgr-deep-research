@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Annotated, ClassVar, Literal, Type, TypeVar
 from pydantic import BaseModel, Field, create_model
 
 from sgr_deep_research.core.models import AgentStatesEnum
-from sgr_deep_research.core.prompts import PromptLoader
 from sgr_deep_research.settings import get_config
 
 if TYPE_CHECKING:
@@ -165,10 +164,19 @@ class NextStepToolsBuilder:
 
     @classmethod
     def build_NextStepTools(cls, tools_list: list[Type[T]]) -> Type[NextStepToolStub]:  # noqa
+        # Lazy import to avoid circular dependency with prompts module
+        try:
+            from sgr_deep_research.core.prompts import PromptLoader  # type: ignore
+
+            tool_prompt = PromptLoader.get_tool_function_prompt()
+        except Exception:
+            # Fallback to a generic description if prompts cannot be loaded at import time
+            tool_prompt = "Select the appropriate tool for the next step"
+
         return create_model(
             "NextStepTools",
             __base__=NextStepToolStub,
-            function=(cls._create_tool_types_union(tools_list), Field()),
+            function=(cls._create_tool_types_union(tools_list), Field(description=tool_prompt)),
         )
 
 

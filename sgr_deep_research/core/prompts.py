@@ -1,11 +1,15 @@
+from __future__ import annotations
+
 import os
 from datetime import datetime
 from functools import cache
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from sgr_deep_research.core.models import SourceData
-from sgr_deep_research.core.tools import BaseTool
 from sgr_deep_research.settings import get_config
+
+if TYPE_CHECKING:
+    from sgr_deep_research.core.tools import BaseTool
 
 config = get_config()
 
