@@ -23,44 +23,30 @@ from sgr_deep_research.core.tools import (
 )
 from sgr_deep_research.settings import get_config
 
-logging.basicConfig(
-    level=logging.INFO,
-    encoding="utf-8",
-    format="%(asctime)s - %(name)s - %(lineno)d - %(levelname)s -  - %(message)s",
-    handlers=[logging.StreamHandler()],
-)
+import logging
+
+try:
+    logger = logging.getLogger("prefect")
+except:
+    # info
+    logger = logging.getLogger(__name__)
+    logger.info("prefect logger not found, using __name__")
+
 
 config = get_config()
-logger = logging.getLogger(__name__)
 
 
 class ExecutionMetrics:
     """Класс для отслеживания метрик выполнения агента."""
-    
+
     # Цены моделей (за 1M токенов в USD)
     MODEL_PRICING = {
-        "gpt-5": {
-            "input": 1.250,
-            "cached_input": 0.125,
-            "output": 10.000
-        },
-        "gpt-4o": {
-            "input": 5.000,
-            "cached_input": 2.500,
-            "output": 15.000
-        },
-        "gpt-4-turbo": {
-            "input": 10.000,
-            "cached_input": 5.000,
-            "output": 30.000
-        },
-        "gpt-3.5-turbo": {
-            "input": 0.500,
-            "cached_input": 0.500,
-            "output": 1.500
-        }
+        "gpt-5": {"input": 1.250, "cached_input": 0.125, "output": 10.000},
+        "gpt-4o": {"input": 5.000, "cached_input": 2.500, "output": 15.000},
+        "gpt-4-turbo": {"input": 10.000, "cached_input": 5.000, "output": 30.000},
+        "gpt-3.5-turbo": {"input": 0.500, "cached_input": 0.500, "output": 1.500},
     }
-    
+
     def __init__(self):
         self.start_time = time.time()
         self.api_calls = 0
@@ -75,31 +61,31 @@ class ExecutionMetrics:
         self.errors_count = 0
         self.steps_completed = 0
         self.model_name = None  # Для отслеживания используемой модели
-        
+
     def add_api_call(self, usage=None):
         """Добавить API вызов с данными о токенах."""
         self.api_calls += 1
         logger.info(f"📊 Adding API call #{self.api_calls}, usage data: {usage}")
         if usage:
-            if hasattr(usage, 'prompt_tokens'):
+            if hasattr(usage, "prompt_tokens"):
                 self.prompt_tokens += usage.prompt_tokens
-            if hasattr(usage, 'completion_tokens'):
+            if hasattr(usage, "completion_tokens"):
                 self.completion_tokens += usage.completion_tokens
-            if hasattr(usage, 'total_tokens'):
+            if hasattr(usage, "total_tokens"):
                 self.tokens_used += usage.total_tokens
             else:
                 self.tokens_used = self.prompt_tokens + self.completion_tokens
-            
+
             # Отслеживание кеширования (Azure OpenAI может возвращать cached_tokens)
-            if hasattr(usage, 'prompt_tokens_details'):
+            if hasattr(usage, "prompt_tokens_details"):
                 details = usage.prompt_tokens_details
-                if hasattr(details, 'cached_tokens'):
+                if hasattr(details, "cached_tokens"):
                     self.cached_tokens += details.cached_tokens
                     if details.cached_tokens > 0:
                         self.cache_hits += 1
                     else:
                         self.cache_misses += 1
-            elif hasattr(usage, 'cached_tokens'):
+            elif hasattr(usage, "cached_tokens"):
                 # Альтернативный формат кеширования
                 self.cached_tokens += usage.cached_tokens
                 if usage.cached_tokens > 0:
@@ -113,50 +99,52 @@ class ExecutionMetrics:
             # Для GPT-5 и Azure OpenAI в streaming режиме
             logger.warning("⚠️ No usage data available, using approximate token estimation")
             # Используем приблизительную оценку: 1 токен ≈ 4 символа для русского текста
-            if hasattr(self, '_last_prompt_length'):
+            if hasattr(self, "_last_prompt_length"):
                 estimated_prompt_tokens = max(100, self._last_prompt_length // 4)
                 estimated_completion_tokens = max(50, 200)  # Минимальная оценка для completion
-                
+
                 self.prompt_tokens += estimated_prompt_tokens
                 self.completion_tokens += estimated_completion_tokens
                 self.tokens_used += estimated_prompt_tokens + estimated_completion_tokens
                 self.cache_misses += 1
-                
-                logger.info(f"📊 Estimated tokens: prompt={estimated_prompt_tokens}, completion={estimated_completion_tokens}")
+
+                logger.info(
+                    f"📊 Estimated tokens: prompt={estimated_prompt_tokens}, completion={estimated_completion_tokens}"
+                )
             else:
                 # Базовая оценка, если длина промпта неизвестна
                 self.prompt_tokens += 1000  # Базовая оценка для промпта
                 self.completion_tokens += 200  # Базовая оценка для ответа
                 self.tokens_used += 1200
                 self.cache_misses += 1
-    
+
     def add_search(self):
         """Добавить выполненный поиск."""
         self.searches_performed += 1
-    
+
     def add_clarification(self):
         """Добавить запрос уточнения."""
         self.clarifications_requested += 1
-    
+
     def add_error(self):
         """Добавить ошибку."""
         self.errors_count += 1
-    
+
     def add_step(self):
         """Добавить выполненный шаг."""
         self.steps_completed += 1
-    
+
     def calculate_cost(self, model_name=None):
         """Рассчитать стоимость использования токенов для указанной модели."""
         # Используем переданную модель или сохраненную
         model = model_name or self.model_name
         if not model:
             return None
-            
+
         # Ищем цены для модели (проверяем точное совпадение и частичное)
         pricing = None
         model_lower = model.lower()
-        
+
         # Сначала точное совпадение
         if model_lower in self.MODEL_PRICING:
             pricing = self.MODEL_PRICING[model_lower]
@@ -166,45 +154,40 @@ class ExecutionMetrics:
                 if price_model in model_lower:
                     pricing = self.MODEL_PRICING[price_model]
                     break
-        
+
         if not pricing:
             return None
-            
+
         try:
             # Рассчитываем стоимость
             input_cost = 0
             output_cost = 0
-            
+
             # Стоимость входных токенов (обычные + кешированные)
             if self.prompt_tokens > 0:
                 regular_input_tokens = max(0, self.prompt_tokens - self.cached_tokens)
                 input_cost = (regular_input_tokens * pricing["input"]) / 1_000_000
-                
+
                 # Кешированные токены дешевле
                 if self.cached_tokens > 0:
                     cached_cost = (self.cached_tokens * pricing["cached_input"]) / 1_000_000
                     input_cost += cached_cost
-            
+
             # Стоимость выходных токенов
             if self.completion_tokens > 0:
                 output_cost = (self.completion_tokens * pricing["output"]) / 1_000_000
-                
+
             total_cost = input_cost + output_cost
-            
-            return {
-                "input_cost": input_cost,
-                "output_cost": output_cost,
-                "total_cost": total_cost,
-                "currency": "USD"
-            }
+
+            return {"input_cost": input_cost, "output_cost": output_cost, "total_cost": total_cost, "currency": "USD"}
         except (KeyError, TypeError, ZeroDivisionError):
             # Если что-то пошло не так, возвращаем None
             return None
-    
+
     def get_duration(self):
         """Получить время выполнения в секундах."""
         return time.time() - self.start_time
-    
+
     def format_duration(self):
         """Форматировать время выполнения."""
         duration = self.get_duration()
@@ -218,7 +201,7 @@ class ExecutionMetrics:
             hours = int(duration // 3600)
             minutes = int((duration % 3600) // 60)
             return f"{hours}ч {minutes}м"
-    
+
     def format_stats(self):
         """Форматировать статистику для вывода."""
         stats = {
@@ -228,29 +211,35 @@ class ExecutionMetrics:
             "Токены (запрос)": f"{self.prompt_tokens:,}",
             "Токены (ответ)": f"{self.completion_tokens:,}",
         }
-        
+
         # Добавляем кеширование если есть данные
         if self.cached_tokens > 0 or self.cache_hits > 0:
             stats["Кеш токенов"] = f"{self.cached_tokens:,}"
             stats["Попадания в кеш"] = self.cache_hits
             stats["Промахи кеша"] = self.cache_misses
-            cache_rate = self.cache_hits / (self.cache_hits + self.cache_misses) * 100 if (self.cache_hits + self.cache_misses) > 0 else 0
+            cache_rate = (
+                self.cache_hits / (self.cache_hits + self.cache_misses) * 100
+                if (self.cache_hits + self.cache_misses) > 0
+                else 0
+            )
             stats["Эффективность кеша"] = f"{cache_rate:.1f}%"
-        
+
         # Добавляем стоимость если можем её рассчитать
         cost_info = self.calculate_cost()
         if cost_info:
             stats["Стоимость (общая)"] = f"${cost_info['total_cost']:.4f}"
             stats["Стоимость (входные)"] = f"${cost_info['input_cost']:.4f}"
             stats["Стоимость (выходные)"] = f"${cost_info['output_cost']:.4f}"
-        
-        stats.update({
-            "Поисковые запросы": self.searches_performed,
-            "Уточнения": self.clarifications_requested,
-            "Шаги выполнения": self.steps_completed,
-            "Ошибки": self.errors_count
-        })
-        
+
+        stats.update(
+            {
+                "Поисковые запросы": self.searches_performed,
+                "Уточнения": self.clarifications_requested,
+                "Шаги выполнения": self.steps_completed,
+                "Ошибки": self.errors_count,
+            }
+        )
+
         return stats
 
 
@@ -308,7 +297,7 @@ class BaseAgent:
             self.verbosity = config.openai.verbosity
         else:
             raise ValueError("Either 'openai' or 'azure' configuration must be provided")
-        
+
         # Передаем название модели в метрики для расчета стоимости
         self.metrics.model_name = self.model_name
         self.streaming_generator = OpenAIStreamingGenerator(model=self.id)
@@ -318,18 +307,18 @@ class BaseAgent:
         params = {
             "model": self.model_name,
         }
-        
+
         # Определяем, поддерживает ли модель новые параметры GPT-5
         is_gpt5 = "gpt-5" in self.model_name.lower() or "o3" in self.model_name.lower()
-        
+
         if is_gpt5:
             # GPT-5 не поддерживает кастомную температуру, только дефолтную (1)
             # params["temperature"] = 1  # Можно не указывать, используется по умолчанию
-            
+
             # GPT-5 и новые модели используют max_completion_tokens
             base_tokens = self.max_completion_tokens
             params["max_completion_tokens"] = min(base_tokens * (deep_level + 1), 128000)  # До 128K
-            
+
             # Специальные параметры GPT-5
             if deep_level >= 2:
                 params["reasoning_effort"] = "high"  # Максимальное рассуждение для deep режимов
@@ -345,7 +334,7 @@ class BaseAgent:
             params["temperature"] = self.temperature
             base_tokens = self.max_tokens
             params["max_tokens"] = min(base_tokens * (deep_level + 1), 128000)  # До 128K для GPT-4
-        
+
         return params
 
     async def provide_clarification(self, clarifications: str):
@@ -414,7 +403,7 @@ class BaseAgent:
 
     async def _prepare_context(self) -> list[dict]:
         """Prepare conversation context with system prompt."""
-        deep_level = getattr(self, '_deep_level', 0)
+        deep_level = getattr(self, "_deep_level", 0)
         system_prompt = PromptLoader.get_system_prompt(
             user_request=self.task,
             sources=list(self._context.sources.values()),
@@ -423,10 +412,8 @@ class BaseAgent:
             system_prompt_key_or_file=getattr(self, "_system_prompt_key_or_file", None),
         )
         # Заменяем плейсхолдеры для счетчиков
-        system_prompt = system_prompt.replace(
-            "{searches_count}", str(self._context.searches_used)
-        ).replace(
-            "{max_searches}", str(getattr(self, 'max_searches', 10))
+        system_prompt = system_prompt.replace("{searches_count}", str(self._context.searches_used)).replace(
+            "{max_searches}", str(getattr(self, "max_searches", 10))
         )
         return [{"role": "system", "content": system_prompt}, *self.conversation]
 

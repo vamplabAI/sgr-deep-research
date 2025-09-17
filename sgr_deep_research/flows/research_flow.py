@@ -11,11 +11,11 @@ from prefect import flow, task
 from sgr_deep_research.core.agents.sgr_tools_agent import SGRToolCallingResearchAgent
 from sgr_deep_research.core.models import AgentStatesEnum
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+import logging
+
+logger = logging.getLogger("prefect")
 
 
-@task(name="run-research-agent")
 async def run_research_agent_task(
     query: str,
     deep_level: int = 0,
