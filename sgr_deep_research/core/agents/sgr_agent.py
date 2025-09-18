@@ -55,10 +55,10 @@ class SGRResearchAgent(BaseAgent):
         """Prepare tool classes with current context limits."""
         tools = set(self.toolkit)
         if self._context.iteration >= self.max_iterations:
-            tools = [
+            tools = {
                 CreateReportTool,
                 AgentCompletionTool,
-            ]
+            }
         if self._context.clarifications_used >= self.max_clarifications:
             tools -= {
                 ClarificationTool,

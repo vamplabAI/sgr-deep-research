@@ -55,11 +55,11 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
         """Prepare available tools for current agent state and progress."""
         tools = set(self.toolkit)
         if self._context.iteration >= self.max_iterations:
-            tools = [
+            tools = {
                 ReasoningTool,
                 CreateReportTool,
                 AgentCompletionTool,
-            ]
+            }
         if self._context.clarifications_used >= self.max_clarifications:
             tools -= {
                 ClarificationTool,
