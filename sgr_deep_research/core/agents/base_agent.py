@@ -14,13 +14,8 @@ from sgr_deep_research.core.models import AgentStatesEnum, ResearchContext
 from sgr_deep_research.core.prompts import PromptLoader
 from sgr_deep_research.core.stream import OpenAIStreamingGenerator
 from sgr_deep_research.settings import get_config
-from sgr_deep_research.tools import (
-    # Base
-    BaseTool,
-    ClarificationTool,
-    ReasoningTool,
-    system_agent_tools,
-)
+from sgr_deep_research.core.base_tool import BaseTool
+from sgr_deep_research.core.tools_registry import ToolsRegistry
 
 logging.basicConfig(
     level=logging.INFO,
@@ -45,7 +40,7 @@ class BaseAgent:
     ):
         self.id = f"base_agent_{uuid.uuid4()}"
         self.task = task
-        self.toolkit = [*system_agent_tools, *(toolkit or [])]
+        self.toolkit = [*ToolsRegistry.get_tools(), *(toolkit or [])]
 
         self._context = ResearchContext()
         self.conversation = []
@@ -68,7 +63,7 @@ class BaseAgent:
         self._context.state = AgentStatesEnum.RESEARCHING
         logger.info(f"✅ Clarification received: {clarifications[:2000]}...")
 
-    def _log_reasoning(self, result: ReasoningTool) -> None:
+    def _log_reasoning(self, result: BaseTool) -> None:
         next_step = result.remaining_steps[0] if result.remaining_steps else "Completing"
         logger.info(
             f"""
@@ -140,11 +135,11 @@ class BaseAgent:
         """Prepare available tools for current agent state and progress."""
         raise NotImplementedError("_prepare_tools must be implemented by subclass")
 
-    async def _reasoning_phase(self) -> ReasoningTool:
+    async def _reasoning_phase(self) -> BaseTool:
         """Call LLM to decide next action based on current context."""
         raise NotImplementedError("_reasoning_phase must be implemented by subclass")
 
-    async def _select_action_phase(self, reasoning: ReasoningTool) -> BaseTool:
+    async def _select_action_phase(self, reasoning: BaseTool) -> BaseTool:
         """Select most suitable tool for the action decided in reasoning phase.
 
         Returns the tool suitable for the action.
@@ -158,9 +153,7 @@ class BaseAgent:
         """
         raise NotImplementedError("_action_phase must be implemented by subclass")
 
-    async def execute(
-        self,
-    ):
+    async def execute(self):
         logger.info(f"🚀 Starting agent {self.id} for task: '{self.task}'")
         self.conversation.extend(
             [
@@ -180,7 +173,7 @@ class BaseAgent:
                 action_tool = await self._select_action_phase(reasoning)
                 action_result = await self._action_phase(action_tool)
 
-                if isinstance(action_tool, ClarificationTool):
+                if isinstance(action_tool, BaseTool):
                     logger.info("\n⏸️  Research paused - please answer questions")
                     logger.info(action_result)
                     self._context.state = AgentStatesEnum.WAITING_FOR_CLARIFICATION

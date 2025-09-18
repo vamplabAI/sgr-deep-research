@@ -4,17 +4,15 @@ from typing import Type
 
 from sgr_deep_research.core.agents.base_agent import BaseAgent
 from sgr_deep_research.settings import get_config
+from sgr_deep_research.core.base_tool import BaseTool
+from sgr_deep_research.core.tools_registry import ToolsRegistry
 from sgr_deep_research.tools import (
     AgentCompletionTool,
-    BaseTool,
     ClarificationTool,
     CreateReportTool,
     NextStepToolsBuilder,
     NextStepToolStub,
-    ReasoningTool,
     WebSearchTool,
-    research_agent_tools,
-    system_agent_tools,
 )
 
 logging.basicConfig(
@@ -48,30 +46,24 @@ class SGRResearchAgent(BaseAgent):
 
         self.id = f"sgr_agent_{uuid.uuid4()}"
 
-        self.toolkit = [
-            *system_agent_tools,
-            *research_agent_tools,
-            *(toolkit or []),
-        ]
-        self.toolkit.remove(ReasoningTool)  # we use our own reasoning scheme
+        # We use our own reasoning scheme
+        ToolsRegistry.disable_tool("ReasoningTool")
+
+        self.toolkit = [*ToolsRegistry.get_tools(), *(toolkit or [])]
         self.max_searches = max_searches
 
     async def _prepare_tools(self) -> Type[NextStepToolStub]:
         """Prepare tool classes with current context limits."""
         tools = set(self.toolkit)
         if self._context.iteration >= self.max_iterations:
-            tools = {
-                CreateReportTool,
-                AgentCompletionTool,
-            }
+            tools = [
+                ToolsRegistry.get_tool("CreateReportTool"),
+                ToolsRegistry.get_tool("AgentCompletionTool"),
+            ]
         if self._context.clarifications_used >= self.max_clarifications:
-            tools -= {
-                ClarificationTool,
-            }
+            ToolsRegistry.disable_tool("ClarificationTool")
         if self._context.searches_used >= self.max_searches:
-            tools -= {
-                WebSearchTool,
-            }
+            ToolsRegistry.disable_tool("WebSearchTool")
         return NextStepToolsBuilder.build_NextStepTools(list(tools))
 
     async def _reasoning_phase(self) -> NextStepToolStub:

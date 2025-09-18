@@ -7,15 +7,14 @@ from openai.types.chat import ChatCompletionFunctionToolParam
 
 from sgr_deep_research.core.agents.sgr_agent import SGRResearchAgent
 from sgr_deep_research.settings import get_config
+from sgr_deep_research.core.base_tool import BaseTool
+from sgr_deep_research.core.tools_registry import ToolsRegistry
 from sgr_deep_research.tools import (
     AgentCompletionTool,
-    BaseTool,
     ClarificationTool,
     CreateReportTool,
     ReasoningTool,
     WebSearchTool,
-    research_agent_tools,
-    system_agent_tools,
 )
 
 logging.basicConfig(
@@ -49,7 +48,7 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
             max_searches=max_searches,
         )
         self.id = f"sgr_tool_calling_agent_{uuid.uuid4()}"
-        self.toolkit = [*system_agent_tools, *research_agent_tools, *(toolkit if toolkit else [])]
+        self.toolkit = [*ToolsRegistry.get_tools(), *(toolkit or [])]
         self.tool_choice: Literal["required"] = "required"
 
     async def _prepare_tools(self) -> list[ChatCompletionFunctionToolParam]:
