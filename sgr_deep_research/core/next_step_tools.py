@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from abc import ABC
 from functools import reduce
-from typing import Annotated, Type, Literal
+from typing import Annotated, Literal, Type
 
 from pydantic import BaseModel, Field, create_model
 

@@ -2,8 +2,8 @@ import os
 from datetime import datetime
 from functools import cache
 
-from sgr_deep_research.core.models import SourceData
 from sgr_deep_research.core.base_tool import BaseTool
+from sgr_deep_research.core.models import SourceData
 from sgr_deep_research.settings import get_config
 
 config = get_config()

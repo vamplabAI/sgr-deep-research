@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import ClassVar
-
 from pydantic import Field
 
 from sgr_deep_research.core.base_tool import BaseTool

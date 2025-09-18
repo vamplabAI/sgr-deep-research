@@ -3,16 +3,12 @@ import uuid
 from typing import Type
 
 from sgr_deep_research.core.agents.base_agent import BaseAgent
-from sgr_deep_research.settings import get_config
 from sgr_deep_research.core.base_tool import BaseTool
 from sgr_deep_research.core.tools_registry import ToolsRegistry
+from sgr_deep_research.settings import get_config
 from sgr_deep_research.tools import (
-    AgentCompletionTool,
-    ClarificationTool,
-    CreateReportTool,
     NextStepToolsBuilder,
     NextStepToolStub,
-    WebSearchTool,
 )
 
 logging.basicConfig(

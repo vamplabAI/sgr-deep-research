@@ -10,12 +10,12 @@ import httpx
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionFunctionToolParam
 
+from sgr_deep_research.core.base_tool import BaseTool
 from sgr_deep_research.core.models import AgentStatesEnum, ResearchContext
 from sgr_deep_research.core.prompts import PromptLoader
 from sgr_deep_research.core.stream import OpenAIStreamingGenerator
-from sgr_deep_research.settings import get_config
-from sgr_deep_research.core.base_tool import BaseTool
 from sgr_deep_research.core.tools_registry import ToolsRegistry
+from sgr_deep_research.settings import get_config
 
 logging.basicConfig(
     level=logging.INFO,

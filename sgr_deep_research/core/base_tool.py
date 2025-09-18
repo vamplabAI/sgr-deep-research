@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 
 class BaseTool(BaseModel):
     """Class to provide tool handling capabilities."""
+
     is_enabled: ClassVar[bool] = True
     tool_name: ClassVar[str] = None
     description: ClassVar[str] = None
