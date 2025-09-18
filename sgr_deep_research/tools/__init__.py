@@ -15,10 +15,6 @@ from sgr_deep_research.tools.generate_plan_tool import GeneratePlanTool
 from sgr_deep_research.tools.reasoning_tool import ReasoningTool
 from sgr_deep_research.tools.web_search_tool import WebSearchTool
 
-# Tool collections using registry
-system_agent_tools = ToolsRegistry.get_system_tools()
-research_agent_tools = ToolsRegistry.get_research_tools()
-
 __all__ = [
     # Base
     "BaseTool",
@@ -37,7 +33,4 @@ __all__ = [
     # SGR framework
     "NextStepToolStub",
     "NextStepToolsBuilder",
-    # Collections (now from registry)
-    "system_agent_tools",
-    "research_agent_tools",
 ]

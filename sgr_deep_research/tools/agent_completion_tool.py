@@ -17,8 +17,6 @@ class AgentCompletionTool(BaseTool):
     """Finalize research task and complete agent execution after all steps are
     completed."""
 
-    is_system_tool: ClassVar[bool] = True
-
     reasoning: str = Field(description="Why task is now complete")
     completed_steps: list[str] = Field(description="Summary of completed steps", min_length=1, max_length=5)
     status: Literal[AgentStatesEnum.COMPLETED, AgentStatesEnum.FAILED] = Field(description="Task completion status")

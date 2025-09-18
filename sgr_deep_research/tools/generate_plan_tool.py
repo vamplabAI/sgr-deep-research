@@ -18,8 +18,6 @@ class GeneratePlanTool(BaseTool):
     Useful to split complex request into manageable steps.
     """
 
-    is_system_tool: ClassVar[bool] = True
-
     reasoning: str = Field(description="Justification for research approach")
     research_goal: str = Field(description="Primary research objective")
     planned_steps: list[str] = Field(description="List of 3-4 planned steps", min_length=3, max_length=4)

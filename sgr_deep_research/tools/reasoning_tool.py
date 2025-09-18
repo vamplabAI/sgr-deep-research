@@ -12,8 +12,6 @@ from sgr_deep_research.core.tools_registry import tool
 class ReasoningTool(BaseTool):
     """Agent Core - Determines next reasoning step with adaptive planning"""
 
-    is_system_tool: ClassVar[bool] = True
-
     # Reasoning chain - step-by-step thinking process (helps stabilize model)
     reasoning_steps: list[str] = Field(
         description="Step-by-step reasoning process leading to decision", min_length=2, max_length=4

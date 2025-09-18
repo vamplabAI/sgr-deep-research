@@ -25,8 +25,6 @@ class CreateReportTool(BaseTool):
     """Create comprehensive detailed report with citations as a final step of
     research."""
 
-    is_system_tool: ClassVar[bool] = True
-
     reasoning: str = Field(description="Why ready to create report now")
     title: str = Field(description="Report title")
     user_request_language_reference: str = Field(

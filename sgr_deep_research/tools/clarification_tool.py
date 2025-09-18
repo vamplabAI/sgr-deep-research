@@ -15,8 +15,6 @@ if TYPE_CHECKING:
 class ClarificationTool(BaseTool):
     """Ask clarifying questions when facing ambiguous request."""
 
-    is_system_tool: ClassVar[bool] = True
-
     reasoning: str = Field(description="Why clarification is needed")
     unclear_terms: list[str] = Field(description="List of unclear terms or concepts", min_length=1, max_length=5)
     assumptions: list[str] = Field(description="Possible interpretations to verify", min_length=2, max_length=4)
