@@ -19,39 +19,21 @@ class ToolsRegistry:
         Args:
             tool_class: Tool class that inherits from BaseTool
         """
-        tool_name = tool_class.tool_name or tool_class.__name__.lower()
+        tool_name = tool_class.tool_name or tool_class.__name__
         cls._tools[tool_name] = tool_class
 
     @classmethod
-    def get_all_tools(cls) -> list[Type[BaseTool]]:
-        """Get all registered tools.
-
-        Returns:
-            List of all registered tool classes
-        """
-        return list(cls._tools.values())
-
-    @classmethod
-    def get_system_tools(cls) -> list[Type[BaseTool]]:
-        """Get all system tools (is_system_tool = True).
+    def get_tools(cls) -> list[Type[BaseTool]]:
+        """Get all enabled tools (is_enabled = True).
 
         Returns:
             List of system tool classes
         """
-        return [tool for tool in cls._tools.values() if tool.is_system_tool]
+        return [tool for tool in cls._tools.values() if tool.is_enabled]
 
     @classmethod
-    def get_research_tools(cls) -> list[Type[BaseTool]]:
-        """Get all research tools (is_system_tool = False).
-
-        Returns:
-            List of research tool classes
-        """
-        return [tool for tool in cls._tools.values() if not tool.is_system_tool]
-
-    @classmethod
-    def get_tool_by_name(cls, name: str) -> Type[BaseTool] | None:
-        """Get a tool by its name.
+    def get_tool(cls, name: str) -> Type[BaseTool] | None:
+        """Get a single tool by its name.
 
         Args:
             name: Tool name
@@ -60,6 +42,18 @@ class ToolsRegistry:
             Tool class or None if not found
         """
         return cls._tools.get(name)
+
+    @classmethod
+    def disable_tool(cls, name: str) -> Type[BaseTool] | None:
+        """Disable tool by its name.
+
+        Args:
+            name: Tool name
+
+        Returns:
+            Tool class or None if not found
+        """
+        cls._tools[name].is_enabled = False
 
     @classmethod
     def clear(cls) -> None:
@@ -76,7 +70,7 @@ class ToolsRegistry:
         return {
             name: {
                 "class": tool.__name__,
-                "is_system_tool": tool.is_system_tool,
+                "is_enabled": tool.is_enabled,
                 "description": tool.description,
             }
             for name, tool in cls._tools.items()
