@@ -7,8 +7,13 @@ from sgr_deep_research.core.base_tool import BaseTool
 from sgr_deep_research.core.tools_registry import ToolsRegistry
 from sgr_deep_research.settings import get_config
 from sgr_deep_research.tools import (
+    AgentCompletionTool,
+    ClarificationTool,
+    CreateReportTool,
     NextStepToolsBuilder,
     NextStepToolStub,
+    ReasoningTool,
+    WebSearchTool,
 )
 
 logging.basicConfig(
@@ -42,10 +47,8 @@ class SGRResearchAgent(BaseAgent):
 
         self.id = f"sgr_agent_{uuid.uuid4()}"
 
-        # We use our own reasoning scheme
-        ToolsRegistry.disable_tool("ReasoningTool")
-
         self.toolkit = [*ToolsRegistry.get_tools(), *(toolkit or [])]
+        self.toolkit.remove(ReasoningTool)  # we use our own reasoning scheme
         self.max_searches = max_searches
 
     async def _prepare_tools(self) -> Type[NextStepToolStub]:
@@ -53,13 +56,17 @@ class SGRResearchAgent(BaseAgent):
         tools = set(self.toolkit)
         if self._context.iteration >= self.max_iterations:
             tools = [
-                ToolsRegistry.get_tool("CreateReportTool"),
-                ToolsRegistry.get_tool("AgentCompletionTool"),
+                CreateReportTool,
+                AgentCompletionTool,
             ]
         if self._context.clarifications_used >= self.max_clarifications:
-            ToolsRegistry.disable_tool("ClarificationTool")
+            tools -= {
+                ClarificationTool,
+            }
         if self._context.searches_used >= self.max_searches:
-            ToolsRegistry.disable_tool("WebSearchTool")
+            tools -= {
+                WebSearchTool,
+            }
         return NextStepToolsBuilder.build_NextStepTools(list(tools))
 
     async def _reasoning_phase(self) -> NextStepToolStub:
