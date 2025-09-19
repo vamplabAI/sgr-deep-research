@@ -4,7 +4,6 @@ from typing import Type
 
 from sgr_deep_research.core.agents.base_agent import BaseAgent
 from sgr_deep_research.core.base_tool import BaseTool
-from sgr_deep_research.core.tools_registry import ToolsRegistry
 from sgr_deep_research.settings import get_config
 from sgr_deep_research.tools import (
     AgentCompletionTool,
@@ -47,7 +46,7 @@ class SGRResearchAgent(BaseAgent):
 
         self.id = f"sgr_agent_{uuid.uuid4()}"
 
-        self.toolkit = [*ToolsRegistry.get_tools(), *(toolkit or [])]
+        self.toolkit = [*self.tools_registry.get_tools(), *(toolkit or [])]
         self.toolkit.remove(ReasoningTool)  # we use our own reasoning scheme
         self.max_searches = max_searches
 

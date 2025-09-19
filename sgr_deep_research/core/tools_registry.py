@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Type
+from typing import Any, Type
 
 from sgr_deep_research.core.base_tool import BaseTool
 
@@ -10,29 +10,34 @@ from sgr_deep_research.core.base_tool import BaseTool
 class ToolsRegistry:
     """Registry for automatic tool registration and categorization."""
 
-    _tools: dict[str, Type[BaseTool]] = {}
+    # Global registry of all available tools (populated by @tool decorator)
+    _global_tools: dict[str, Type[BaseTool]] = {}
+
+    def __init__(self):
+        """Initialize instance registry with all available tools and their
+        enabled status."""
+        self._tools: dict[str, Type[BaseTool]] = self._global_tools.copy()
+        self._disabled_tools: set[str] = set()
 
     @classmethod
     def register(cls, tool_class: Type[BaseTool]) -> None:
-        """Register a tool class in the registry.
+        """Register a tool class in the global registry.
 
         Args:
             tool_class: Tool class that inherits from BaseTool
         """
         tool_name = tool_class.tool_name or tool_class.__name__
-        cls._tools[tool_name] = tool_class
+        cls._global_tools[tool_name] = tool_class
 
-    @classmethod
-    def get_tools(cls) -> list[Type[BaseTool]]:
-        """Get all enabled tools (is_enabled = True).
+    def get_tools(self) -> list[Type[BaseTool]]:
+        """Get all enabled tools for this registry instance.
 
         Returns:
-            List of system tool classes
+            List of enabled tool classes
         """
-        return [tool for tool in cls._tools.values() if tool.is_enabled]
+        return [tool for name, tool in self._tools.items() if tool.is_enabled and name not in self._disabled_tools]
 
-    @classmethod
-    def get_tool(cls, name: str) -> Type[BaseTool] | None:
+    def get_tool(self, name: str) -> Type[BaseTool] | None:
         """Get a single tool by its name.
 
         Args:
@@ -41,27 +46,42 @@ class ToolsRegistry:
         Returns:
             Tool class or None if not found
         """
-        return cls._tools.get(name)
+        return self._tools.get(name)
 
-    @classmethod
-    def disable_tool(cls, name: str) -> Type[BaseTool] | None:
-        """Disable tool by its name.
+    def disable_tool(self, name: str) -> bool:
+        """Disable tool by its name for this registry instance.
 
         Args:
             name: Tool name
 
         Returns:
-            Tool class or None if not found
+            True if tool was found and disabled, False otherwise
         """
-        cls._tools[name].is_enabled = False
+        if name in self._tools:
+            self._disabled_tools.add(name)
+            return True
+        return False
 
-    @classmethod
-    def clear(cls) -> None:
+    def enable_tool(self, name: str) -> bool:
+        """Enable tool by its name for this registry instance.
+
+        Args:
+            name: Tool name
+
+        Returns:
+            True if tool was found and enabled, False otherwise
+        """
+        if name in self._tools:
+            self._disabled_tools.discard(name)
+            return True
+        return False
+
+    def clear(self) -> None:
         """Clear all registered tools (mainly for testing)."""
-        cls._tools.clear()
+        self._tools.clear()
+        self._disabled_tools.clear()
 
-    @classmethod
-    def list_tools(cls) -> dict[str, dict[str, any]]:
+    def list_tools(self) -> dict[str, dict[str, Any]]:
         """Get detailed information about all registered tools.
 
         Returns:
@@ -70,11 +90,16 @@ class ToolsRegistry:
         return {
             name: {
                 "class": tool.__name__,
-                "is_enabled": tool.is_enabled,
+                "is_enabled": tool.is_enabled and name not in self._disabled_tools,
                 "description": tool.description,
             }
-            for name, tool in cls._tools.items()
+            for name, tool in self._tools.items()
         }
+
+    @classmethod
+    def get_default_registry(cls) -> "ToolsRegistry":
+        """Get a new registry instance with all available tools."""
+        return cls()
 
 
 def tool(cls: Type[BaseTool]) -> Type[BaseTool]:

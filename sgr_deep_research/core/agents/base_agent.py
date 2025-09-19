@@ -40,7 +40,8 @@ class BaseAgent:
     ):
         self.id = f"base_agent_{uuid.uuid4()}"
         self.task = task
-        self.toolkit = [*ToolsRegistry.get_tools(), *(toolkit or [])]
+        self.tools_registry = ToolsRegistry.get_default_registry()
+        self.toolkit = [*self.tools_registry.get_tools(), *(toolkit or [])]
 
         self._context = ResearchContext()
         self.conversation = []
