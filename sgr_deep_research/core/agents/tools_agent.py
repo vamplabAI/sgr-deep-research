@@ -1,5 +1,3 @@
-import logging
-import uuid
 from typing import Literal, Type
 
 from openai import pydantic_function_tool
@@ -18,20 +16,14 @@ from sgr_deep_research.core.tools import (
 )
 from sgr_deep_research.settings import get_config
 
-logging.basicConfig(
-    level=logging.INFO,
-    encoding="utf-8",
-    format="%(asctime)s - %(name)s - %(lineno)d - %(levelname)s -  - %(message)s",
-    handlers=[logging.StreamHandler()],
-)
-
 config = get_config()
-logger = logging.getLogger(__name__)
 
 
 class ToolCallingResearchAgent(BaseAgent):
     """Tool Calling Research Agent relying entirely on LLM native function
     calling."""
+
+    name: str = "tool_calling_agent"
 
     def __init__(
         self,
@@ -47,7 +39,6 @@ class ToolCallingResearchAgent(BaseAgent):
             max_clarifications=max_clarifications,
             max_iterations=max_iterations,
         )
-        self.id = f"tool_calling_agent_{uuid.uuid4()}"
 
         self.toolkit = [*system_agent_tools, *research_agent_tools, *(toolkit if toolkit else [])]
         self.toolkit.remove(ReasoningTool)  # LLM will do the reasoning internally
@@ -59,10 +50,10 @@ class ToolCallingResearchAgent(BaseAgent):
         """Prepare tool classes with current context limits."""
         tools = set(self.toolkit)
         if self._context.iteration >= self.max_iterations:
-            tools = [
+            tools = {
                 CreateReportTool,
                 AgentCompletionTool,
-            ]
+            }
         if self._context.clarifications_used >= self.max_clarifications:
             tools -= {
                 ClarificationTool,
@@ -88,8 +79,7 @@ class ToolCallingResearchAgent(BaseAgent):
         ) as stream:
             async for event in stream:
                 if event.type == "chunk":
-                    content = event.chunk.choices[0].delta.content
-                    self.streaming_generator.add_chunk(content)
+                    self.streaming_generator.add_chunk(event)
         tool = (await stream.get_final_completion()).choices[0].message.tool_calls[0].function.parsed_arguments
 
         if not isinstance(tool, BaseTool):
@@ -120,6 +110,6 @@ class ToolCallingResearchAgent(BaseAgent):
         self.conversation.append(
             {"role": "tool", "content": result, "tool_call_id": f"{self._context.iteration}-action"}
         )
-        self.streaming_generator.add_chunk(f"{result}\n")
+        self.streaming_generator.add_chunk_from_str(f"{result}\n")
         self._log_tool_execution(tool, result)
         return result

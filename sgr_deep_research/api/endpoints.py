@@ -134,24 +134,14 @@ async def create_chat_completion(request: ChatCompletionRequest):
     try:
         task = extract_user_content_from_messages(request.messages)
 
-        # Determine agent model type
-        agent_model = request.model
-        if isinstance(agent_model, str) and _is_agent_id(agent_model):
-            # If it's an agent ID but not found in storage, use default
-            agent_model = AgentModel.SGR_AGENT
-        elif agent_model is None:
-            agent_model = AgentModel.SGR_AGENT
-        elif isinstance(agent_model, str):
-            # Try to convert string to AgentModel enum
-            try:
-                agent_model = AgentModel(agent_model)
-            except ValueError:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Invalid model '{agent_model}'. Available models: {[m.value for m in AgentModel]}",
-                )
+        try:
+            agent_model = AgentModel(request.model)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid model '{request.model}'. Available models: {[m.value for m in AgentModel]}",
+            )
 
-        # Create agent using mapping
         agent_class = AGENT_MODEL_MAPPING[agent_model]
         agent = agent_class(task=task)
         agents_storage[agent.id] = agent
@@ -171,6 +161,3 @@ async def create_chat_completion(request: ChatCompletionRequest):
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"Error completion: {e}")
-        raise HTTPException(status_code=500, detail=str(e))

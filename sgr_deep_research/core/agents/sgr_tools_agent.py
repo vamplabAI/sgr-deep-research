@@ -1,5 +1,3 @@
-import logging
-import uuid
 from typing import Literal, Type
 
 from openai import pydantic_function_tool
@@ -18,20 +16,14 @@ from sgr_deep_research.core.tools import (
 )
 from sgr_deep_research.settings import get_config
 
-logging.basicConfig(
-    level=logging.INFO,
-    encoding="utf-8",
-    format="%(asctime)s - %(name)s - %(lineno)d - %(levelname)s -  - %(message)s",
-    handlers=[logging.StreamHandler()],
-)
-
 config = get_config()
-logger = logging.getLogger(__name__)
 
 
 class SGRToolCallingResearchAgent(SGRResearchAgent):
     """Agent that uses OpenAI native function calling to select and execute
     tools based on SGR like reasoning scheme."""
+
+    name: str = "sgr_tool_calling_agent"
 
     def __init__(
         self,
@@ -48,7 +40,6 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
             max_iterations=max_iterations,
             max_searches=max_searches,
         )
-        self.id = f"sgr_tool_calling_agent_{uuid.uuid4()}"
         self.toolkit = [*system_agent_tools, *research_agent_tools, *(toolkit if toolkit else [])]
         self.tool_choice: Literal["required"] = "required"
 
@@ -56,11 +47,11 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
         """Prepare available tools for current agent state and progress."""
         tools = set(self.toolkit)
         if self._context.iteration >= self.max_iterations:
-            tools = [
+            tools = {
                 ReasoningTool,
                 CreateReportTool,
                 AgentCompletionTool,
-            ]
+            }
         if self._context.clarifications_used >= self.max_clarifications:
             tools -= {
                 ClarificationTool,
@@ -83,8 +74,7 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
             async for event in stream:
                 # print(event)
                 if event.type == "chunk":
-                    content = event.chunk.choices[0].delta.content
-                    self.streaming_generator.add_chunk(content)
+                    self.streaming_generator.add_chunk(event.chunk)
             reasoning: ReasoningTool = (  # noqa
                 (await stream.get_final_completion()).choices[0].message.tool_calls[0].function.parsed_arguments  #
             )
@@ -122,8 +112,7 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
         ) as stream:
             async for event in stream:
                 if event.type == "chunk":
-                    content = event.chunk.choices[0].delta.content
-                    self.streaming_generator.add_chunk(content)
+                    self.streaming_generator.add_chunk(event.chunk)
         tool = (await stream.get_final_completion()).choices[0].message.tool_calls[0].function.parsed_arguments
 
         if not isinstance(tool, BaseTool):
