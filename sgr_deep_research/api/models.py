@@ -17,11 +17,11 @@ from sgr_deep_research.core.agents import (
 class AgentModel(str, Enum):
     """Available agent models for chat completion."""
 
-    SGR_AGENT = "sgr-agent"
-    SGR_TOOLS_AGENT = "sgr-tools-agent"
-    SGR_AUTO_TOOLS_AGENT = "sgr-auto-tools-agent"
-    SGR_SO_TOOLS_AGENT = "sgr-so-tools-agent"
-    TOOLS_AGENT = "tools-agent"
+    SGR_AGENT = SGRResearchAgent.name
+    SGR_TOOLS_AGENT = SGRToolCallingResearchAgent.name
+    SGR_AUTO_TOOLS_AGENT = SGRAutoToolCallingResearchAgent.name
+    SGR_SO_TOOLS_AGENT = SGRSOToolCallingResearchAgent.name
+    TOOLS_AGENT = ToolCallingResearchAgent.name
 
 
 # Mapping of agent types to their classes
@@ -47,7 +47,7 @@ class ChatCompletionRequest(BaseModel):
     model: str | None = Field(
         default=AgentModel.SGR_AGENT,
         description="Agent type or existing agent identifier",
-        example="sgr-agent",
+        example=AgentModel.SGR_AGENT.name,
     )
     messages: List[ChatMessage] = Field(description="List of messages")
     stream: bool = Field(default=True, description="Enable streaming mode")

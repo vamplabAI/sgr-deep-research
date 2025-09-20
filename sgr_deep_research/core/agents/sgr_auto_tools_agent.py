@@ -1,4 +1,3 @@
-import uuid
 from typing import Literal, Type
 
 from sgr_deep_research.core.agents.sgr_tools_agent import SGRToolCallingResearchAgent
@@ -9,6 +8,8 @@ class SGRAutoToolCallingResearchAgent(SGRToolCallingResearchAgent):
     """SGR Tool Calling Research Agent variation for benchmark with automatic
     tool selection."""
 
+    name: str = "sgr_auto_tool_calling_agent"
+
     def __init__(
         self,
         task: str,
@@ -18,5 +19,4 @@ class SGRAutoToolCallingResearchAgent(SGRToolCallingResearchAgent):
         max_iterations: int = 10,
     ):
         super().__init__(task, toolkit, max_clarifications, max_searches, max_iterations)
-        self.id = f"sgr_auto_tool_calling_agent_{uuid.uuid4()}"
         self.tool_choice: Literal["auto"] = "auto"

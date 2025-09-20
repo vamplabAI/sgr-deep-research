@@ -2,6 +2,8 @@ import asyncio
 import json
 import time
 
+from openai.types.chat import ChatCompletionChunk
+
 
 class StreamingGenerator:
     def __init__(self):
@@ -30,7 +32,11 @@ class OpenAIStreamingGenerator(StreamingGenerator):
         self.created = int(time.time())
         self.choice_index = 0
 
-    def add_chunk(self, content: str):
+    def add_chunk(self, chunk: ChatCompletionChunk):
+        chunk.model = self.model
+        super().add(f"data: {chunk.model_dump_json()}\n\n")
+
+    def add_chunk_from_str(self, content: str):
         response = {
             "id": self.id,
             "object": "chat.completion.chunk",

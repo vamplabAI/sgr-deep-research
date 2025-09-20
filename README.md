@@ -211,7 +211,7 @@ The system provides a fully OpenAI-compatible API with advanced agent interrupti
 curl -X POST "http://localhost:8010/v1/chat/completions" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "sgr-agent",
+    "model": "sgr_agent",
     "messages": [{"role": "user", "content": "Research BMW X6 2025 prices in Russia"}],
     "stream": true,
     "max_tokens": 1500,
@@ -229,7 +229,7 @@ When the agent needs clarification, it returns a unique agent ID in the streamin
 curl -X POST "http://localhost:8010/v1/chat/completions" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "sgr-agent",
+    "model": "sgr_agent",
     "messages": [{"role": "user", "content": "Research AI market trends"}],
     "stream": true,
     "max_tokens": 1500,
@@ -309,7 +309,7 @@ sequenceDiagram
 
     Note over Client, Tools: SGR Deep Research - Agent Workflow
 
-    Client->>API: POST /v1/chat/completions<br/>{"model": "sgr-agent", "messages": [...]}
+    Client->>API: POST /v1/chat/completions<br/>{"model": "sgr_agent", "messages": [...]}
 
     API->>Agent: Create new SGR Agent<br/>with unique ID
     Note over Agent: State: INITED

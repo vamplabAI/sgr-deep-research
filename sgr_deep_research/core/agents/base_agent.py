@@ -25,16 +25,17 @@ from sgr_deep_research.settings import get_config
 logging.basicConfig(
     level=logging.INFO,
     encoding="utf-8",
-    format="%(asctime)s - %(name)s - %(lineno)d - %(levelname)s -  - %(message)s",
+    format="%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(message)s",
     handlers=[logging.StreamHandler()],
 )
 
 config = get_config()
-logger = logging.getLogger(__name__)
 
 
 class BaseAgent:
     """Base class for agents."""
+
+    name: str = "base_agent"
 
     def __init__(
         self,
@@ -43,7 +44,8 @@ class BaseAgent:
         max_iterations: int = 10,
         max_clarifications: int = 3,
     ):
-        self.id = f"base_agent_{uuid.uuid4()}"
+        self.id = f"{self.name}_{uuid.uuid4()}"
+        self.logger = logging.getLogger(f"{self.id}")
         self.task = task
         self.toolkit = [*system_agent_tools, *(toolkit or [])]
 
@@ -66,11 +68,11 @@ class BaseAgent:
         self._context.clarifications_used += 1
         self._context.clarification_received.set()
         self._context.state = AgentStatesEnum.RESEARCHING
-        logger.info(f"✅ Clarification received: {clarifications[:2000]}...")
+        self.logger.info(f"✅ Clarification received: {clarifications[:2000]}...")
 
     def _log_reasoning(self, result: ReasoningTool) -> None:
         next_step = result.remaining_steps[0] if result.remaining_steps else "Completing"
-        logger.info(
+        self.logger.info(
             f"""
 ###############################################
 🤖 LLM RESPONSE DEBUG:
@@ -95,7 +97,7 @@ class BaseAgent:
         )
 
     def _log_tool_execution(self, tool: BaseTool, result: str):
-        logger.info(
+        self.logger.info(
             f"""
 ###############################################
 🛠️ TOOL EXECUTION DEBUG:
@@ -161,7 +163,7 @@ class BaseAgent:
     async def execute(
         self,
     ):
-        logger.info(f"🚀 Starting agent {self.id} for task: '{self.task}'")
+        self.logger.info(f"🚀 Starting for task: '{self.task}'")
         self.conversation.extend(
             [
                 {
@@ -173,7 +175,7 @@ class BaseAgent:
         try:
             while self._context.state not in AgentStatesEnum.FINISH_STATES.value:
                 self._context.iteration += 1
-                logger.info(f"agent {self.id} Step {self._context.iteration} started")
+                self.logger.info(f"Step {self._context.iteration} started")
 
                 reasoning = await self._reasoning_phase()
                 self._context.current_state_reasoning = reasoning
@@ -181,15 +183,15 @@ class BaseAgent:
                 action_result = await self._action_phase(action_tool)
 
                 if isinstance(action_tool, ClarificationTool):
-                    logger.info("\n⏸️  Research paused - please answer questions")
-                    logger.info(action_result)
+                    self.logger.info("\n⏸️  Research paused - please answer questions")
+                    self.logger.info(action_result)
                     self._context.state = AgentStatesEnum.WAITING_FOR_CLARIFICATION
                     self._context.clarification_received.clear()
                     await self._context.clarification_received.wait()
                     continue
 
         except Exception as e:
-            logger.error(f"❌ Agent execution error: {str(e)}")
+            self.logger.error(f"❌ Agent execution error: {str(e)}")
             self._context.state = AgentStatesEnum.FAILED
             traceback.print_exc()
         finally:
