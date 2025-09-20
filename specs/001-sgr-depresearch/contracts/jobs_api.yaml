@@ -1,0 +1,601 @@
+openapi: 3.0.3
+info:
+  title: SGR Deep Research Jobs API
+  description: Asynchronous job management for long-running research operations
+  version: 1.0.0
+  contact:
+    name: SGR Deep Research Team
+    url: https://github.com/vakovalskii/sgr-deep-research
+
+servers:
+  - url: http://localhost:8010
+    description: Local development server
+
+paths:
+  /jobs:
+    post:
+      summary: Submit a new research job
+      description: Creates a new long-running research job and returns job ID immediately
+      operationId: submitJob
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobRequest'
+            examples:
+              basic_research:
+                summary: Basic research query
+                value:
+                  query: "Analyze recent developments in quantum computing"
+                  agent_type: "sgr-tools"
+              deep_research:
+                summary: Deep research with high priority
+                value:
+                  query: "Comprehensive analysis of AI trends in 2024"
+                  agent_type: "sgr-tools"
+                  deep_level: 2
+                  priority: 10
+                  tags: ["ai", "trends", "2024"]
+      responses:
+        '201':
+          description: Job created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobSubmissionResponse'
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many jobs submitted, queue is full
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      summary: List user jobs
+      description: Retrieve a list of jobs with optional filtering
+      operationId: listJobs
+      parameters:
+        - name: status
+          in: query
+          description: Filter by job status
+          required: false
+          schema:
+            $ref: '#/components/schemas/JobState'
+        - name: limit
+          in: query
+          description: Maximum number of jobs to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of jobs to skip for pagination
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: tags
+          in: query
+          description: Filter by tags (comma-separated)
+          required: false
+          schema:
+            type: string
+            example: "ai,trends"
+      responses:
+        '200':
+          description: List of jobs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobListResponse'
+
+  /jobs/{job_id}:
+    get:
+      summary: Get job status and results
+      description: Retrieve current status, progress, and results for a specific job
+      operationId: getJob
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          description: Unique job identifier
+          schema:
+            type: string
+            format: uuid
+            example: "123e4567-e89b-12d3-a456-426614174000"
+      responses:
+        '200':
+          description: Job information retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Cancel a job
+      description: Cancel a pending or running job
+      operationId: cancelJob
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          description: Unique job identifier
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Job cancelled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobCancellationResponse'
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Job cannot be cancelled (already completed)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /jobs/{job_id}/stream:
+    get:
+      summary: Stream job updates
+      description: Server-Sent Events endpoint for real-time job progress updates
+      operationId: streamJobUpdates
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          description: Unique job identifier
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event stream established
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: Server-Sent Events stream with job updates
+              examples:
+                progress_update:
+                  summary: Progress update event
+                  value: |
+                    event: job_progress
+                    data: {"job_id": "123e4567-e89b-12d3-a456-426614174000", "progress": 45.5, "current_step": "Analyzing sources"}
+
+                    event: job_complete
+                    data: {"job_id": "123e4567-e89b-12d3-a456-426614174000", "status": "completed"}
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    JobRequest:
+      type: object
+      required:
+        - query
+        - agent_type
+      properties:
+        query:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: Research question or topic to investigate
+          example: "Analyze recent developments in quantum computing"
+        agent_type:
+          type: string
+          enum: ["sgr", "sgr-tools", "sgr-auto-tools", "sgr-so-tools", "tools"]
+          description: Type of research agent to use
+          example: "sgr-tools"
+        deep_level:
+          type: integer
+          minimum: 0
+          maximum: 10
+          default: 0
+          description: Research depth level (0=normal, 1-5+=deep)
+          example: 2
+        priority:
+          type: integer
+          minimum: -100
+          maximum: 100
+          default: 0
+          description: Job priority for queue ordering
+          example: 10
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 10
+          description: User-defined tags for organization
+          example: ["ai", "trends", "research"]
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional configuration parameters
+          example: {"department": "research", "project": "q1-analysis"}
+
+    JobSubmissionResponse:
+      type: object
+      required:
+        - job_id
+        - status
+        - created_at
+      properties:
+        job_id:
+          type: string
+          format: uuid
+          description: Unique job identifier
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        status:
+          $ref: '#/components/schemas/JobState'
+        created_at:
+          type: string
+          format: date-time
+          description: Job creation timestamp
+          example: "2024-01-21T10:30:00Z"
+        estimated_completion:
+          type: string
+          format: date-time
+          nullable: true
+          description: Estimated completion time
+          example: "2024-01-21T11:30:00Z"
+
+    JobResponse:
+      type: object
+      required:
+        - job_id
+        - status
+        - progress
+        - created_at
+      properties:
+        job_id:
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        status:
+          $ref: '#/components/schemas/JobState'
+        progress:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Completion percentage
+          example: 75.5
+        current_step:
+          type: string
+          description: Description of current operation
+          example: "Analyzing research sources"
+        steps_completed:
+          type: integer
+          minimum: 0
+          description: Number of steps finished
+          example: 15
+        total_steps:
+          type: integer
+          minimum: 0
+          description: Estimated total steps
+          example: 20
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-21T10:30:00Z"
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-01-21T10:30:05Z"
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-01-21T11:15:30Z"
+        result:
+          $ref: '#/components/schemas/JobResult'
+          nullable: true
+        error:
+          $ref: '#/components/schemas/JobError'
+          nullable: true
+
+    JobResult:
+      type: object
+      required:
+        - final_answer
+        - sources
+        - metrics
+      properties:
+        final_answer:
+          type: string
+          description: Generated research report content
+        report_url:
+          type: string
+          format: uri
+          nullable: true
+          description: URL to download full report
+          example: "/jobs/123e4567-e89b-12d3-a456-426614174000/report"
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResearchSource'
+          description: Sources used in research
+        metrics:
+          $ref: '#/components/schemas/ExecutionMetrics'
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileArtifact'
+          description: Generated files and attachments
+
+    JobError:
+      type: object
+      required:
+        - error_type
+        - error_message
+        - occurred_at
+      properties:
+        error_type:
+          type: string
+          enum: ["network", "timeout", "validation", "resource", "internal"]
+          description: Error classification
+          example: "network"
+        error_message:
+          type: string
+          description: Human-readable error description
+          example: "Failed to connect to external research API"
+        error_details:
+          type: object
+          additionalProperties: true
+          description: Technical error information
+        retry_count:
+          type: integer
+          minimum: 0
+          description: Number of retry attempts made
+          example: 3
+        is_retryable:
+          type: boolean
+          description: Whether job can be automatically retried
+          example: true
+        occurred_at:
+          type: string
+          format: date-time
+          example: "2024-01-21T11:05:30Z"
+
+    ResearchSource:
+      type: object
+      required:
+        - number
+        - url
+        - title
+      properties:
+        number:
+          type: integer
+          minimum: 1
+          description: Sequential source number within job
+          example: 1
+        url:
+          type: string
+          format: uri
+          description: Source URL or identifier
+          example: "https://example.com/article"
+        title:
+          type: string
+          description: Source title or description
+          example: "Recent Advances in Quantum Computing"
+        content_excerpt:
+          type: string
+          description: Relevant excerpt from source
+          example: "Quantum computing has seen significant breakthroughs..."
+        confidence_score:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Relevance confidence score
+          example: 0.95
+
+    ExecutionMetrics:
+      type: object
+      required:
+        - total_duration_seconds
+        - api_calls_made
+        - tokens_consumed
+      properties:
+        total_duration_seconds:
+          type: number
+          minimum: 0
+          description: Wall clock execution time in seconds
+          example: 1845.5
+        api_calls_made:
+          type: integer
+          minimum: 0
+          description: Number of external API calls
+          example: 25
+        tokens_consumed:
+          type: integer
+          minimum: 0
+          description: Total LLM tokens used
+          example: 15000
+        estimated_cost_usd:
+          type: number
+          minimum: 0
+          description: Estimated execution cost in USD
+          example: 2.45
+        search_operations:
+          type: integer
+          minimum: 0
+          description: Number of search operations
+          example: 8
+
+    FileArtifact:
+      type: object
+      required:
+        - file_path
+        - file_type
+        - size_bytes
+      properties:
+        file_path:
+          type: string
+          description: Relative path to file
+          example: "reports/job_123_report.md"
+        file_type:
+          type: string
+          description: MIME type or file category
+          example: "text/markdown"
+        size_bytes:
+          type: integer
+          minimum: 0
+          description: File size in bytes
+          example: 25600
+        description:
+          type: string
+          description: Human-readable description
+          example: "Full research report in Markdown format"
+        download_url:
+          type: string
+          format: uri
+          description: URL to download file
+          example: "/jobs/123e4567-e89b-12d3-a456-426614174000/files/report.md"
+
+    JobState:
+      type: string
+      enum: ["pending", "running", "completed", "failed", "cancelled"]
+      description: Current job execution state
+
+    JobListResponse:
+      type: object
+      required:
+        - jobs
+        - total
+        - limit
+        - offset
+      properties:
+        jobs:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobSummary'
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of jobs matching filters
+          example: 42
+        limit:
+          type: integer
+          minimum: 1
+          description: Maximum jobs returned in this response
+          example: 20
+        offset:
+          type: integer
+          minimum: 0
+          description: Number of jobs skipped
+          example: 0
+
+    JobSummary:
+      type: object
+      required:
+        - job_id
+        - status
+        - progress
+        - created_at
+      properties:
+        job_id:
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        status:
+          $ref: '#/components/schemas/JobState'
+        progress:
+          type: number
+          minimum: 0
+          maximum: 100
+          example: 75.5
+        query:
+          type: string
+          description: Research query (truncated if long)
+          example: "Analyze recent developments in quantum..."
+        agent_type:
+          type: string
+          example: "sgr-tools"
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["ai", "research"]
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-21T10:30:00Z"
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-01-21T11:15:30Z"
+
+    JobCancellationResponse:
+      type: object
+      required:
+        - job_id
+        - status
+        - cancelled_at
+      properties:
+        job_id:
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        status:
+          type: string
+          enum: ["cancelled"]
+          example: "cancelled"
+        cancelled_at:
+          type: string
+          format: date-time
+          example: "2024-01-21T10:45:00Z"
+        message:
+          type: string
+          description: Cancellation confirmation message
+          example: "Job cancelled successfully"
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error type or code
+          example: "INVALID_REQUEST"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "The query field is required and cannot be empty"
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error details
+          example: {"field": "query", "constraint": "non_empty"}

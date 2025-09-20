@@ -60,6 +60,9 @@ class ResearchContext(BaseModel):
     clarification_received: asyncio.Event = Field(
         default_factory=asyncio.Event, description="Event for clarification synchronization"
     )
+    
+    # Path to the last created report file (for Prefect artifacts)
+    last_report_path: str | None = Field(default=None, description="Path to the last created report file")
 
     # ToDO: rename, my creativity finished now
     def agent_state(self) -> dict:

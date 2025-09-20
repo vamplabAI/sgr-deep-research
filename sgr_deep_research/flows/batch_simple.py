@@ -2,10 +2,12 @@
 
 import asyncio
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List
 
 from prefect import flow, task
+from prefect.artifacts import create_markdown_artifact
 
 from sgr_deep_research.core.agents.batch_generator_agent import BatchGeneratorAgent
 from sgr_deep_research.core.agents import DEFAULT_AGENT
@@ -127,6 +129,41 @@ async def batch_simple_flow(
     exceptions = sum(1 for r in results if isinstance(r, Exception))
 
     logger.info(f"📊 Batch завершен: {completed} успешно, {failed} ошибок, {exceptions} исключений")
+
+    # Создаем Prefect artifact с обзором batch исследования
+    try:
+        # Формируем обзор для artifact
+        artifact_content = f"""# Batch исследование: {topic}
+
+## Общая статистика
+
+- **Тема:** {topic}
+- **Всего запросов:** {len(queries)}
+- **Успешно выполнено:** {completed}
+- **Ошибок:** {failed}
+- **Исключений:** {exceptions}
+- **Режим глубины:** {deep_level if deep_level > 0 else "Стандартный"}
+- **Результаты в папке:** `{result_path}`
+
+## Результаты по запросам
+
+"""
+        # Добавляем информацию по каждому запросу
+        for i, query_data in enumerate(queries, 1):
+            query = query_data["query"]
+            status = "✅" if any(isinstance(r, dict) and r.get("index") == i and r.get("status") == "COMPLETED" for r in results) else "❌"
+            depth = query_data.get("suggested_depth", 0)
+            artifact_content += f"{i}. {status} **{query}** (глубина: {depth})\n"
+
+        # Создаем artifact
+        create_markdown_artifact(
+            key=f"batch-research-{datetime.now().strftime('%Y%m%d-%H%M%S')}",
+            markdown=artifact_content,
+            description=f"Batch исследование: {topic}"
+        )
+        logger.info(f"📊 Создан Prefect artifact с обзором batch исследования")
+    except Exception as e:
+        logger.warning(f"Не удалось создать Prefect artifact: {e}")
 
     return {
         "status": "COMPLETED",

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Optional, Dict, Any
 
 from prefect import flow, task
+from prefect.artifacts import create_markdown_artifact
 
 from sgr_deep_research.core.agents.sgr_tools_agent import SGRToolCallingResearchAgent
 from sgr_deep_research.core.models import AgentStatesEnum
@@ -24,106 +25,81 @@ async def run_research_agent_task(
 ) -> Dict[str, Any]:
     """Task для выполнения одного исследовательского запроса."""
 
-    try:
-        logger.info(f"🚀 Запуск агента: {query}")
+    logger.info(f"🚀 Запуск агента: {query}")
 
-        base_steps = 5
-        base_searches = 3
+    base_steps = 5
+    base_searches = 3
 
-        # Создаем агента
-        agent = SGRToolCallingResearchAgent(
-            task=query,
-            max_iterations=base_steps * (deep_level * 3 + 1),
-            max_searches=base_searches * (deep_level + 1),
-            use_streaming=False,
-        )
+    # Создаем агента
+    agent = SGRToolCallingResearchAgent(
+        task=query,
+        max_iterations=base_steps * (deep_level * 3 + 1),
+        max_searches=base_searches * (deep_level + 1),
+        use_streaming=False,
+    )
 
-        # Устанавливаем deep_level для использования в параметрах модели
-        if deep_level > 0:
-            agent._deep_level = deep_level
+    # Устанавливаем deep_level для использования в параметрах модели
+    if deep_level > 0:
+        agent._deep_level = deep_level
 
-        # Временно изменяем конфигурацию для result_dir если передан
-        original_reports_dir = None
-        if result_dir:
-            from sgr_deep_research.settings import get_config
+    # Временно изменяем конфигурацию для result_dir если передан
+    original_reports_dir = None
+    if result_dir:
+        from sgr_deep_research.settings import get_config
 
-            config = get_config()
-            original_reports_dir = config.execution.reports_dir
-            config.execution.reports_dir = result_dir
+        config = get_config()
+        original_reports_dir = config.execution.reports_dir
+        config.execution.reports_dir = result_dir
 
+        # Запуск агента
+        logger.info(f"▶️ Начинаем выполнение агента...")
+
+        # Если no_clarifications=True, принудительно отключаем уточнения
+        if no_clarifications:
+            # Устанавливаем флаг что уточнения не нужны (пропускаем если поле не существует)
+            try:
+                agent._context.disable_clarifications = True
+                logger.info(f"🚫 Режим без уточнений - агент будет работать с имеющейся информацией")
+            except (ValueError, AttributeError):
+                logger.info(f"🚫 Режим без уточнений (автоматически - поле disable_clarifications недоступно)")
+
+        await agent.execute()
+
+        # Получение результата - читаем файл отчета если агент его создал
+        final_answer = ""
+        
+        if hasattr(agent._context, 'last_report_path') and agent._context.last_report_path:
+            try:
+                with open(agent._context.last_report_path, "r", encoding="utf-8") as f:
+                    final_answer = f.read()
+                logger.info(f"📄 Найден отчет: {Path(agent._context.last_report_path).name}")
+            except Exception as e:
+                logger.warning(f"Не удалось прочитать отчет: {e}")
+
+        # Получаем источники и статистику
+        sources = list(agent._context.sources.values())
+        stats = agent.metrics.format_stats()
+
+        # Создаем Prefect artifact с результатом
         try:
-            # Запуск агента
-            logger.info(f"▶️ Начинаем выполнение агента...")
-            
-            # Если no_clarifications=True, принудительно отключаем уточнения
-            if no_clarifications:
-                # Устанавливаем флаг что уточнения не нужны (пропускаем если поле не существует)
-                try:
-                    agent._context.disable_clarifications = True
-                    logger.info(f"🚫 Режим без уточнений - агент будет работать с имеющейся информацией")
-                except (ValueError, AttributeError):
-                    logger.info(f"🚫 Режим без уточнений (автоматически - поле disable_clarifications недоступно)")
-            
-            await agent.execute()
+            create_markdown_artifact(
+                key=f"research-result-{datetime.now().strftime('%Y%m%d-%H%M%S')}",
+                markdown=final_answer or "Отчет не найден",
+                description=f"Исследование: {query[:50]}..."
+            )
+            logger.info(f"📊 Создан Prefect artifact")
+        except Exception as e:
+            logger.warning(f"Не удалось создать Prefect artifact: {e}")
 
-            # Обработка состояния агента
-            if agent._context.state == AgentStatesEnum.COMPLETED:
-                # Получение результата
-                final_answer = ""
+        logger.info(f"✅ Агент завершил работу")
 
-                # Проверяем отчеты в папке reports
-                reports_dir = Path(result_dir or "reports")
-                if reports_dir.exists():
-                    report_files = list(reports_dir.glob("*.md"))
-                    if report_files:
-                        latest_report = max(report_files, key=lambda x: x.stat().st_mtime)
-                        if (datetime.now().timestamp() - latest_report.stat().st_mtime) < 300:
-                            try:
-                                with open(latest_report, "r", encoding="utf-8") as f:
-                                    final_answer = f.read()
-                                logger.info(f"📄 Найден отчет: {latest_report.name}")
-                            except Exception as e:
-                                logger.warning(f"Не удалось прочитать отчет: {e}")
-
-                # Получаем источники и статистику
-                sources = list(agent._context.sources.values())
-                stats = agent.metrics.format_stats()
-
-                logger.info(f"✅ Агент успешно завершил работу")
-
-                return {
-                    "status": "COMPLETED",
-                    "answer": final_answer,
-                    "sources": [{"number": s.number, "url": s.url, "title": s.title} for s in sources],
-                    "stats": stats,
-                    "model": agent.model_name,
-                    "deep_level": deep_level,
-                }
-            else:
-                logger.error(f"❌ Агент завершился с состоянием: {agent._context.state}")
-                return {
-                    "status": "ERROR",
-                    "error": f"Agent finished with state: {agent._context.state}",
-                    "stats": agent.metrics.format_stats(),
-                }
-
-        finally:
-            # Восстанавливаем исходную конфигурацию
-            if original_reports_dir is not None:
-                from sgr_deep_research.settings import get_config
-
-                config = get_config()
-                config.execution.reports_dir = original_reports_dir
-
-    except Exception as e:
-        logger.error(f"💥 Критическая ошибка: {e}")
-        import traceback
-
-        logger.error(f"📜 Traceback: {traceback.format_exc()}")
         return {
-            "status": "ERROR",
-            "error": str(e),
-            "traceback": traceback.format_exc(),
+            "status": "COMPLETED",
+            "answer": final_answer,
+            "sources": [{"number": s.number, "url": s.url, "title": s.title} for s in sources],
+            "stats": stats,
+            "model": agent.model_name,
+            "deep_level": deep_level,
         }
 
 

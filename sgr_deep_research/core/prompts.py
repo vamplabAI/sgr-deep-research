@@ -77,11 +77,7 @@ class PromptLoader:
             else:
                 template_file = config.prompts.available_prompts.get("default", config.prompts.system_prompt_file)
 
-        # Load template (with fallback to default system prompt)
-        try:
-            template = cls._load_prompt_file(template_file)
-        except FileNotFoundError:
-            template = cls._load_prompt_file(config.prompts.system_prompt_file)
+        template = cls._load_prompt_file(template_file)
 
         # Добавляем инструкции для глубокого режима
         deep_mode_instructions = ""
@@ -90,14 +86,6 @@ class PromptLoader:
             deep_mode_instructions = f"""
 DEEP RESEARCH MODE LEVEL {deep_level} ACTIVATED:
 - MINIMUM REQUIRED SEARCHES: {min_searches} different search queries before considering data sufficient
-- Current searches done: {{searches_count}}/{{max_searches}}
-- You MUST perform MULTIPLE diverse search queries covering different aspects of the topic
-- Set enough_data=False UNTIL you have conducted at least {min_searches} searches
-- Search variations: different keywords, specific terms, related concepts, historical context, recent developments
-- For topics like history: search periods, regions, key figures, institutions, sources, conflicts, demographics
-- Example search progression: broad overview → specific periods → key events → sources analysis →
-  related peoples/regions
-- DEPTH OVER SPEED: More thorough analysis is expected at this deep level
 """
 
         try:

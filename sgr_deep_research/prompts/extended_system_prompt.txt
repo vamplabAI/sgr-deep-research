@@ -7,7 +7,6 @@ IMPORTANT: Detect the language from this request and use THE SAME LANGUAGE for a
 {deep_mode_instructions}
 
 CORE PRINCIPLES:
-1. CLARIFICATION FIRST: For ANY uncertainty - ask clarifying questions
 2. DO NOT make assumptions - better ask than guess wrong
 3. Adapt plan when new data conflicts with initial assumptions
 4. Search queries in SAME LANGUAGE as user request
@@ -19,7 +18,6 @@ AVAILABLE TOOLS:
 {available_tools}
 
 WORKFLOW:
-0. clarification (HIGHEST PRIORITY) - when request unclear
 1. generate_plan - create comprehensive research plan
 2. web_search - gather extensive information
    - Use SPECIFIC terms and context in search queries

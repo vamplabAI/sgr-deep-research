@@ -42,6 +42,7 @@ class ExecutionMetrics:
     # Цены моделей (за 1M токенов в USD)
     MODEL_PRICING = {
         "gpt-5": {"input": 1.250, "cached_input": 0.125, "output": 10.000},
+        "gpt-5-mini": {"input": 1.250, "cached_input": 0.125, "output": 10.000},
         "gpt-4o": {"input": 5.000, "cached_input": 2.500, "output": 15.000},
         "gpt-4-turbo": {"input": 10.000, "cached_input": 5.000, "output": 30.000},
         "gpt-3.5-turbo": {"input": 0.500, "cached_input": 0.500, "output": 1.500},
@@ -462,14 +463,14 @@ class BaseAgent:
                 action_tool = await self._select_action_phase(reasoning)
                 action_result = await self._action_phase(action_tool)
 
-                if isinstance(action_tool, ClarificationTool):
-                    self.metrics.add_clarification()
-                    logger.info("\n⏸️  Research paused - please answer questions")
-                    logger.info(action_result)
-                    self._context.state = AgentStatesEnum.WAITING_FOR_CLARIFICATION
-                    self._context.clarification_received.clear()
-                    await self._context.clarification_received.wait()
-                    continue
+                # if isinstance(action_tool, ClarificationTool):
+                #     self.metrics.add_clarification()
+                #     logger.info("\n⏸️  Research paused - please answer questions")
+                #     logger.info(action_result)
+                #     self._context.state = AgentStatesEnum.WAITING_FOR_CLARIFICATION
+                #     self._context.clarification_received.clear()
+                #     await self._context.clarification_received.wait()
+                #     continue
 
         except Exception as e:
             self.metrics.add_error()

@@ -17,9 +17,11 @@ class OpenAIConfig(BaseModel):
 
     api_key: str = Field(description="API key")
     base_url: str = Field(default="https://api.openai.com/v1", description="Base URL")
-    model: str = Field(default="gpt-4o-mini", description="Model to use")
+    model: str = Field(default="gpt-5-mini", description="Model to use")
     max_tokens: int = Field(default=32000, description="Maximum number of tokens (for older models)")
-    max_completion_tokens: int = Field(default=32000, description="Maximum completion tokens (for newer models like GPT-5)")
+    max_completion_tokens: int = Field(
+        default=32000, description="Maximum completion tokens (for newer models like GPT-5)"
+    )
     temperature: float = Field(default=0.4, ge=0.0, le=1.0, description="Generation temperature")
     reasoning_effort: str = Field(default="medium", description="GPT-5 reasoning effort: low/medium/high")
     verbosity: str = Field(default="medium", description="GPT-5 verbosity level: low/medium/high")
@@ -34,7 +36,9 @@ class AzureConfig(BaseModel):
     api_version: str = Field(default="2024-12-01-preview", description="Azure API version")
     deployment_name: str = Field(description="Azure deployment name")
     max_tokens: int = Field(default=32000, description="Maximum number of tokens (for older models)")
-    max_completion_tokens: int = Field(default=32000, description="Maximum completion tokens (for newer models like GPT-5)")
+    max_completion_tokens: int = Field(
+        default=32000, description="Maximum completion tokens (for newer models like GPT-5)"
+    )
     temperature: float = Field(default=0.4, ge=0.0, le=1.0, description="Generation temperature")
     reasoning_effort: str = Field(default="medium", description="GPT-5 reasoning effort: low/medium/high")
     verbosity: str = Field(default="medium", description="GPT-5 verbosity level: low/medium/high")

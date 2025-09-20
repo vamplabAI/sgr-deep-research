@@ -63,10 +63,10 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
                 CreateReportTool,
                 AgentCompletionTool,
             ]
-        if self._context.clarifications_used >= self.max_clarifications:
-            tools -= {
-                ClarificationTool,
-            }
+        # if self._context.clarifications_used >= self.max_clarifications:
+        #     tools -= {
+        #         ClarificationTool,
+        #     }
         if self._context.searches_used >= self.max_searches:
             tools -= {
                 WebSearchTool,
@@ -77,15 +77,17 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
         # Получаем параметры модели с учетом deep_level
         context_messages = await self._prepare_context()
         # Сохраняем приблизительную длину промпта для оценки токенов
-        self._last_prompt_length = sum(len(str(msg.get('content', ''))) for msg in context_messages)
-        
-        model_params = self._get_model_parameters(getattr(self, '_deep_level', 0))
-        model_params.update({
-            "messages": context_messages,
-            "tools": await self._prepare_tools(),
-            "tool_choice": {"type": "function", "function": {"name": ReasoningTool.tool_name}},
-        })
-        
+        self._last_prompt_length = sum(len(str(msg.get("content", ""))) for msg in context_messages)
+
+        model_params = self._get_model_parameters(getattr(self, "_deep_level", 0))
+        model_params.update(
+            {
+                "messages": context_messages,
+                "tools": await self._prepare_tools(),
+                "tool_choice": {"type": "function", "function": {"name": ReasoningTool.tool_name}},
+            }
+        )
+
         if self.use_streaming:
             # Streaming режим (для API)
             usage_data = None
@@ -95,22 +97,21 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
                         content = event.chunk.choices[0].delta.content
                         self.streaming_generator.add_chunk(content)
                         # Попытаемся получить usage из chunk, если доступно
-                        if hasattr(event.chunk, 'usage') and event.chunk.usage:
+                        if hasattr(event.chunk, "usage") and event.chunk.usage:
                             usage_data = event.chunk.usage
                 final_completion = await stream.get_final_completion()
                 # Если usage не было получено из chunk, попробуем из final completion
                 if not usage_data and final_completion.usage:
                     usage_data = final_completion.usage
                 self.metrics.add_api_call(usage_data)
-                reasoning: ReasoningTool = (
-                    final_completion.choices[0].message.tool_calls[0].function.parsed_arguments
-                )
+                reasoning: ReasoningTool = final_completion.choices[0].message.tool_calls[0].function.parsed_arguments
         else:
             # Non-streaming режим (для CLI) - получаем точные данные о токенах
             completion = await self.openai_client.chat.completions.create(**model_params)
             self.metrics.add_api_call(completion.usage)
             # В non-streaming режиме нужно парсить arguments вручную
             import json
+
             arguments_str = completion.choices[0].message.tool_calls[0].function.arguments
             arguments_dict = json.loads(arguments_str)
             reasoning: ReasoningTool = ReasoningTool(**arguments_dict)
@@ -140,16 +141,18 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
     async def _select_action_phase(self, reasoning: ReasoningTool) -> BaseTool:
         # Получаем параметры модели с учетом deep_level
         context_messages = await self._prepare_context()
-        # Сохраняем приблизительную длину промпта для оценки токенов  
-        self._last_prompt_length = sum(len(str(msg.get('content', ''))) for msg in context_messages)
-        
-        model_params = self._get_model_parameters(getattr(self, '_deep_level', 0))
-        model_params.update({
-            "messages": context_messages,
-            "tools": await self._prepare_tools(),
-            "tool_choice": self.tool_choice,
-        })
-        
+        # Сохраняем приблизительную длину промпта для оценки токенов
+        self._last_prompt_length = sum(len(str(msg.get("content", ""))) for msg in context_messages)
+
+        model_params = self._get_model_parameters(getattr(self, "_deep_level", 0))
+        model_params.update(
+            {
+                "messages": context_messages,
+                "tools": await self._prepare_tools(),
+                "tool_choice": self.tool_choice,
+            }
+        )
+
         if self.use_streaming:
             # Streaming режим (для API)
             usage_data = None
@@ -159,7 +162,7 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
                         content = event.chunk.choices[0].delta.content
                         self.streaming_generator.add_chunk(content)
                         # Попытаемся получить usage из chunk, если доступно
-                        if hasattr(event.chunk, 'usage') and event.chunk.usage:
+                        if hasattr(event.chunk, "usage") and event.chunk.usage:
                             usage_data = event.chunk.usage
             final_completion = await stream.get_final_completion()
             # Если usage не было получено из chunk, попробуем из final completion
@@ -173,20 +176,21 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
             self.metrics.add_api_call(completion.usage)
             # В non-streaming режиме нужно парсить arguments вручную
             import json
+
             tool_name = completion.choices[0].message.tool_calls[0].function.name
             arguments_str = completion.choices[0].message.tool_calls[0].function.arguments
             arguments_dict = json.loads(arguments_str)
-            
+
             # Простой маппинг имен инструментов к классам
             tool_class = None
             for tool_cls in self.toolkit:
-                if hasattr(tool_cls, 'tool_name') and tool_cls.tool_name == tool_name:
+                if hasattr(tool_cls, "tool_name") and tool_cls.tool_name == tool_name:
                     tool_class = tool_cls
                     break
-            
+
             if not tool_class:
                 raise ValueError(f"Tool class not found for tool name: {tool_name}")
-            
+
             tool = tool_class(**arguments_dict)
 
         if not isinstance(tool, BaseTool):
@@ -211,3 +215,28 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
             f"{self._context.iteration}-action", tool.tool_name, tool.model_dump_json()
         )
         return tool
+
+    async def _action_phase(self, tool: BaseTool) -> str:
+        # Отслеживаем типы инструментов для метрик
+        if isinstance(tool, WebSearchTool):
+            self.metrics.add_search()
+        
+        result = tool(self._context)
+        
+        # Если это CreateReportTool, сохраняем путь к файлу для использования в Prefect artifacts
+        if isinstance(tool, CreateReportTool):
+            try:
+                import json
+                report_data = json.loads(result)
+                if 'filepath' in report_data:
+                    # Сохраняем путь к файлу в контексте агента для последующего использования
+                    self._context.last_report_path = report_data['filepath']
+            except (json.JSONDecodeError, KeyError):
+                pass
+        
+        self.conversation.append(
+            {"role": "tool", "content": result, "tool_call_id": f"{self._context.iteration}-action"}
+        )
+        self.streaming_generator.add_chunk(f"{result}\n")
+        self._log_tool_execution(tool, result)
+        return result
