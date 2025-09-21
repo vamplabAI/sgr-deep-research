@@ -1,535 +1,487 @@
-"""Job queue management service for coordinating job execution.
+"""Job queue management for SGR Deep Research system.
 
-This module provides the JobQueueManager service that coordinates between
-job submission, queueing, and execution using the existing job queue and executor.
+This module provides the core job queue implementation for managing
+long-running research jobs with prioritization and concurrency control.
 """
 
 import asyncio
+import json
 import logging
+import uuid
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
-from contextlib import asynccontextmanager
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Set
+from enum import Enum
 
-from ..api.models import (
-    JobRequest, JobStatus, JobState, ErrorType, ErrorSeverity
-)
-from .job_storage import get_job_storage
-from .job_executor import get_job_executor
-from .job_queue import get_job_queue
+import aiofiles
 
 logger = logging.getLogger(__name__)
 
 
-class JobQueueManagerError(Exception):
-    """Exception raised by job queue manager operations."""
-    pass
+class JobState(str, Enum):
+    """Job execution states."""
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
 
 
-class JobQueueManager:
-    """Service for managing job queue and execution coordination.
+class JobPriority:
+    """Job priority levels for queue ordering."""
+    LOW = -10
+    NORMAL = 0
+    HIGH = 10
+    URGENT = 20
 
-    Coordinates between job submission, priority queueing, and execution
-    while managing system resources and concurrency limits.
-    """
 
-    def __init__(self,
-                 max_queue_size: int = 1000,
-                 max_concurrent_jobs: int = 5,
-                 queue_check_interval: float = 1.0):
-        """Initialize job queue manager.
+class JobQueueItem:
+    """Represents a job in the queue with priority and metadata."""
 
-        Args:
-            max_queue_size: Maximum number of jobs in queue
-            max_concurrent_jobs: Maximum concurrent executing jobs
-            max_concurrent_jobs: Maximum concurrent executing jobs
-            queue_check_interval: Interval between queue processing checks
-        """
-        self.max_queue_size = max_queue_size
-        self.max_concurrent_jobs = max_concurrent_jobs
-        self.queue_check_interval = queue_check_interval
+    def __init__(
+        self,
+        job_id: str,
+        query: str,
+        agent_type: str,
+        deep_level: int = 0,
+        priority: int = 0,
+        tags: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None
+    ):
+        self.job_id = job_id
+        self.query = query
+        self.agent_type = agent_type
+        self.deep_level = deep_level
+        self.priority = priority
+        self.tags = tags or []
+        self.metadata = metadata or {}
+        self.created_at = datetime.now()
+        self.started_at: Optional[datetime] = None
+        self.completed_at: Optional[datetime] = None
+        self.state = JobState.PENDING
+        self.progress = 0.0
+        self.current_step = ""
+        self.steps_completed = 0
+        self.total_steps = self._calculate_total_steps()
+        self.searches_used = 0
+        self.sources_found = 0
+        self.error: Optional[Dict[str, Any]] = None
+        self.result: Optional[Dict[str, Any]] = None
 
-        # Service dependencies
-        self.storage = get_job_storage()
-        self.executor = get_job_executor()
-        self.queue = get_job_queue()
+    def _calculate_total_steps(self) -> int:
+        """Calculate estimated total steps based on deep level."""
+        base_steps = 5
+        return base_steps * (self.deep_level * 3 + 1)
 
-        # Queue processing task
-        self._queue_processor_task: Optional[asyncio.Task] = None
-        self._shutdown_event = asyncio.Event()
-
-        # Statistics
-        self._stats = {
-            "jobs_submitted": 0,
-            "jobs_queued": 0,
-            "jobs_executed": 0,
-            "jobs_rejected": 0,
-            "queue_full_events": 0,
-            "total_queue_time": 0.0
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert job to dictionary for JSON serialization."""
+        return {
+            "job_id": self.job_id,
+            "query": self.query,
+            "agent_type": self.agent_type,
+            "deep_level": self.deep_level,
+            "priority": self.priority,
+            "tags": self.tags,
+            "metadata": self.metadata,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "started_at": self.started_at.isoformat() if self.started_at else None,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "state": self.state.value,
+            "progress": self.progress,
+            "current_step": self.current_step,
+            "steps_completed": self.steps_completed,
+            "total_steps": self.total_steps,
+            "searches_used": self.searches_used,
+            "sources_found": self.sources_found,
+            "error": self.error,
+            "result": self.result
         }
 
-        # Job submission timestamps for queue time tracking
-        self._submission_times: Dict[str, datetime] = {}
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "JobQueueItem":
+        """Create job from dictionary (for deserialization)."""
+        job = cls(
+            job_id=data["job_id"],
+            query=data["query"],
+            agent_type=data["agent_type"],
+            deep_level=data["deep_level"],
+            priority=data["priority"],
+            tags=data["tags"],
+            metadata=data["metadata"]
+        )
+
+        # Restore state
+        if data.get("created_at"):
+            job.created_at = datetime.fromisoformat(data["created_at"])
+        if data.get("started_at"):
+            job.started_at = datetime.fromisoformat(data["started_at"])
+        if data.get("completed_at"):
+            job.completed_at = datetime.fromisoformat(data["completed_at"])
+
+        job.state = JobState(data["state"])
+        job.progress = data["progress"]
+        job.current_step = data["current_step"]
+        job.steps_completed = data["steps_completed"]
+        job.total_steps = data["total_steps"]
+        job.searches_used = data["searches_used"]
+        job.sources_found = data["sources_found"]
+        job.error = data.get("error")
+        job.result = data.get("result")
+
+        return job
+
+    def __lt__(self, other: "JobQueueItem") -> bool:
+        """Define ordering for priority queue (higher priority first)."""
+        if self.priority != other.priority:
+            return self.priority > other.priority  # Higher priority comes first
+        return self.created_at < other.created_at  # FIFO for same priority
+
+
+class JobQueue:
+    """Main job queue implementation with persistence and concurrency control."""
+
+    def __init__(
+        self,
+        max_concurrent_jobs: int = 3,
+        persistence_dir: Optional[str] = None,
+        cleanup_completed_after: timedelta = timedelta(hours=24)
+    ):
+        self.max_concurrent_jobs = max_concurrent_jobs
+        self.cleanup_completed_after = cleanup_completed_after
+
+        # Storage
+        self.persistence_dir = Path(persistence_dir) if persistence_dir else Path("jobs")
+        self.persistence_dir.mkdir(exist_ok=True)
+
+        # Queue state
+        self._pending_queue: asyncio.PriorityQueue = asyncio.PriorityQueue()
+        self._running_jobs: Dict[str, JobQueueItem] = {}
+        self._completed_jobs: Dict[str, JobQueueItem] = {}
+        self._all_jobs: Dict[str, JobQueueItem] = {}
+
+        # Concurrency control
+        self._queue_lock = asyncio.Lock()
+        self._worker_semaphore = asyncio.Semaphore(max_concurrent_jobs)
+
+        # Background tasks
+        self._cleanup_task: Optional[asyncio.Task] = None
+        self._persistence_task: Optional[asyncio.Task] = None
+
+        # Event callbacks
+        self._job_state_callbacks: List[callable] = []
 
     async def start(self):
-        """Start the queue manager and processing loop."""
-        if self._queue_processor_task is None or self._queue_processor_task.done():
-            logger.info("Starting job queue manager")
-            self._queue_processor_task = asyncio.create_task(
-                self._queue_processor_loop(),
-                name="job-queue-processor"
-            )
+        """Start the job queue and background tasks."""
+        logger.info("Starting job queue...")
+
+        # Load persisted jobs
+        await self._load_persisted_jobs()
+
+        # Start background tasks
+        self._cleanup_task = asyncio.create_task(self._cleanup_worker())
+        self._persistence_task = asyncio.create_task(self._persistence_worker())
+
+        logger.info(f"Job queue started with {len(self._all_jobs)} existing jobs")
 
     async def stop(self):
-        """Stop the queue manager and processing loop."""
-        logger.info("Stopping job queue manager")
-        self._shutdown_event.set()
+        """Stop the job queue and background tasks."""
+        logger.info("Stopping job queue...")
 
-        if self._queue_processor_task:
-            self._queue_processor_task.cancel()
-            try:
-                await self._queue_processor_task
-            except asyncio.CancelledError:
-                pass
+        # Cancel background tasks
+        if self._cleanup_task:
+            self._cleanup_task.cancel()
+        if self._persistence_task:
+            self._persistence_task.cancel()
 
-        self._queue_processor_task = None
+        # Save current state
+        await self._persist_jobs()
 
-    @asynccontextmanager
-    async def managed_lifecycle(self):
-        """Context manager for automatic start/stop lifecycle."""
-        await self.start()
-        try:
-            yield self
-        finally:
-            await self.stop()
+        logger.info("Job queue stopped")
 
-    async def submit_job(self, job_request: JobRequest) -> str:
-        """Submit a job for execution.
+    async def submit_job(
+        self,
+        query: str,
+        agent_type: str,
+        deep_level: int = 0,
+        priority: int = 0,
+        tags: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """Submit a new job to the queue."""
+        job_id = str(uuid.uuid4())
 
-        Args:
-            job_request: Job submission request
+        job = JobQueueItem(
+            job_id=job_id,
+            query=query,
+            agent_type=agent_type,
+            deep_level=deep_level,
+            priority=priority,
+            tags=tags,
+            metadata=metadata
+        )
 
-        Returns:
-            str: Job ID
+        async with self._queue_lock:
+            self._all_jobs[job_id] = job
+            await self._pending_queue.put(job)
 
-        Raises:
-            JobQueueManagerError: If submission fails
-        """
-        try:
-            # Check queue capacity
-            if await self.queue.size() >= self.max_queue_size:
-                self._stats["queue_full_events"] += 1
-                raise JobQueueManagerError(
-                    f"Queue is full (max size: {self.max_queue_size}). Please try again later."
-                )
+        logger.info(f"Job {job_id} submitted to queue (priority: {priority})")
+        await self._notify_job_state_change(job, "submitted")
 
-            # Create job in storage
-            job_status = await self.storage.create_job(job_request)
-            job_id = job_status.job_id
+        return job_id
 
-            logger.info(f"Submitting job {job_id} to queue: {job_request.query[:100]}")
+    async def get_job(self, job_id: str) -> Optional[JobQueueItem]:
+        """Get job by ID."""
+        return self._all_jobs.get(job_id)
 
-            # Add to queue
-            await self.queue.submit_job(job_request, job_id)
-
-            # Track submission time
-            self._submission_times[job_id] = datetime.utcnow()
-
-            # Update statistics
-            self._stats["jobs_submitted"] += 1
-            self._stats["jobs_queued"] += 1
-
-            logger.info(f"Job {job_id} queued successfully with priority {job_request.priority}")
-
-            return job_id
-
-        except Exception as e:
-            self._stats["jobs_rejected"] += 1
-            if isinstance(e, JobQueueManagerError):
-                raise
-            raise JobQueueManagerError(f"Failed to submit job: {e}")
-
-    async def cancel_job(self, job_id: str, reason: str = "User requested cancellation") -> bool:
-        """Cancel a job (queued or running).
-
-        Args:
-            job_id: Job identifier
-            reason: Cancellation reason
-
-        Returns:
-            bool: True if job was cancelled
-
-        Raises:
-            JobQueueManagerError: If cancellation fails
-        """
-        try:
-            logger.info(f"Cancelling job {job_id}: {reason}")
-
-            # Try to remove from queue first
-            removed_from_queue = await self.queue.cancel_job(job_id)
-
-            if removed_from_queue:
-                # Job was in queue, cancel in storage
-                await self.storage.cancel_job(job_id, reason)
-                self._cleanup_job_tracking(job_id)
-                logger.info(f"Job {job_id} removed from queue")
-                return True
-
-            # Try to cancel running job
-            cancelled_running = await self.executor.cancel_job(job_id, reason)
-
-            if cancelled_running:
-                self._cleanup_job_tracking(job_id)
-                logger.info(f"Running job {job_id} cancelled")
-                return True
-
-            # Job might be in storage only (not found in queue or executor)
-            try:
-                await self.storage.cancel_job(job_id, reason)
-                self._cleanup_job_tracking(job_id)
-                return True
-            except Exception:
+    async def cancel_job(self, job_id: str) -> bool:
+        """Cancel a job (pending or running)."""
+        async with self._queue_lock:
+            job = self._all_jobs.get(job_id)
+            if not job:
                 return False
 
-        except Exception as e:
-            raise JobQueueManagerError(f"Failed to cancel job {job_id}: {e}")
-
-    async def get_queue_status(self) -> Dict[str, Any]:
-        """Get current queue status and statistics.
-
-        Returns:
-            Dict: Queue status information
-        """
-        try:
-            queue_size = await self.queue.size()
-            running_jobs = await self.executor.get_running_jobs()
-            executor_stats = await self.executor.get_execution_stats()
-
-            return {
-                "queue_size": queue_size,
-                "max_queue_size": self.max_queue_size,
-                "running_jobs": len(running_jobs),
-                "max_concurrent_jobs": self.max_concurrent_jobs,
-                "capacity_available": self.max_queue_size - queue_size,
-                "execution_slots_available": self.max_concurrent_jobs - len(running_jobs),
-                "queue_utilization": (queue_size / self.max_queue_size) * 100,
-                "execution_utilization": (len(running_jobs) / self.max_concurrent_jobs) * 100,
-                "statistics": self._stats.copy(),
-                "executor_statistics": executor_stats
-            }
-
-        except Exception as e:
-            raise JobQueueManagerError(f"Failed to get queue status: {e}")
-
-    async def get_job_position(self, job_id: str) -> Optional[int]:
-        """Get job position in queue.
-
-        Args:
-            job_id: Job identifier
-
-        Returns:
-            Optional[int]: Position in queue (1-based) or None if not in queue
-        """
-        try:
-            return await self.queue.get_job_position(job_id)
-        except Exception as e:
-            logger.warning(f"Failed to get job position for {job_id}: {e}")
-            return None
-
-    async def get_estimated_wait_time(self, job_id: str) -> Optional[timedelta]:
-        """Get estimated wait time for a job in queue.
-
-        Args:
-            job_id: Job identifier
-
-        Returns:
-            Optional[timedelta]: Estimated wait time or None if not calculable
-        """
-        try:
-            position = await self.get_job_position(job_id)
-            if position is None:
-                return None
-
-            # Simple estimation based on average job execution time
-            executor_stats = await self.executor.get_execution_stats()
-
-            total_jobs = executor_stats.get("jobs_completed", 0)
-            total_time = executor_stats.get("total_execution_time", 0)
-
-            if total_jobs > 0:
-                avg_job_time = total_time / total_jobs
+            if job.state == JobState.PENDING:
+                job.state = JobState.CANCELLED
+                job.completed_at = datetime.now()
+                self._completed_jobs[job_id] = job
+                logger.info(f"Job {job_id} cancelled (was pending)")
+                await self._notify_job_state_change(job, "cancelled")
+                return True
+            elif job.state == JobState.RUNNING:
+                job.state = JobState.CANCELLED
+                job.completed_at = datetime.now()
+                if job_id in self._running_jobs:
+                    del self._running_jobs[job_id]
+                self._completed_jobs[job_id] = job
+                logger.info(f"Job {job_id} cancelled (was running)")
+                await self._notify_job_state_change(job, "cancelled")
+                return True
             else:
-                avg_job_time = 300  # Default 5 minutes
+                return False  # Can't cancel completed/failed jobs
 
-            # Estimate wait time based on position and concurrent capacity
-            jobs_ahead = max(0, position - 1)
-            concurrent_slots = self.max_concurrent_jobs
+    async def list_jobs(
+        self,
+        status: Optional[str] = None,
+        limit: int = 20,
+        offset: int = 0,
+        tags: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """List jobs with optional filtering."""
+        jobs = list(self._all_jobs.values())
 
-            estimated_seconds = (jobs_ahead / concurrent_slots) * avg_job_time
-            return timedelta(seconds=estimated_seconds)
+        # Filter by status
+        if status:
+            jobs = [job for job in jobs if job.state.value == status]
 
-        except Exception as e:
-            logger.warning(f"Failed to estimate wait time for job {job_id}: {e}")
+        # Filter by tags
+        if tags:
+            jobs = [job for job in jobs if any(tag in job.tags for tag in tags)]
+
+        # Sort by creation time (newest first)
+        jobs.sort(key=lambda j: j.created_at, reverse=True)
+
+        # Pagination
+        total = len(jobs)
+        jobs = jobs[offset:offset + limit]
+
+        return {
+            "jobs": [job.to_dict() for job in jobs],
+            "total": total,
+            "limit": limit,
+            "offset": offset
+        }
+
+    async def get_next_job(self) -> Optional[JobQueueItem]:
+        """Get the next job from the queue (for workers)."""
+        try:
+            job = await asyncio.wait_for(self._pending_queue.get(), timeout=1.0)
+
+            async with self._queue_lock:
+                if job.state == JobState.CANCELLED:
+                    # Skip cancelled jobs
+                    return await self.get_next_job()
+
+                job.state = JobState.RUNNING
+                job.started_at = datetime.now()
+                self._running_jobs[job.job_id] = job
+
+            await self._notify_job_state_change(job, "started")
+            return job
+
+        except asyncio.TimeoutError:
             return None
 
-    async def adjust_job_priority(self, job_id: str, new_priority: int) -> bool:
-        """Adjust priority of a queued job.
+    async def mark_job_completed(self, job_id: str, result: Dict[str, Any]):
+        """Mark a job as completed with results."""
+        async with self._queue_lock:
+            job = self._running_jobs.get(job_id)
+            if job:
+                job.state = JobState.COMPLETED
+                job.completed_at = datetime.now()
+                job.progress = 100.0
+                job.current_step = "Completed"
+                job.result = result
 
-        Args:
-            job_id: Job identifier
-            new_priority: New priority value
+                del self._running_jobs[job_id]
+                self._completed_jobs[job_id] = job
 
-        Returns:
-            bool: True if priority was adjusted
+                logger.info(f"Job {job_id} completed successfully")
+                await self._notify_job_state_change(job, "completed")
 
-        Raises:
-            JobQueueManagerError: If adjustment fails
-        """
-        try:
-            # Check if job is in queue
-            position = await self.get_job_position(job_id)
-            if position is None:
-                return False
+    async def mark_job_failed(self, job_id: str, error: Dict[str, Any]):
+        """Mark a job as failed with error details."""
+        async with self._queue_lock:
+            job = self._running_jobs.get(job_id)
+            if job:
+                job.state = JobState.FAILED
+                job.completed_at = datetime.now()
+                job.error = error
 
-            # Update priority in queue
-            success = await self.queue.adjust_priority(job_id, new_priority)
+                del self._running_jobs[job_id]
+                self._completed_jobs[job_id] = job
 
-            if success:
-                logger.info(f"Adjusted priority for job {job_id} to {new_priority}")
+                logger.error(f"Job {job_id} failed: {error}")
+                await self._notify_job_state_change(job, "failed")
 
-            return success
+    async def update_job_progress(
+        self,
+        job_id: str,
+        progress: float,
+        current_step: str = "",
+        steps_completed: int = None,
+        searches_used: int = None,
+        sources_found: int = None
+    ):
+        """Update job progress and status."""
+        job = self._running_jobs.get(job_id)
+        if job:
+            job.progress = min(100.0, max(0.0, progress))
+            if current_step:
+                job.current_step = current_step
+            if steps_completed is not None:
+                job.steps_completed = steps_completed
+            if searches_used is not None:
+                job.searches_used = searches_used
+            if sources_found is not None:
+                job.sources_found = sources_found
 
-        except Exception as e:
-            raise JobQueueManagerError(f"Failed to adjust priority for job {job_id}: {e}")
+            await self._notify_job_state_change(job, "progress")
 
-    async def pause_queue_processing(self):
-        """Pause queue processing temporarily."""
-        logger.info("Pausing queue processing")
-        # Implementation would set a pause flag
-        # For now, this is a placeholder
-        pass
+    def get_queue_stats(self) -> Dict[str, Any]:
+        """Get current queue statistics."""
+        return {
+            "pending_jobs": self._pending_queue.qsize(),
+            "running_jobs": len(self._running_jobs),
+            "completed_jobs": len(self._completed_jobs),
+            "total_jobs": len(self._all_jobs),
+            "max_concurrent": self.max_concurrent_jobs,
+            "current_load": len(self._running_jobs) / self.max_concurrent_jobs
+        }
 
-    async def resume_queue_processing(self):
-        """Resume queue processing."""
-        logger.info("Resuming queue processing")
-        # Implementation would clear pause flag
-        # For now, this is a placeholder
-        pass
+    def add_job_state_callback(self, callback: callable):
+        """Add a callback for job state changes."""
+        self._job_state_callbacks.append(callback)
 
-    async def _queue_processor_loop(self):
-        """Main queue processing loop."""
-        logger.info("Starting queue processor loop")
-
-        while not self._shutdown_event.is_set():
+    async def _notify_job_state_change(self, job: JobQueueItem, event: str):
+        """Notify all callbacks of job state changes."""
+        for callback in self._job_state_callbacks:
             try:
-                await self._process_queue_batch()
-                await asyncio.sleep(self.queue_check_interval)
-
-            except asyncio.CancelledError:
-                logger.info("Queue processor loop cancelled")
-                break
-
+                if asyncio.iscoroutinefunction(callback):
+                    await callback(job, event)
+                else:
+                    callback(job, event)
             except Exception as e:
-                logger.error(f"Error in queue processor loop: {e}", exc_info=True)
-                await asyncio.sleep(self.queue_check_interval * 2)  # Back off on error
+                logger.error(f"Error in job state callback: {e}")
 
-        logger.info("Queue processor loop stopped")
+    async def _cleanup_worker(self):
+        """Background worker to clean up old completed jobs."""
+        while True:
+            try:
+                await asyncio.sleep(3600)  # Run every hour
 
-    async def _process_queue_batch(self):
-        """Process a batch of jobs from the queue."""
+                cutoff_time = datetime.now() - self.cleanup_completed_after
+                to_remove = []
+
+                for job_id, job in self._completed_jobs.items():
+                    if job.completed_at and job.completed_at < cutoff_time:
+                        to_remove.append(job_id)
+
+                for job_id in to_remove:
+                    del self._completed_jobs[job_id]
+                    del self._all_jobs[job_id]
+                    # Remove persisted file
+                    job_file = self.persistence_dir / f"{job_id}.json"
+                    if job_file.exists():
+                        job_file.unlink()
+
+                if to_remove:
+                    logger.info(f"Cleaned up {len(to_remove)} old completed jobs")
+
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Error in cleanup worker: {e}")
+
+    async def _persistence_worker(self):
+        """Background worker to persist job state."""
+        while True:
+            try:
+                await asyncio.sleep(60)  # Persist every minute
+                await self._persist_jobs()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Error in persistence worker: {e}")
+
+    async def _persist_jobs(self):
+        """Persist current job state to disk."""
         try:
-            # Check if we can start more jobs
-            running_jobs = await self.executor.get_running_jobs()
-            available_slots = self.max_concurrent_jobs - len(running_jobs)
+            for job in self._all_jobs.values():
+                job_file = self.persistence_dir / f"{job.job_id}.json"
+                async with aiofiles.open(job_file, 'w') as f:
+                    await f.write(json.dumps(job.to_dict(), indent=2))
+        except Exception as e:
+            logger.error(f"Error persisting jobs: {e}")
 
-            if available_slots <= 0:
-                return
+    async def _load_persisted_jobs(self):
+        """Load persisted jobs from disk."""
+        try:
+            for job_file in self.persistence_dir.glob("*.json"):
+                async with aiofiles.open(job_file, 'r') as f:
+                    data = json.loads(await f.read())
+                    job = JobQueueItem.from_dict(data)
+                    self._all_jobs[job.job_id] = job
 
-            # Get jobs to process
-            jobs_to_process = min(available_slots, 5)  # Process up to 5 jobs at once
-
-            for _ in range(jobs_to_process):
-                # Get next job from queue
-                job_data = await self.queue.get_next_job()
-
-                if job_data is None:
-                    break  # Queue is empty
-
-                job_request, job_id = job_data
-
-                try:
-                    # Check if executor can start the job
-                    if not await self.executor.can_start_job():
-                        # Put job back in queue if can't start
-                        await self.queue.submit_job(job_request, job_id)
-                        break
-
-                    # Start job execution
-                    logger.info(f"Starting execution for job {job_id}")
-
-                    # Calculate queue time
-                    if job_id in self._submission_times:
-                        queue_time = (datetime.utcnow() - self._submission_times[job_id]).total_seconds()
-                        self._stats["total_queue_time"] += queue_time
-
-                    # Start the job
-                    await self.executor.start_job(job_request)
-
-                    # Update statistics
-                    self._stats["jobs_executed"] += 1
-
-                    # Cleanup tracking
-                    self._cleanup_job_tracking(job_id)
-
-                except Exception as e:
-                    logger.error(f"Failed to start job {job_id}: {e}")
-
-                    # Handle job start failure
-                    await self._handle_job_start_failure(job_id, job_request, e)
+                    # Restore to appropriate collections
+                    if job.state == JobState.PENDING:
+                        await self._pending_queue.put(job)
+                    elif job.state == JobState.RUNNING:
+                        # Reset running jobs to pending on restart
+                        job.state = JobState.PENDING
+                        await self._pending_queue.put(job)
+                    else:
+                        self._completed_jobs[job.job_id] = job
 
         except Exception as e:
-            logger.error(f"Error processing queue batch: {e}")
-
-    async def _handle_job_start_failure(self, job_id: str, job_request: JobRequest, error: Exception):
-        """Handle failure to start job execution.
-
-        Args:
-            job_id: Job identifier
-            job_request: Original job request
-            error: Exception that occurred
-        """
-        try:
-            # Create error record
-            from ..api.models import JobError
-
-            job_error = JobError(
-                job_id=job_id,
-                error_type=ErrorType.SYSTEM_ERROR,
-                error_message=f"Failed to start job execution: {str(error)}",
-                severity=ErrorSeverity.HIGH,
-                occurred_at=datetime.utcnow(),
-                is_retryable=True
-            )
-
-            # Determine if we should retry
-            if job_error.should_retry_automatically():
-                logger.info(f"Retrying job {job_id} after start failure")
-
-                # Put back in queue with slight delay
-                await asyncio.sleep(1.0)
-                await self.queue.submit_job(job_request, job_id)
-
-                job_error.retry_count += 1
-                await self.storage.save_error(job_error)
-            else:
-                logger.error(f"Job {job_id} failed to start and cannot be retried")
-                await self.storage.fail_job(job_id, job_error)
-                self._cleanup_job_tracking(job_id)
-
-        except Exception as e:
-            logger.error(f"Failed to handle job start failure for {job_id}: {e}")
-
-    def _cleanup_job_tracking(self, job_id: str):
-        """Clean up job tracking data.
-
-        Args:
-            job_id: Job identifier
-        """
-        self._submission_times.pop(job_id, None)
-
-    async def cleanup_old_tracking_data(self, max_age_hours: int = 24):
-        """Clean up old job tracking data.
-
-        Args:
-            max_age_hours: Maximum age in hours for keeping tracking data
-        """
-        cutoff_time = datetime.utcnow() - timedelta(hours=max_age_hours)
-
-        old_jobs = [
-            job_id for job_id, submit_time in self._submission_times.items()
-            if submit_time < cutoff_time
-        ]
-
-        for job_id in old_jobs:
-            self._cleanup_job_tracking(job_id)
-
-        if old_jobs:
-            logger.info(f"Cleaned up tracking data for {len(old_jobs)} old jobs")
-
-    async def get_comprehensive_status(self) -> Dict[str, Any]:
-        """Get comprehensive status of the entire job management system.
-
-        Returns:
-            Dict: Comprehensive status information
-        """
-        try:
-            queue_status = await self.get_queue_status()
-            storage_stats = await self.storage.get_storage_stats()
-
-            # Get sample of recent jobs
-            recent_jobs = await self.storage.list_jobs(limit=10, offset=0)
-
-            status = {
-                "queue_manager": {
-                    "status": "running" if self._queue_processor_task and not self._queue_processor_task.done() else "stopped",
-                    "queue_check_interval": self.queue_check_interval,
-                    "tracked_submissions": len(self._submission_times)
-                },
-                "queue_status": queue_status,
-                "storage_status": storage_stats,
-                "recent_jobs": recent_jobs["jobs"][:5],  # Last 5 jobs
-                "system_health": {
-                    "queue_utilization": queue_status["queue_utilization"],
-                    "execution_utilization": queue_status["execution_utilization"],
-                    "error_rate": self._calculate_error_rate(),
-                    "avg_queue_time": self._calculate_avg_queue_time()
-                }
-            }
-
-            return status
-
-        except Exception as e:
-            raise JobQueueManagerError(f"Failed to get comprehensive status: {e}")
-
-    def _calculate_error_rate(self) -> float:
-        """Calculate error rate percentage."""
-        total_jobs = self._stats["jobs_submitted"]
-        if total_jobs == 0:
-            return 0.0
-
-        failed_jobs = self._stats["jobs_rejected"]
-        return (failed_jobs / total_jobs) * 100
-
-    def _calculate_avg_queue_time(self) -> float:
-        """Calculate average queue time in seconds."""
-        executed_jobs = self._stats["jobs_executed"]
-        if executed_jobs == 0:
-            return 0.0
-
-        return self._stats["total_queue_time"] / executed_jobs
-
-    async def close(self):
-        """Close queue manager and cleanup resources."""
-        await self.stop()
-
-        # Cleanup tracking data
-        self._submission_times.clear()
+            logger.error(f"Error loading persisted jobs: {e}")
 
 
-# Global queue manager instance
-_queue_manager_instance: Optional[JobQueueManager] = None
+# Global job queue instance
+_global_job_queue: Optional[JobQueue] = None
 
 
-def get_job_queue_manager() -> JobQueueManager:
-    """Get the global job queue manager instance."""
-    global _queue_manager_instance
-    if _queue_manager_instance is None:
-        _queue_manager_instance = JobQueueManager()
-    return _queue_manager_instance
+async def get_job_queue() -> JobQueue:
+    """Get the global job queue instance."""
+    global _global_job_queue
+    if _global_job_queue is None:
+        _global_job_queue = JobQueue()
+        await _global_job_queue.start()
+    return _global_job_queue
 
 
-async def close_job_queue_manager():
-    """Close the global job queue manager instance."""
-    global _queue_manager_instance
-    if _queue_manager_instance:
-        await _queue_manager_instance.close()
-        _queue_manager_instance = None
+async def shutdown_job_queue():
+    """Shutdown the global job queue."""
+    global _global_job_queue
+    if _global_job_queue:
+        await _global_job_queue.stop()
+        _global_job_queue = None

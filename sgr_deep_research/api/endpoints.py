@@ -13,8 +13,19 @@ from sgr_deep_research.api.models import (
     ChatCompletionRequest,
     HealthResponse,
 )
+from sgr_deep_research.api.models import (
+    JobRequest,
+    JobStatus,
+    JobResult,
+    JobError,
+    JobState,
+    AgentType,
+)
 from sgr_deep_research.core.agents import BaseAgent
 from sgr_deep_research.core.models import AgentStatesEnum
+from sgr_deep_research.core.job_storage import JobStorage
+from sgr_deep_research.core.job_queue_manager import JobQueue
+from sgr_deep_research.core.job_executor import JobExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +33,11 @@ app = FastAPI(title="SGR Deep Research API", version="1.0.0")
 
 # ToDo: better to move to a separate service
 agents_storage: dict[str, BaseAgent] = {}
+
+# Initialize job management services
+job_storage = JobStorage()
+job_queue_manager = JobQueue()
+job_executor = JobExecutor()
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -173,4 +189,130 @@ async def create_chat_completion(request: ChatCompletionRequest):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error completion: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Job Management API Endpoints
+
+@app.post("/jobs", status_code=201)
+async def submit_job(request: JobRequest):
+    """Submit a new research job."""
+    try:
+        job_status = await job_executor.submit_job(request)
+        return {
+            "job_id": job_status.job_id,
+            "status": job_status.status.value,
+            "created_at": job_status.created_at.isoformat(),
+            "estimated_completion": job_status.estimated_completion.isoformat() if job_status.estimated_completion else None
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error submitting job: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/jobs/{job_id}")
+async def get_job(job_id: str):
+    """Get job status and results."""
+    try:
+        job_status = await job_storage.get_job_status(job_id)
+        if not job_status:
+            raise HTTPException(status_code=404, detail="Job not found")
+
+        response = {
+            "job_id": job_status.job_id,
+            "status": job_status.status.value,
+            "progress": job_status.progress,
+            "current_step": job_status.current_step,
+            "steps_completed": job_status.steps_completed,
+            "total_steps": job_status.total_steps,
+            "created_at": job_status.created_at.isoformat(),
+            "started_at": job_status.started_at.isoformat() if job_status.started_at else None,
+            "completed_at": job_status.completed_at.isoformat() if job_status.completed_at else None,
+            "result": None,
+            "error": None
+        }
+
+        if job_status.status == JobState.COMPLETED:
+            result = await job_storage.get_job_result(job_id)
+            if result:
+                response["result"] = {
+                    "final_answer": result.final_answer,
+                    "report_url": result.report_path,
+                    "sources": [source.model_dump() for source in result.sources],
+                    "metrics": result.metrics.model_dump()
+                }
+        elif job_status.status == JobState.FAILED:
+            error = await job_storage.get_job_error(job_id)
+            if error:
+                response["error"] = error.model_dump()
+
+        return response
+    except Exception as e:
+        logger.error(f"Error getting job {job_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/jobs")
+async def list_jobs(
+    status: str = None,
+    limit: int = 20,
+    offset: int = 0,
+    tags: str = None
+):
+    """List jobs with optional filtering."""
+    try:
+        # Parse filters
+        status_filter = JobState(status) if status else None
+        tags_filter = tags.split(",") if tags else None
+
+        jobs = await job_storage.list_jobs(
+            status=status_filter,
+            limit=limit,
+            offset=offset,
+            tags=tags_filter
+        )
+
+        return {
+            "jobs": [
+                {
+                    "job_id": job.job_id,
+                    "status": job.status.value,
+                    "progress": job.progress,
+                    "query": job.current_step[:100] + "..." if len(job.current_step) > 100 else job.current_step,
+                    "agent_type": "sgr-tools",  # Default for now
+                    "tags": [],  # TODO: implement tags
+                    "created_at": job.created_at.isoformat(),
+                    "completed_at": job.completed_at.isoformat() if job.completed_at else None
+                }
+                for job in jobs
+            ],
+            "total": len(jobs),  # TODO: implement proper count
+            "limit": limit,
+            "offset": offset
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error listing jobs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/jobs/{job_id}")
+async def cancel_job(job_id: str):
+    """Cancel a running job."""
+    try:
+        success = await job_executor.cancel_job(job_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Job not found")
+
+        return {
+            "job_id": job_id,
+            "status": "cancelled",
+            "cancelled_at": "2024-01-21T10:45:00Z",  # TODO: implement proper timestamp
+            "message": "Job cancelled successfully"
+        }
+    except Exception as e:
+        logger.error(f"Error cancelling job {job_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))

@@ -6,7 +6,7 @@ error information when research jobs fail.
 
 from datetime import datetime
 from typing import Dict, Any, Optional, List
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from enum import Enum
 
 
@@ -43,7 +43,7 @@ class JobError(BaseModel):
 
     job_id: str = Field(
         ...,
-        regex=r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+        pattern=r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
         description="Reference to the failed job"
     )
 
@@ -147,7 +147,8 @@ class JobError(BaseModel):
         description="Error record creation timestamp"
     )
 
-    @validator('error_message')
+    @field_validator('error_message')
+    @classmethod
     def validate_error_message(cls, v):
         """Validate and clean error message."""
         if not v or not v.strip():
@@ -165,7 +166,8 @@ class JobError(BaseModel):
 
         return cleaned
 
-    @validator('error_details')
+    @field_validator('error_details')
+    @classmethod
     def validate_error_details(cls, v):
         """Validate and sanitize error details."""
         if not v:
@@ -183,7 +185,8 @@ class JobError(BaseModel):
 
         return sanitized
 
-    @validator('suggested_actions')
+    @field_validator('suggested_actions')
+    @classmethod
     def validate_suggested_actions(cls, v):
         """Validate suggested actions list."""
         if not v:
@@ -198,7 +201,8 @@ class JobError(BaseModel):
 
         return cleaned_actions[:10]  # Limit to 10 actions
 
-    @validator('stack_trace')
+    @field_validator('stack_trace')
+    @classmethod
     def validate_stack_trace(cls, v):
         """Validate and limit stack trace size."""
         if not v:
@@ -281,14 +285,13 @@ class JobError(BaseModel):
 
         return base_message
 
-    class Config:
-        """Pydantic configuration."""
-        use_enum_values = True
-        validate_assignment = True
-        json_encoders = {
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True,
+        "json_encoders": {
             datetime: lambda v: v.isoformat()
-        }
-        schema_extra = {
+        },
+        "json_schema_extra": {
             "example": {
                 "job_id": "123e4567-e89b-12d3-a456-426614174000",
                 "error_type": "network_error",
@@ -315,3 +318,4 @@ class JobError(BaseModel):
                 "requires_intervention": False
             }
         }
+    }

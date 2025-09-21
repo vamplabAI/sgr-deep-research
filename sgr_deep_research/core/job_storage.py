@@ -63,14 +63,21 @@ class JobStorage:
         self._file_locks: Dict[str, asyncio.Lock] = {}
         self._lock_cleanup_interval = 300  # 5 minutes
 
-        # Start background cleanup task
+        # Start background cleanup task - lazy initialization
         self._cleanup_task = None
-        self._start_cleanup_task()
+        self._cleanup_started = False
 
     def _start_cleanup_task(self):
-        """Start background cleanup task."""
-        if self._cleanup_task is None or self._cleanup_task.done():
-            self._cleanup_task = asyncio.create_task(self._cleanup_old_locks())
+        """Start background cleanup task if not already started."""
+        if not self._cleanup_started:
+            try:
+                loop = asyncio.get_running_loop()
+                if self._cleanup_task is None or self._cleanup_task.done():
+                    self._cleanup_task = loop.create_task(self._cleanup_old_locks())
+                    self._cleanup_started = True
+            except RuntimeError:
+                # No event loop running, cleanup will be started later
+                pass
 
     async def _cleanup_old_locks(self):
         """Clean up old file locks periodically."""

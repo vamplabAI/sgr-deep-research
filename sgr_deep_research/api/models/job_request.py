@@ -5,8 +5,9 @@ to the SGR Deep Research system.
 """
 
 from typing import Dict, List, Any, Optional
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, model_validator, computed_field
 from enum import Enum
+import uuid
 
 
 class AgentType(str, Enum):
@@ -83,7 +84,16 @@ class JobRequest(BaseModel):
         description="Maximum execution time in minutes"
     )
 
-    @validator('query')
+    @computed_field
+    @property
+    def job_id(self) -> str:
+        """Generate unique job ID."""
+        if not hasattr(self, '_job_id'):
+            self._job_id = str(uuid.uuid4())
+        return self._job_id
+
+    @field_validator('query')
+    @classmethod
     def validate_query(cls, v):
         """Validate query content."""
         if not v or not v.strip():
@@ -98,7 +108,8 @@ class JobRequest(BaseModel):
 
         return v
 
-    @validator('tags')
+    @field_validator('tags')
+    @classmethod
     def validate_tags(cls, v):
         """Validate and normalize tags."""
         if not v:
@@ -122,7 +133,8 @@ class JobRequest(BaseModel):
 
         return unique_tags
 
-    @validator('metadata')
+    @field_validator('metadata')
+    @classmethod
     def validate_metadata(cls, v):
         """Validate metadata content and size."""
         if not v:
@@ -192,12 +204,11 @@ class JobRequest(BaseModel):
 
         return max(1, int(base_minutes))
 
-    class Config:
-        """Pydantic configuration."""
-        use_enum_values = True
-        validate_assignment = True
-        extra = "forbid"  # Prevent extra fields
-        schema_extra = {
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True,
+        "extra": "forbid",  # Prevent extra fields
+        "json_schema_extra": {
             "example": {
                 "query": "What are the latest developments in AI research?",
                 "agent_type": "sgr-tools",
@@ -210,3 +221,4 @@ class JobRequest(BaseModel):
                 }
             }
         }
+    }

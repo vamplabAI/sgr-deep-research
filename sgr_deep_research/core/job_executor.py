@@ -19,8 +19,8 @@ from ..api.models import (
 from .job_storage import get_job_storage
 from .agents.base_agent import BaseAgent
 from .agents.sgr_tools_agent import SGRToolCallingResearchAgent
-from .agents.sgr_agent import SGRAgent
-from .agents.tools_agent import ToolCallingResearchAgent
+# from .agents.sgr_agent import SGRAgent  # Not available in current agents
+# from .agents.tools_agent import ToolCallingResearchAgent  # Not available in current agents
 
 logger = logging.getLogger(__name__)
 
@@ -50,11 +50,11 @@ class JobExecutor:
         self._running_jobs: Dict[str, asyncio.Task] = {}
         self._job_cancellation_events: Dict[str, asyncio.Event] = {}
 
-        # Agent registry
+        # Agent registry - only include available agents
         self._agent_registry = {
-            "sgr": SGRAgent,
             "sgr-tools": SGRToolCallingResearchAgent,
-            "tools": ToolCallingResearchAgent,
+            # "sgr": SGRAgent,  # Not available in current implementation
+            # "tools": ToolCallingResearchAgent,  # Not available in current implementation
         }
 
         # Progress callbacks

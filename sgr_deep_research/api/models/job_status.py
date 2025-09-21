@@ -6,7 +6,7 @@ and progress of running jobs in the SGR Deep Research system.
 
 from datetime import datetime
 from typing import Optional, Dict, Any
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, model_validator
 from enum import Enum
 
 
@@ -28,7 +28,7 @@ class JobStatus(BaseModel):
 
     job_id: str = Field(
         ...,
-        regex=r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+        pattern=r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
         description="Unique job identifier (UUID4 format)"
     )
 
@@ -127,74 +127,48 @@ class JobStatus(BaseModel):
         description="Total runtime in seconds (for completed jobs)"
     )
 
-    @validator('progress')
-    def validate_progress(cls, v, values):
-        """Validate progress is consistent with status."""
-        status = values.get('status')
-
-        if status == JobState.PENDING and v != 0.0:
+    @model_validator(mode='after')
+    def validate_model(self):
+        """Validate model fields consistency."""
+        # Validate progress is consistent with status
+        if self.status == JobState.PENDING and self.progress != 0.0:
             raise ValueError("Pending jobs must have 0% progress")
 
-        if status == JobState.COMPLETED and v != 100.0:
+        if self.status == JobState.COMPLETED and self.progress != 100.0:
             raise ValueError("Completed jobs must have 100% progress")
 
-        if status == JobState.RUNNING and (v <= 0.0 or v >= 100.0):
+        if self.status == JobState.RUNNING and (self.progress <= 0.0 or self.progress >= 100.0):
             raise ValueError("Running jobs must have progress between 0% and 100%")
 
-        return v
-
-    @validator('steps_completed')
-    def validate_steps_completed(cls, v, values):
-        """Validate steps_completed doesn't exceed total_steps."""
-        total_steps = values.get('total_steps', 0)
-
-        if total_steps > 0 and v > total_steps:
+        # Validate steps_completed doesn't exceed total_steps
+        if self.total_steps > 0 and self.steps_completed > self.total_steps:
             raise ValueError("steps_completed cannot exceed total_steps")
 
-        return v
-
-    @validator('completed_at')
-    def validate_completed_at(cls, v, values):
-        """Validate completed_at is consistent with status."""
-        status = values.get('status')
-
+        # Validate completed_at is consistent with status
         terminal_states = {JobState.COMPLETED, JobState.FAILED, JobState.CANCELLED}
 
-        if status in terminal_states and v is None:
-            raise ValueError(f"Jobs in {status} state must have completed_at timestamp")
+        if self.status in terminal_states and self.completed_at is None:
+            raise ValueError(f"Jobs in {self.status} state must have completed_at timestamp")
 
-        if status not in terminal_states and v is not None:
-            raise ValueError(f"Jobs in {status} state cannot have completed_at timestamp")
+        if self.status not in terminal_states and self.completed_at is not None:
+            raise ValueError(f"Jobs in {self.status} state cannot have completed_at timestamp")
 
-        return v
-
-    @validator('started_at')
-    def validate_started_at(cls, v, values):
-        """Validate started_at is consistent with status."""
-        status = values.get('status')
-
-        if status in {JobState.RUNNING, JobState.COMPLETED, JobState.FAILED, JobState.CANCELLED} and v is None:
+        # Validate started_at is consistent with status
+        if self.status in {JobState.RUNNING, JobState.COMPLETED, JobState.FAILED, JobState.CANCELLED} and self.started_at is None:
             # Only pending jobs should not have started_at
-            if status != JobState.PENDING:
-                raise ValueError(f"Jobs in {status} state must have started_at timestamp")
+            if self.status != JobState.PENDING:
+                raise ValueError(f"Jobs in {self.status} state must have started_at timestamp")
 
-        return v
-
-    @validator('estimated_completion')
-    def validate_estimated_completion(cls, v, values):
-        """Validate estimated_completion is in the future for running jobs."""
-        status = values.get('status')
-        created_at = values.get('created_at')
-
-        if v is not None and created_at is not None:
-            if v <= created_at:
+        # Validate estimated_completion is in the future for running jobs
+        if self.estimated_completion is not None and self.created_at is not None:
+            if self.estimated_completion <= self.created_at:
                 raise ValueError("estimated_completion must be after created_at")
 
         # Only running jobs should have estimated completion
-        if v is not None and status not in {JobState.PENDING, JobState.RUNNING}:
+        if self.estimated_completion is not None and self.status not in {JobState.PENDING, JobState.RUNNING}:
             raise ValueError("Only pending/running jobs can have estimated_completion")
 
-        return v
+        return self
 
     def calculate_progress_from_steps(self) -> float:
         """Calculate progress percentage from completed steps."""
@@ -232,14 +206,13 @@ class JobStatus(BaseModel):
 
         return self.query[:max_length - 3] + "..."
 
-    class Config:
-        """Pydantic configuration."""
-        use_enum_values = True
-        validate_assignment = True
-        json_encoders = {
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True,
+        "json_encoders": {
             datetime: lambda v: v.isoformat() if v else None
-        }
-        schema_extra = {
+        },
+        "json_schema_extra": {
             "example": {
                 "job_id": "123e4567-e89b-12d3-a456-426614174000",
                 "status": "running",
@@ -259,3 +232,4 @@ class JobStatus(BaseModel):
                 "priority": 0
             }
         }
+    }

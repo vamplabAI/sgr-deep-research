@@ -6,7 +6,7 @@ the final output and metadata from completed research jobs.
 
 from datetime import datetime
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from decimal import Decimal
 
 from .research_source import ResearchSource
@@ -74,7 +74,7 @@ class JobResult(BaseModel):
 
     job_id: str = Field(
         ...,
-        regex=r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+        pattern=r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
         description="Reference to the originating job"
     )
 
@@ -150,7 +150,8 @@ class JobResult(BaseModel):
         description="Result creation timestamp"
     )
 
-    @validator('final_answer')
+    @field_validator('final_answer')
+    @classmethod
     def validate_final_answer(cls, v):
         """Validate final answer content."""
         if not v or not v.strip():
@@ -162,7 +163,8 @@ class JobResult(BaseModel):
 
         return v.strip()
 
-    @validator('sources')
+    @field_validator('sources')
+    @classmethod
     def validate_sources(cls, v):
         """Validate sources list."""
         if not v:
@@ -182,7 +184,8 @@ class JobResult(BaseModel):
 
         return unique_sources
 
-    @validator('key_insights')
+    @field_validator('key_insights')
+    @classmethod
     def validate_key_insights(cls, v):
         """Validate and clean key insights."""
         if not v:
@@ -198,7 +201,8 @@ class JobResult(BaseModel):
 
         return cleaned_insights
 
-    @validator('agent_conversation')
+    @field_validator('agent_conversation')
+    @classmethod
     def validate_agent_conversation(cls, v):
         """Validate agent conversation history."""
         if not v:
@@ -278,14 +282,13 @@ class JobResult(BaseModel):
         else:
             return truncated + "..."
 
-    class Config:
-        """Pydantic configuration."""
-        validate_assignment = True
-        json_encoders = {
+    model_config = {
+        "validate_assignment": True,
+        "json_encoders": {
             datetime: lambda v: v.isoformat(),
             Decimal: lambda v: float(v)
-        }
-        schema_extra = {
+        },
+        "json_schema_extra": {
             "example": {
                 "job_id": "123e4567-e89b-12d3-a456-426614174000",
                 "final_answer": "Based on comprehensive research across 15 sources, the latest developments in AI research show significant progress in large language models, with particular advances in reasoning capabilities and multimodal integration...",
@@ -313,3 +316,4 @@ class JobResult(BaseModel):
                 "completion_reason": "success"
             }
         }
+    }

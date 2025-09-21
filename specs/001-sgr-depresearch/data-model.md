@@ -7,20 +7,24 @@
 **Lifecycle**: Created on job submission, immutable after creation
 
 **Attributes**:
-- `query: str` - Research question or topic to investigate
-- `agent_type: str` - Agent type (sgr, sgr-tools, sgr-auto-tools, etc.)
-- `deep_level: int = 0` - Research depth level (0-5+)
-- `max_iterations: int` - Maximum research steps (calculated from deep_level)
-- `max_searches: int` - Maximum search operations (calculated from deep_level)
-- `priority: int = 0` - Job priority for queue ordering (higher = more urgent)
-- `tags: List[str] = []` - User-defined tags for organization
-- `metadata: Dict[str, Any] = {}` - Additional configuration parameters
+- `query: str` - Research question or topic to investigate (min 1, max 1000 chars)
+- `agent_type: AgentType` - Agent type enum (SGR, SGR_TOOLS, SGR_AUTO_TOOLS, etc.)
+- `deep_level: int = 0` - Research depth level (0-10, higher = more comprehensive)
+- `priority: int = 0` - Job priority for queue ordering (-100 to 100, higher = more urgent)
+- `tags: List[str] = []` - User-defined tags for organization (max 10 items)
+- `metadata: Dict[str, Any] = {}` - Additional configuration parameters (max 10KB JSON)
+- `max_iterations: Optional[int]` - Maximum research steps (auto-calculated from deep_level if not provided)
+- `max_searches: Optional[int]` - Maximum search operations (auto-calculated from deep_level if not provided)
+- `timeout_minutes: Optional[int]` - Maximum execution time in minutes (1-480, max 8 hours)
+- `job_id: str` - Auto-generated unique job identifier (UUID4 format)
 
 **Validation Rules**:
-- query must be non-empty string, max 1000 characters
-- agent_type must be valid registered agent
-- deep_level must be 0-10 (practical limit)
-- priority must be -100 to 100 range
+- query: non-empty string, 3-1000 characters, whitespace normalized
+- agent_type: must be valid registered agent from AgentType enum
+- deep_level: 0-10 range (exponential scaling: steps = 6 × (3×level + 1))
+- priority: -100 to 100 range for queue ordering
+- tags: max 10 items, each max 50 chars, normalized to lowercase
+- metadata: must be JSON serializable, max 10KB size limit
 
 ### JobStatus
 **Purpose**: Tracks current state and progress of a running job
@@ -83,27 +87,90 @@
 **Lifecycle**: Created during research execution, associated with job result
 
 **Attributes**:
-- `number: int` - Sequential source number within job
-- `url: str` - Source URL or identifier
-- `title: str` - Source title or description
-- `content_excerpt: str` - Relevant excerpt from source
-- `confidence_score: float` - Relevance confidence (0.0-1.0)
-- `discovered_at: datetime` - When source was found
+- `number: int` - Sequential source number within job (≥1)
+- `url: str` - Source URL or identifier (max 2000 chars, auto-prefix https://)
+- `title: str` - Source title or description (max 500 chars, cleaned)
+- `content_excerpt: str` - Relevant excerpt from source (max 2000 chars)
+- `confidence_score: float` - Relevance confidence score (0.0-1.0)
+- `source_type: SourceType` - Type/category (web_page, academic_paper, etc.)
+- `status: SourceStatus` - Processing status (discovered, processing, analyzed, failed, skipped)
+- `discovered_at: datetime` - Timestamp when source was discovered
+- `analyzed_at: Optional[datetime]` - Timestamp when source was analyzed
+- `word_count: Optional[int]` - Word count of analyzed content
+- `language: Optional[str]` - Detected language code (e.g., 'en', 'es')
+- `author: Optional[str]` - Author name if available (max 200 chars)
+- `publication_date: Optional[datetime]` - Publication date if available
+- `domain: Optional[str]` - Source domain extracted from URL (max 200 chars)
+- `key_topics: List[str]` - Key topics identified in source (max 20 items)
+- `relevance_keywords: List[str]` - Keywords that made source relevant (max 50 items)
+- `processing_time_ms: Optional[float]` - Time taken to process source in milliseconds
+- `error_message: Optional[str]` - Error message if processing failed (max 500 chars)
+- `citation_format: Optional[str]` - Formatted citation for the source
+- `access_date: datetime` - Date when source was accessed
+
+**Methods**:
+- `extract_domain() -> str` - Extract domain from URL
+- `calculate_relevance_score(query_keywords) -> float` - Calculate relevance based on keyword matching
+- `generate_citation(style="apa") -> str` - Generate formatted citation
+- `is_academic_source() -> bool` - Check if source appears to be academic
 
 ### ExecutionMetrics
 **Purpose**: Performance and resource usage statistics for completed jobs
 **Lifecycle**: Accumulated during job execution, finalized at completion
 
 **Attributes**:
-- `total_duration: timedelta` - Wall clock execution time
-- `api_calls_made: int` - Number of external API calls
-- `tokens_consumed: int` - Total LLM tokens used
-- `estimated_cost: Decimal` - Estimated execution cost
-- `peak_memory_mb: int` - Maximum memory usage
-- `search_operations: int` - Number of search operations
-- `retry_operations: int` - Number of retry attempts
+- `total_duration_seconds: float` - Wall clock execution time in seconds
+- `queue_time_seconds: float` - Time spent waiting in queue
+- `execution_time_seconds: float` - Actual execution time (excluding queue)
+- `api_calls_made: int` - Total number of external API calls
+- `openai_calls: int` - Number of OpenAI API calls
+- `tavily_calls: int` - Number of Tavily search API calls
+- `tokens_consumed: int` - Total LLM tokens consumed
+- `input_tokens: int` - Input tokens sent to LLM
+- `output_tokens: int` - Output tokens generated by LLM
+- `estimated_cost: Decimal` - Total estimated execution cost in USD
+- `cost_breakdown: CostBreakdown` - Detailed cost breakdown by service
+- `peak_memory_mb: int` - Peak memory usage in megabytes
+- `avg_cpu_percent: Optional[float]` - Average CPU utilization percentage
+- `disk_io_operations: int` - Number of disk I/O operations
+- `network_bytes_transferred: int` - Total network bytes transferred
+- `search_operations: int` - Number of search operations performed
+- `sources_processed: int` - Number of sources analyzed
+- `retry_operations: int` - Number of retry attempts made
+- `research_depth_achieved: int` - Actual research depth level achieved
+- `quality_score: Optional[float]` - Research quality score (0-10)
+- `completeness_score: Optional[float]` - Research completeness score (0.0-1.0)
+- `performance: PerformanceMetrics` - Detailed performance metrics
+- `started_at: datetime` - Execution start timestamp
+- `completed_at: datetime` - Execution completion timestamp
+- `agent_version: Optional[str]` - Version of the agent used
+- `system_info: Dict[str, Any]` - System information during execution
 
 ## Supporting Entities
+
+### CostBreakdown
+**Purpose**: Detailed cost breakdown by service for financial tracking
+**Lifecycle**: Accumulated during job execution, finalized at completion
+
+**Attributes**:
+- `openai_cost: Decimal` - Cost for OpenAI API calls
+- `tavily_cost: Decimal` - Cost for Tavily search API calls
+- `other_api_costs: Dict[str, Decimal]` - Costs for other API services
+- `compute_cost: Decimal` - Estimated compute/infrastructure cost
+
+**Methods**:
+- `get_total_cost() -> Decimal` - Calculate total cost across all services
+
+### PerformanceMetrics
+**Purpose**: Performance metrics for execution analysis and optimization
+**Lifecycle**: Collected during job execution, used for system optimization
+
+**Attributes**:
+- `avg_response_time_ms: Optional[float]` - Average API response time in milliseconds
+- `cache_hit_rate: Optional[float]` - Cache hit rate (0.0-1.0)
+- `concurrent_operations: int` - Peak concurrent operations
+- `queue_wait_time_seconds: Optional[float]` - Time spent waiting in queue
+- `execution_efficiency: Optional[float]` - Execution efficiency score (0.0-1.0)
 
 ### JobQueue
 **Purpose**: Manages job prioritization and concurrency control

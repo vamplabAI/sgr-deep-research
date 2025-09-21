@@ -6,7 +6,7 @@ performance and resource usage statistics during job execution.
 
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, model_validator
 from decimal import Decimal, ROUND_HALF_UP
 from enum import Enum
 
@@ -44,11 +44,11 @@ class CostBreakdown(BaseModel):
             total += cost
         return total.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
-    class Config:
-        """Pydantic configuration."""
-        json_encoders = {
+    model_config = {
+        "json_encoders": {
             Decimal: lambda v: float(v)
         }
+    }
 
 
 class PerformanceMetrics(BaseModel):
@@ -257,39 +257,24 @@ class ExecutionMetrics(BaseModel):
         description="System information during execution"
     )
 
-    @validator('execution_time_seconds')
-    def validate_execution_time(cls, v, values):
-        """Validate execution time doesn't exceed total duration."""
-        total_duration = values.get('total_duration_seconds', 0)
-
-        if v > total_duration:
+    @model_validator(mode='after')
+    def validate_model(self):
+        """Validate model fields consistency."""
+        # Validate execution time doesn't exceed total duration
+        if self.execution_time_seconds > self.total_duration_seconds:
             raise ValueError("execution_time_seconds cannot exceed total_duration_seconds")
 
-        return v
-
-    @validator('tokens_consumed')
-    def validate_tokens_consumed(cls, v, values):
-        """Validate token consumption consistency."""
-        input_tokens = values.get('input_tokens', 0)
-        output_tokens = values.get('output_tokens', 0)
-
-        # If we have input/output breakdown, total should match
-        if input_tokens > 0 or output_tokens > 0:
-            expected_total = input_tokens + output_tokens
-            if abs(v - expected_total) > 100:  # Allow small discrepancy
+        # Validate token consumption consistency
+        if self.input_tokens > 0 or self.output_tokens > 0:
+            expected_total = self.input_tokens + self.output_tokens
+            if abs(self.tokens_consumed - expected_total) > 100:  # Allow small discrepancy
                 raise ValueError("tokens_consumed should roughly equal input_tokens + output_tokens")
 
-        return v
-
-    @validator('completed_at')
-    def validate_completed_at(cls, v, values):
-        """Validate completion time is after start time."""
-        started_at = values.get('started_at')
-
-        if started_at and v <= started_at:
+        # Validate completion time is after start time
+        if self.started_at and self.completed_at <= self.started_at:
             raise ValueError("completed_at must be after started_at")
 
-        return v
+        return self
 
     def calculate_cost_per_token(self) -> Optional[Decimal]:
         """Calculate cost per token if tokens were consumed."""
@@ -379,14 +364,13 @@ class ExecutionMetrics(BaseModel):
         # Update total estimated cost
         self.estimated_cost = self.cost_breakdown.get_total_cost()
 
-    class Config:
-        """Pydantic configuration."""
-        validate_assignment = True
-        json_encoders = {
+    model_config = {
+        "validate_assignment": True,
+        "json_encoders": {
             datetime: lambda v: v.isoformat(),
             Decimal: lambda v: float(v)
-        }
-        schema_extra = {
+        },
+        "json_schema_extra": {
             "example": {
                 "total_duration_seconds": 1800.5,
                 "queue_time_seconds": 15.2,
@@ -413,3 +397,4 @@ class ExecutionMetrics(BaseModel):
                 "completed_at": "2024-01-21T11:00:00Z"
             }
         }
+    }

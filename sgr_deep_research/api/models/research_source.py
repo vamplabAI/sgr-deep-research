@@ -6,7 +6,7 @@ sources discovered and used during research jobs.
 
 from datetime import datetime
 from typing import Optional, Dict, Any, List
-from pydantic import BaseModel, Field, validator, HttpUrl
+from pydantic import BaseModel, Field, field_validator
 from enum import Enum
 
 
@@ -164,7 +164,8 @@ class ResearchSource(BaseModel):
         description="Date when source was accessed"
     )
 
-    @validator('url')
+    @field_validator('url')
+    @classmethod
     def validate_url(cls, v):
         """Validate URL format and accessibility."""
         if not v or not v.strip():
@@ -184,7 +185,8 @@ class ResearchSource(BaseModel):
 
         return v
 
-    @validator('title')
+    @field_validator('title')
+    @classmethod
     def validate_title(cls, v):
         """Validate and clean title."""
         if not v or not v.strip():
@@ -201,7 +203,8 @@ class ResearchSource(BaseModel):
 
         return cleaned[:500]  # Ensure length limit
 
-    @validator('content_excerpt')
+    @field_validator('content_excerpt')
+    @classmethod
     def validate_content_excerpt(cls, v):
         """Validate and clean content excerpt."""
         if not v:
@@ -217,7 +220,8 @@ class ResearchSource(BaseModel):
 
         return cleaned
 
-    @validator('key_topics', 'relevance_keywords')
+    @field_validator('key_topics', 'relevance_keywords')
+    @classmethod
     def validate_string_lists(cls, v):
         """Validate and clean string lists."""
         if not v:
@@ -232,7 +236,8 @@ class ResearchSource(BaseModel):
 
         return cleaned
 
-    @validator('language')
+    @field_validator('language')
+    @classmethod
     def validate_language(cls, v):
         """Validate language code format."""
         if v is None:
@@ -340,14 +345,13 @@ class ResearchSource(BaseModel):
         delta = datetime.utcnow() - self.publication_date
         return delta.days
 
-    class Config:
-        """Pydantic configuration."""
-        use_enum_values = True
-        validate_assignment = True
-        json_encoders = {
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True,
+        "json_encoders": {
             datetime: lambda v: v.isoformat()
-        }
-        schema_extra = {
+        },
+        "json_schema_extra": {
             "example": {
                 "number": 1,
                 "url": "https://arxiv.org/abs/2024.12345",
@@ -368,3 +372,4 @@ class ResearchSource(BaseModel):
                 "processing_time_ms": 2340.5
             }
         }
+    }

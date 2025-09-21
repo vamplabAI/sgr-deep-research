@@ -423,6 +423,268 @@ def batch(topic, count, agent, concurrent, output_dir, deep):
     asyncio.run(run_batch_simple(topic, count, agent, concurrent, output_dir, deep))
 
 
+# Job Management Commands
+
+@cli.group()
+def jobs():
+    """Job management commands."""
+    pass
+
+
+@jobs.command('submit')
+@click.argument('query')
+@click.option('--agent', '-a', default='sgr-tools', help='Agent type (sgr, sgr-tools, etc.)')
+@click.option('--deep', '-d', type=int, default=0, help='Deep research level (0-5+)')
+@click.option('--priority', '-p', type=int, default=0, help='Job priority (-100 to 100)')
+@click.option('--tags', '-t', help='Comma-separated tags')
+def submit_job(query, agent, deep, priority, tags):
+    """Submit a new research job."""
+    asyncio.run(submit_job_cmd(query, agent, deep, priority, tags))
+
+
+@jobs.command('status')
+@click.argument('job_id')
+def job_status(job_id):
+    """Get job status."""
+    asyncio.run(get_job_status_cmd(job_id))
+
+
+@jobs.command('list')
+@click.option('--status', '-s', help='Filter by status (pending, running, completed, failed, cancelled)')
+@click.option('--limit', '-l', type=int, default=20, help='Maximum number of jobs to show')
+def list_jobs(status, limit):
+    """List jobs."""
+    asyncio.run(list_jobs_cmd(status, limit))
+
+
+@jobs.command('cancel')
+@click.argument('job_id')
+def cancel_job(job_id):
+    """Cancel a job."""
+    asyncio.run(cancel_job_cmd(job_id))
+
+
+@jobs.command('stream')
+@click.argument('job_id')
+def stream_job(job_id):
+    """Stream job progress updates."""
+    asyncio.run(stream_job_cmd(job_id))
+
+
+async def submit_job_cmd(query: str, agent: str, deep: int, priority: int, tags: str):
+    """Submit a job command implementation."""
+    import httpx
+    from sgr_deep_research.settings import get_config
+
+    config = get_config()
+
+    # Prepare request data
+    request_data = {
+        "query": query,
+        "agent_type": agent,
+        "deep_level": deep,
+        "priority": priority,
+        "tags": tags.split(",") if tags else [],
+        "metadata": {}
+    }
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "http://localhost:8010/jobs",
+                json=request_data,
+                timeout=30.0
+            )
+
+            if response.status_code == 201:
+                data = response.json()
+                console.print(f"[green]✓[/green] Job submitted successfully!")
+                console.print(f"  Job ID: [cyan]{data['job_id']}[/cyan]")
+                console.print(f"  Status: [yellow]{data['status']}[/yellow]")
+                console.print(f"  Created: [blue]{data['created_at']}[/blue]")
+                if data.get('estimated_completion'):
+                    console.print(f"  Estimated completion: [blue]{data['estimated_completion']}[/blue]")
+            else:
+                console.print(f"[red]✗[/red] Failed to submit job: {response.status_code}")
+                console.print(response.text)
+
+    except Exception as e:
+        console.print(f"[red]✗[/red] Error submitting job: {e}")
+
+
+async def get_job_status_cmd(job_id: str):
+    """Get job status command implementation."""
+    import httpx
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"http://localhost:8010/jobs/{job_id}",
+                timeout=30.0
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                console.print(f"\n[bold cyan]Job Status: {job_id}[/bold cyan]")
+                console.print(f"  Status: [yellow]{data['status']}[/yellow]")
+                console.print(f"  Progress: [green]{data['progress']:.1f}%[/green]")
+                console.print(f"  Current step: {data['current_step']}")
+                console.print(f"  Steps completed: {data['steps_completed']}/{data['total_steps']}")
+                console.print(f"  Created: [blue]{data['created_at']}[/blue]")
+
+                if data.get('started_at'):
+                    console.print(f"  Started: [blue]{data['started_at']}[/blue]")
+
+                if data.get('completed_at'):
+                    console.print(f"  Completed: [blue]{data['completed_at']}[/blue]")
+
+                if data.get('result'):
+                    result = data['result']
+                    console.print(f"\n[bold green]Results:[/bold green]")
+                    console.print(f"  Sources found: {len(result.get('sources', []))}")
+                    if result.get('metrics'):
+                        metrics = result['metrics']
+                        console.print(f"  Duration: {metrics.get('total_duration_seconds', 0):.1f}s")
+                        console.print(f"  API calls: {metrics.get('api_calls_made', 0)}")
+                        console.print(f"  Estimated cost: ${metrics.get('estimated_cost_usd', 0):.2f}")
+
+                if data.get('error'):
+                    error = data['error']
+                    console.print(f"\n[bold red]Error:[/bold red]")
+                    console.print(f"  Type: {error['error_type']}")
+                    console.print(f"  Message: {error['error_message']}")
+                    console.print(f"  Occurred: [blue]{error['occurred_at']}[/blue]")
+
+            elif response.status_code == 404:
+                console.print(f"[red]✗[/red] Job not found: {job_id}")
+            else:
+                console.print(f"[red]✗[/red] Error getting job status: {response.status_code}")
+                console.print(response.text)
+
+    except Exception as e:
+        console.print(f"[red]✗[/red] Error getting job status: {e}")
+
+
+async def list_jobs_cmd(status: str, limit: int):
+    """List jobs command implementation."""
+    import httpx
+
+    try:
+        params = {"limit": limit}
+        if status:
+            params["status"] = status
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                "http://localhost:8010/jobs",
+                params=params,
+                timeout=30.0
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                jobs = data.get('jobs', [])
+
+                if not jobs:
+                    console.print("[yellow]No jobs found[/yellow]")
+                    return
+
+                console.print(f"\n[bold cyan]Jobs (showing {len(jobs)} of {data.get('total', len(jobs))})[/bold cyan]")
+
+                for job in jobs:
+                    status_color = {
+                        'pending': 'yellow',
+                        'running': 'blue',
+                        'completed': 'green',
+                        'failed': 'red',
+                        'cancelled': 'gray'
+                    }.get(job['status'], 'white')
+
+                    console.print(f"  [{status_color}]{job['job_id']}[/{status_color}] - {job['status']} ({job['progress']:.1f}%)")
+                    console.print(f"    Query: {job.get('query', 'N/A')}")
+                    console.print(f"    Created: [blue]{job['created_at']}[/blue]")
+
+            else:
+                console.print(f"[red]✗[/red] Error listing jobs: {response.status_code}")
+                console.print(response.text)
+
+    except Exception as e:
+        console.print(f"[red]✗[/red] Error listing jobs: {e}")
+
+
+async def cancel_job_cmd(job_id: str):
+    """Cancel job command implementation."""
+    import httpx
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.delete(
+                f"http://localhost:8010/jobs/{job_id}",
+                timeout=30.0
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                console.print(f"[green]✓[/green] Job cancelled successfully!")
+                console.print(f"  Job ID: [cyan]{data['job_id']}[/cyan]")
+                console.print(f"  Status: [yellow]{data['status']}[/yellow]")
+                console.print(f"  Cancelled at: [blue]{data['cancelled_at']}[/blue]")
+            elif response.status_code == 404:
+                console.print(f"[red]✗[/red] Job not found: {job_id}")
+            elif response.status_code == 409:
+                console.print(f"[red]✗[/red] Job cannot be cancelled (already completed)")
+            else:
+                console.print(f"[red]✗[/red] Error cancelling job: {response.status_code}")
+                console.print(response.text)
+
+    except Exception as e:
+        console.print(f"[red]✗[/red] Error cancelling job: {e}")
+
+
+async def stream_job_cmd(job_id: str):
+    """Stream job progress command implementation."""
+    import httpx
+
+    console.print(f"[cyan]Streaming updates for job {job_id}...[/cyan]")
+    console.print("[dim]Press Ctrl+C to stop[/dim]\n")
+
+    try:
+        async with httpx.AsyncClient() as client:
+            async with client.stream(
+                "GET",
+                f"http://localhost:8010/jobs/{job_id}/stream",
+                timeout=300.0
+            ) as response:
+
+                if response.status_code != 200:
+                    console.print(f"[red]✗[/red] Error starting stream: {response.status_code}")
+                    return
+
+                async for line in response.aiter_lines():
+                    if line.startswith("data: "):
+                        try:
+                            import json
+                            data = json.loads(line[6:])  # Remove "data: " prefix
+
+                            if 'error' in data:
+                                console.print(f"[red]Error: {data['error']}[/red]")
+                                break
+
+                            console.print(f"[{data.get('status', 'unknown')}] {data.get('progress', 0):.1f}% - {data.get('current_step', 'N/A')}")
+
+                            if data.get('status') in ['completed', 'failed', 'cancelled']:
+                                console.print(f"[green]Stream ended: Job {data['status']}[/green]")
+                                break
+
+                        except json.JSONDecodeError:
+                            continue  # Skip invalid JSON lines
+
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Stream stopped by user[/yellow]")
+    except Exception as e:
+        console.print(f"[red]✗[/red] Error streaming job updates: {e}")
+
+
 def main():
     """Точка входа CLI."""
     cli()
