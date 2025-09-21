@@ -37,37 +37,37 @@
 - **API**: Enhanced `sgr_deep_research/api/` module
 
 ## Phase 3.1: Setup & Mock Infrastructure
-- [ ] T001 [P] Create mock infrastructure in tests/mocks/external_apis.py
-- [ ] T002 [P] Setup pytest fixtures for job testing in tests/fixtures/job_fixtures.py
-- [ ] T003 [P] Create job queue manager in sgr_deep_research/core/job_queue.py
-- [ ] T004 [P] Setup SSE streaming utilities in sgr_deep_research/api/streaming.py
+- [x] T001 [P] Create mock infrastructure in tests/mocks/external_apis.py
+- [x] T002 [P] Setup pytest fixtures for job testing in tests/fixtures/job_fixtures.py
+- [x] T003 [P] Create job queue manager in sgr_deep_research/core/job_queue.py
+- [x] T004 [P] Setup SSE streaming utilities in sgr_deep_research/api/streaming.py
 
 ## Phase 3.2: Tests First (TDD) ⚠️ MUST COMPLETE BEFORE 3.3
 **CRITICAL: These tests MUST be written and MUST FAIL before ANY implementation**
 
 ### Contract Tests [P] - All can run in parallel
-- [ ] T005 [P] Contract test POST /jobs in tests/contract/test_jobs_post.py
-- [ ] T006 [P] Contract test GET /jobs/{job_id} in tests/contract/test_jobs_get.py
-- [ ] T007 [P] Contract test GET /jobs/{job_id}/stream in tests/contract/test_jobs_stream.py
-- [ ] T008 [P] Contract test GET /jobs in tests/contract/test_jobs_list.py
-- [ ] T009 [P] Contract test DELETE /jobs/{job_id} in tests/contract/test_jobs_delete.py
+- [x] T005 [P] Contract test POST /jobs in tests/contract/test_jobs_post.py
+- [x] T006 [P] Contract test GET /jobs/{job_id} in tests/contract/test_jobs_get.py
+- [x] T007 [P] Contract test GET /jobs/{job_id}/stream in tests/contract/test_jobs_stream.py
+- [x] T008 [P] Contract test GET /jobs in tests/contract/test_jobs_list.py
+- [x] T009 [P] Contract test DELETE /jobs/{job_id} in tests/contract/test_jobs_delete.py
 
 ### Integration Tests [P] - All can run in parallel
-- [ ] T010 [P] Integration test job submission workflow in tests/integration/test_job_submission.py
-- [ ] T011 [P] Integration test job status polling in tests/integration/test_job_polling.py
-- [ ] T012 [P] Integration test job cancellation in tests/integration/test_job_cancellation.py
-- [ ] T013 [P] Integration test long-running job execution in tests/integration/test_long_running_jobs.py
-- [ ] T014 [P] Integration test SSE streaming in tests/integration/test_sse_streaming.py
+- [x] T010 [P] Integration test job submission workflow in tests/integration/test_job_submission.py
+- [x] T011 [P] Integration test job status polling in tests/integration/test_job_polling.py
+- [x] T012 [P] Integration test job cancellation in tests/integration/test_job_cancellation.py
+- [x] T013 [P] Integration test long-running job execution in tests/integration/test_long_running_jobs.py
+- [x] T014 [P] Integration test SSE streaming in tests/integration/test_sse_streaming.py
 
 ## Phase 3.3: Core Models Implementation (ONLY after tests are failing)
 
 ### Pydantic Models [P] - All can run in parallel
-- [ ] T015 [P] JobRequest model in sgr_deep_research/api/models/job_request.py
-- [ ] T016 [P] JobStatus model in sgr_deep_research/api/models/job_status.py
-- [ ] T017 [P] JobResult model in sgr_deep_research/api/models/job_result.py
-- [ ] T018 [P] JobError model in sgr_deep_research/api/models/job_error.py
-- [ ] T019 [P] ResearchSource model in sgr_deep_research/api/models/research_source.py
-- [ ] T020 [P] ExecutionMetrics model in sgr_deep_research/api/models/execution_metrics.py
+- [x] T015 [P] JobRequest model in sgr_deep_research/api/models/job_request.py
+- [x] T016 [P] JobStatus model in sgr_deep_research/api/models/job_status.py
+- [x] T017 [P] JobResult model in sgr_deep_research/api/models/job_result.py
+- [x] T018 [P] JobError model in sgr_deep_research/api/models/job_error.py
+- [x] T019 [P] ResearchSource model in sgr_deep_research/api/models/research_source.py
+- [x] T020 [P] ExecutionMetrics model in sgr_deep_research/api/models/execution_metrics.py
 
 ### Core Services - Sequential (shared dependencies)
 - [ ] T021 Job storage service in sgr_deep_research/core/job_storage.py
