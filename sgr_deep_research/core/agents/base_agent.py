@@ -132,7 +132,6 @@ class BaseAgent:
     async def _prepare_context(self) -> list[dict]:
         """Prepare conversation context with system prompt."""
         system_prompt = PromptLoader.get_system_prompt(
-            user_request=self.task,
             sources=list(self._context.sources.values()),
             available_tools=self.toolkit,
         )
