@@ -122,8 +122,8 @@ class BaseAgent:
         filepath = os.path.join(logs_dir, f"{datetime.now().strftime('%Y%m%d-%H%M%S')}-{self.id}-log.json")
         agent_log = {
             "id": self.id,
+            "model_config": config.openai.model_dump(exclude={"api_key", "proxy"}),
             "task": self.task,
-            "context": self._context.agent_state(),
             "log": self.log,
         }
 
