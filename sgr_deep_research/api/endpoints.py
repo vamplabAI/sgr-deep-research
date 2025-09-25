@@ -75,7 +75,10 @@ def extract_user_content_from_messages(messages):
 
 
 @app.post("/agents/{agent_id}/provide_clarification")
-async def provide_clarification(agent_id: str, request: ClarificationRequest):
+async def provide_clarification(agent_id: str, request: ChatCompletionRequest):
+    if not request.stream:
+        raise HTTPException(status_code=501, detail="Only streaming responses are supported. Set 'stream=true'")
+
     try:
         agent = agents_storage.get(agent_id)
         if not agent:
