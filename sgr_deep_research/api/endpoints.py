@@ -36,25 +36,19 @@ async def get_agent_state(agent_id: str):
 
     agent = agents_storage[agent_id]
 
-    current_state_dict = None
-    if agent._context.current_state_reasoning:
-        current_state_dict = agent._context.current_state_reasoning.model_dump()
-
     return AgentStateResponse(
         agent_id=agent.id,
         task=agent.task,
-        state=agent.state.value,
-        searches_used=agent._context.searches_used,
-        clarifications_used=agent._context.clarifications_used,
         sources_count=len(agent._context.sources),
-        current_state=current_state_dict,
+        **agent._context.model_dump(),
     )
 
 
 @app.get("/agents", response_model=AgentListResponse)
 async def get_agents_list():
     agents_list = [
-        AgentListItem(agent_id=agent.id, task=agent.task, state=agent.state.value) for agent in agents_storage.values()
+        AgentListItem(agent_id=agent.id, task=agent.task, state=agent._context.state)
+        for agent in agents_storage.values()
     ]
 
     return AgentListResponse(agents=agents_list, total=len(agents_list))
@@ -79,7 +73,7 @@ def extract_user_content_from_messages(messages):
     raise ValueError("User message not found in messages")
 
 
-@app.post("agents/{agent_id}/provide_clarification")
+@app.post("/agents/{agent_id}/provide_clarification")
 async def provide_clarification(agent_id: str, request: ChatCompletionRequest):
     if not request.stream:
         raise HTTPException(status_code=501, detail="Only streaming responses are supported. Set 'stream=true'")
