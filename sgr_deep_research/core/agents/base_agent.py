@@ -122,8 +122,8 @@ class BaseAgent:
         filepath = os.path.join(logs_dir, f"{datetime.now().strftime('%Y%m%d-%H%M%S')}-{self.id}-log.json")
         agent_log = {
             "id": self.id,
+            "model_config": config.openai.model_dump(exclude={"api_key", "proxy"}),
             "task": self.task,
-            "context": self._context.agent_state(),
             "log": self.log,
         }
 
@@ -132,7 +132,6 @@ class BaseAgent:
     async def _prepare_context(self) -> list[dict]:
         """Prepare conversation context with system prompt."""
         system_prompt = PromptLoader.get_system_prompt(
-            user_request=self.task,
             sources=list(self._context.sources.values()),
             available_tools=self.toolkit,
         )

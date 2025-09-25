@@ -9,14 +9,13 @@ from typing import TYPE_CHECKING, Annotated, ClassVar, Literal, Type, TypeVar
 from pydantic import BaseModel, Field, create_model
 
 from sgr_deep_research.core.models import AgentStatesEnum
-from sgr_deep_research.settings import get_config
 
 if TYPE_CHECKING:
     from sgr_deep_research.core.models import ResearchContext
 
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-config = get_config()
 
 
 class BaseTool(BaseModel):
@@ -136,6 +135,10 @@ class NextStepToolStub(ReasoningTool, ABC):
     function: T = Field(description="Select the appropriate tool for the next step")
 
 
+class DiscriminantToolMixin(BaseModel):
+    tool_name_discriminator: str = Field(..., description="Tool name discriminator")
+
+
 class NextStepToolsBuilder:
     """SGR Core - Builder for NextStepTool with dynamic union tool function type on
     pydantic models level."""
@@ -144,19 +147,12 @@ class NextStepToolsBuilder:
     def _create_discriminant_tool(cls, tool_class: Type[T]) -> Type[BaseModel]:
         """Create discriminant version of tool with tool_name as instance
         field."""
-        tool_name = tool_class.tool_name
 
-        discriminant_tool = create_model(
+        return create_model(
             f"{tool_class.__name__}WithDiscriminant",
-            __base__=tool_class,
-            tool_name_discriminator=(
-                Literal[tool_name],  # noqa
-                Field(default=tool_name, description="Tool name discriminator"),
-            ),
-        )
-        discriminant_tool.__call__ = tool_class.__call__
-
-        return discriminant_tool
+            __base__=(tool_class, DiscriminantToolMixin),  # the order matters here
+            tool_name_discriminator=(Literal[tool_class.tool_name], Field(..., description="Tool name discriminator")),
+        )  # noqa
 
     @classmethod
     def _create_tool_types_union(cls, tools_list: list[Type[T]]) -> Type:

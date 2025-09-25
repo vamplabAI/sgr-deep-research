@@ -27,7 +27,7 @@ class PromptLoader:
         raise FileNotFoundError(f"Prompt file not found: {user_file_path} or {lib_file_path}")
 
     @classmethod
-    def get_system_prompt(cls, user_request: str, sources: list[SourceData], available_tools: list[BaseTool]) -> str:
+    def get_system_prompt(cls, sources: list[SourceData], available_tools: list[BaseTool]) -> str:
         sources_formatted = "\n".join([str(source) for source in sources])
         template = cls._load_prompt_file(config.prompts.system_prompt_file)
         available_tools_str_list = [
@@ -35,9 +35,9 @@ class PromptLoader:
         ]
         try:
             return template.format(
-                current_date=datetime.now().strftime("%Y-%m-%d-%H:%M:%S"),
+                current_date=datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
+                date_format="d-m-Y HH:MM:SS",
                 available_tools="\n".join(available_tools_str_list),
-                user_request=user_request,
                 sources_formatted=sources_formatted,
             )
         except KeyError as e:
