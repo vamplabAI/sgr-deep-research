@@ -177,7 +177,7 @@ class BaseAgent:
                 self.logger.info(f"Step {self._context.iteration} started")
 
                 reasoning = await self._reasoning_phase()
-                self._context.current_state_reasoning = reasoning
+                self._context.current_step_reasoning = reasoning
                 action_tool = await self._select_action_phase(reasoning)
                 action_result = await self._action_phase(action_tool)
 

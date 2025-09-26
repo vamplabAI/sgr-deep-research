@@ -11,6 +11,7 @@ from sgr_deep_research.api.models import (
     AgentModel,
     AgentStateResponse,
     ChatCompletionRequest,
+    ClarificationRequest,
     HealthResponse,
 )
 from sgr_deep_research.core.agents import BaseAgent
@@ -36,25 +37,19 @@ async def get_agent_state(agent_id: str):
 
     agent = agents_storage[agent_id]
 
-    current_state_dict = None
-    if agent._context.current_state_reasoning:
-        current_state_dict = agent._context.current_state_reasoning.model_dump()
-
     return AgentStateResponse(
         agent_id=agent.id,
         task=agent.task,
-        state=agent.state.value,
-        searches_used=agent._context.searches_used,
-        clarifications_used=agent._context.clarifications_used,
         sources_count=len(agent._context.sources),
-        current_state=current_state_dict,
+        **agent._context.model_dump(),
     )
 
 
 @app.get("/agents", response_model=AgentListResponse)
 async def get_agents_list():
     agents_list = [
-        AgentListItem(agent_id=agent.id, task=agent.task, state=agent.state.value) for agent in agents_storage.values()
+        AgentListItem(agent_id=agent.id, task=agent.task, state=agent._context.state)
+        for agent in agents_storage.values()
     ]
 
     return AgentListResponse(agents=agents_list, total=len(agents_list))
@@ -79,20 +74,16 @@ def extract_user_content_from_messages(messages):
     raise ValueError("User message not found in messages")
 
 
-@app.post("agents/{agent_id}/provide_clarification")
-async def provide_clarification(agent_id: str, request: ChatCompletionRequest):
-    if not request.stream:
-        raise HTTPException(status_code=501, detail="Only streaming responses are supported. Set 'stream=true'")
-
+@app.post("/agents/{agent_id}/provide_clarification")
+async def provide_clarification(agent_id: str, request: ClarificationRequest):
     try:
-        clarifications_content = extract_user_content_from_messages(request.messages)
         agent = agents_storage.get(agent_id)
         if not agent:
             raise HTTPException(status_code=404, detail="Agent not found")
 
-        logger.info(f"Providing clarification to agent {agent.id}: {clarifications_content[:100]}...")
+        logger.info(f"Providing clarification to agent {agent.id}: {request.clarifications[:100]}...")
 
-        await agent.provide_clarification(clarifications_content)
+        await agent.provide_clarification(request.clarifications)
         return StreamingResponse(
             agent.streaming_generator.stream(),
             media_type="text/plain",
@@ -103,8 +94,6 @@ async def provide_clarification(agent_id: str, request: ChatCompletionRequest):
             },
         )
 
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error completion: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -129,7 +118,10 @@ async def create_chat_completion(request: ChatCompletionRequest):
         and request.model in agents_storage
         and agents_storage[request.model]._context.state == AgentStatesEnum.WAITING_FOR_CLARIFICATION
     ):
-        return await provide_clarification(request.model, request)
+        return await provide_clarification(
+            agent_id=request.model,
+            request=ClarificationRequest(clarifications=extract_user_content_from_messages(request.messages)),
+        )
 
     try:
         task = extract_user_content_from_messages(request.messages)

@@ -83,10 +83,11 @@ class AgentStateResponse(BaseModel):
     agent_id: str = Field(description="Agent ID")
     task: str = Field(description="Agent task")
     state: str = Field(description="Current agent state")
+    iteration: int = Field(description="Current iteration number")
     searches_used: int = Field(description="Number of searches performed")
     clarifications_used: int = Field(description="Number of clarifications requested")
     sources_count: int = Field(description="Number of sources found")
-    current_state: Dict[str, Any] | None = Field(default=None, description="Current agent step")
+    current_step_reasoning: Dict[str, Any] | None = Field(default=None, description="Current agent step")
 
 
 class AgentListItem(BaseModel):
@@ -98,3 +99,9 @@ class AgentListItem(BaseModel):
 class AgentListResponse(BaseModel):
     agents: List[AgentListItem] = Field(description="List of agents")
     total: int = Field(description="Total number of agents")
+
+
+class ClarificationRequest(BaseModel):
+    """Simple request for providing clarifications to an agent."""
+
+    clarifications: str = Field(description="Clarification text to provide to the agent")
