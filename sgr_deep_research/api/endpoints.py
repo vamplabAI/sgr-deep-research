@@ -118,7 +118,10 @@ async def create_chat_completion(request: ChatCompletionRequest):
         and request.model in agents_storage
         and agents_storage[request.model]._context.state == AgentStatesEnum.WAITING_FOR_CLARIFICATION
     ):
-        return await provide_clarification(request.model, request)
+        return await provide_clarification(
+            agent_id=request.model,
+            request=ClarificationRequest(clarifications=extract_user_content_from_messages(request.messages)),
+        )
 
     try:
         task = extract_user_content_from_messages(request.messages)
