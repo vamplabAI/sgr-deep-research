@@ -11,6 +11,7 @@ from sgr_deep_research.api.models import (
     AgentModel,
     AgentStateResponse,
     ChatCompletionRequest,
+    ClarificationRequest,
     HealthResponse,
 )
 from sgr_deep_research.core.agents import BaseAgent
@@ -74,19 +75,15 @@ def extract_user_content_from_messages(messages):
 
 
 @app.post("/agents/{agent_id}/provide_clarification")
-async def provide_clarification(agent_id: str, request: ChatCompletionRequest):
-    if not request.stream:
-        raise HTTPException(status_code=501, detail="Only streaming responses are supported. Set 'stream=true'")
-
+async def provide_clarification(agent_id: str, request: ClarificationRequest):
     try:
-        clarifications_content = extract_user_content_from_messages(request.messages)
         agent = agents_storage.get(agent_id)
         if not agent:
             raise HTTPException(status_code=404, detail="Agent not found")
 
-        logger.info(f"Providing clarification to agent {agent.id}: {clarifications_content[:100]}...")
+        logger.info(f"Providing clarification to agent {agent.id}: {request.clarifications[:100]}...")
 
-        await agent.provide_clarification(clarifications_content)
+        await agent.provide_clarification(request.clarifications)
         return StreamingResponse(
             agent.streaming_generator.stream(),
             media_type="text/plain",
@@ -97,8 +94,6 @@ async def provide_clarification(agent_id: str, request: ChatCompletionRequest):
             },
         )
 
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error completion: {e}")
         raise HTTPException(status_code=500, detail=str(e))

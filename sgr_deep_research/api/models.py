@@ -99,3 +99,9 @@ class AgentListItem(BaseModel):
 class AgentListResponse(BaseModel):
     agents: List[AgentListItem] = Field(description="List of agents")
     total: int = Field(description="Total number of agents")
+
+
+class ClarificationRequest(BaseModel):
+    """Simple request for providing clarifications to an agent."""
+
+    clarifications: str = Field(description="Clarification text to provide to the agent")
