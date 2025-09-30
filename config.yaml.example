@@ -16,6 +16,13 @@ tavily:
   api_key: "your-tavily-api-key-here"  # Required: Your Tavily API key
   api_base_url: "https://api.tavily.com"  # Tavily API base URL
 
+# Confluence Configuration (Optional - for internal knowledge base search)
+confluence:
+  base_url: "https://conf.redmadrobot.com"  # Your Confluence base URL
+  username: "your-username"                  # Confluence username
+  password: "your-password-or-api-token"     # Confluence password or API token
+  timeout: 30.0                              # Request timeout in seconds
+
 # Search Settings
 search:
   max_results: 10                      # Maximum number of search results

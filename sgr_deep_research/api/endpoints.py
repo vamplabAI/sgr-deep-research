@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
 from sgr_deep_research.api.models import (
@@ -20,6 +21,15 @@ from sgr_deep_research.core.models import AgentStatesEnum
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="SGR Deep Research API", version="1.0.0")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ToDo: better to move to a separate service
 agents_storage: dict[str, BaseAgent] = {}
