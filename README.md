@@ -1,5 +1,14 @@
 # 🧠 SGR Deep Research - Open-Source Schema-Guided Reasoning System
 
+
+## SGR Deep Research is an agent-driven research system with a chat interface. It is can run with small LLMs for a fully local mode.
+
+This project is developed by the **neuraldeep** community. It is inspired by the Schema-Guided Reasoning (SGR) work and [SGR Agent Demo](https://abdullin.com/schema-guided-reasoning/demo) delivered by "LLM Under the Hood" community and AI R&D Hub of [TIMETOACT GROUP Österreich](
+https://www.timetoact-group.at)
+
+If you have any questions - feel free to reach out to [Valerii Kovalskii](https://www.linkedin.com/in/vakovalskii/).
+
+
 Web Interface Video
 
 https://github.com/user-attachments/assets/9e1c46c0-0c13-45dd-8b35-a3198f946451
