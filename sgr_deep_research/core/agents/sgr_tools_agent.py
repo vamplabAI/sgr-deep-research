@@ -63,13 +63,16 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
         return [pydantic_function_tool(tool, name=tool.tool_name, description=tool.description) for tool in tools]
 
     async def _reasoning_phase(self) -> ReasoningTool:
+        # Only provide ReasoningTool for reasoning phase to force its use
+        reasoning_tool = [pydantic_function_tool(ReasoningTool, name=ReasoningTool.tool_name, description=ReasoningTool.description)]
+        
         async with self.openai_client.chat.completions.stream(
             model=config.openai.model,
             messages=await self._prepare_context(),
             max_tokens=config.openai.max_tokens,
             temperature=config.openai.temperature,
-            tools=await self._prepare_tools(),
-            tool_choice={"type": "function", "function": {"name": ReasoningTool.tool_name}},
+            tools=reasoning_tool,  # Only ReasoningTool
+            tool_choice="required",  # Force tool use
         ) as stream:
             async for event in stream:
                 # print(event)

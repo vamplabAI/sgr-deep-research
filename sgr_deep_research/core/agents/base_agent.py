@@ -71,10 +71,13 @@ class BaseAgent:
         self._context.state = AgentStatesEnum.RESEARCHING
         self.logger.info(f"✅ Clarification received: {clarifications[:2000]}...")
 
-    def _log_reasoning(self, result: ReasoningTool) -> None:
-        next_step = result.remaining_steps[0] if result.remaining_steps else "Completing"
-        self.logger.info(
-            f"""
+    def _log_reasoning(self, result: BaseTool) -> None:
+        """Log reasoning step. Works with ReasoningTool or any other BaseTool."""
+        # Handle ReasoningTool specifically
+        if isinstance(result, ReasoningTool):
+            next_step = result.remaining_steps[0] if result.remaining_steps else "Completing"
+            self.logger.info(
+                f"""
 ###############################################
 🤖 LLM RESPONSE DEBUG:
    🧠 Reasoning Steps: {result.reasoning_steps}
@@ -87,7 +90,20 @@ class BaseAgent:
    🏁 Task Completed: {result.task_completed}
    ➡️ Next Step: {next_step}
 ###############################################"""
-        )
+            )
+        else:
+            # For other tools (like ClarificationTool)
+            self.logger.info(
+                f"""
+###############################################
+🤖 LLM RESPONSE DEBUG:
+   🔧 Tool: {result.__class__.__name__}
+   📝 Tool Content: {result.model_dump_json(indent=2)}
+   🔍 Searches Done: {self._context.searches_used}
+   🔍 Clarifications Done: {self._context.clarifications_used}
+###############################################"""
+            )
+        
         self.log.append(
             {
                 "step_number": self._context.iteration,
