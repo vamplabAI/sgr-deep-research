@@ -41,9 +41,6 @@ class ConfluenceVectorSearchTool(BaseTool):
     - Results include both content and source references
     """
     
-    tool_name: str = "confluence_vector_search"
-    description: str = "Semantic vector search in Confluence using KNN for context-aware, meaning-based retrieval"
-    
     reasoning: str = Field(description="Why using vector search and what information is expected")
     query: str = Field(description="Natural language search query describing what information is needed")
 

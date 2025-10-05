@@ -1,0 +1,5 @@
+Current Date: {current_date} (ISO format: YYYY-MM-DD HH:MM:SS)
+
+ORIGINAL USER REQUEST:
+
+{task}

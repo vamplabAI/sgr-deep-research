@@ -376,7 +376,7 @@ Results:
 [2] Постановка на разработку Smart Platform
     Type: page
     Space: NDT Smart Platform (NDTALL)
-    URL: https://conf.redmadrobot.com/pages/viewpage.action?pageId=4266429013
+    URL: https://conf.redmadrobot.com/pages/viewpage.action?pageId=123456789
     Version: 5
     Updated: 2025-09-01T09:15:00Z by Петров П.П.
 ```
@@ -443,7 +443,7 @@ Results:
 
 **Поля:**
 - `reasoning` (str) - Почему загружаем именно эту страницу
-- `page_id` (str) - ID страницы Confluence (например, '4266429013')
+- `page_id` (str) - ID страницы Confluence (например, '123456789')
 
 **Когда использовать:**
 - Найдена нужная страница в результатах поиска
@@ -763,6 +763,9 @@ research_agent_tools = [
     WebSearchTool,
     CreateReportTool,
 ]
+
+# Confluence tools are dynamically added if available
+# Including: ConfluenceSearchTool, ConfluenceSpaceSearchTool, ConfluencePageTool, ConfluenceVectorSearchTool
 ```
 
 **Цикл работы:**
@@ -830,6 +833,9 @@ research_agent_tools = [
     WebSearchTool,
     CreateReportTool,
 ]
+
+# Confluence tools are dynamically added if available
+# Including: ConfluenceSearchTool, ConfluenceSpaceSearchTool, ConfluencePageTool, ConfluenceVectorSearchTool
 ```
 
 **Цикл работы:**

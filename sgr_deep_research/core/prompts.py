@@ -27,18 +27,41 @@ class PromptLoader:
         raise FileNotFoundError(f"Prompt file not found: {user_file_path} or {lib_file_path}")
 
     @classmethod
-    def get_system_prompt(cls, sources: list[SourceData], available_tools: list[BaseTool]) -> str:
-        sources_formatted = "\n".join([str(source) for source in sources])
+    @cache
+    def get_system_prompt(cls) -> str:
+        """Get static system prompt for caching optimization.
+        
+        Returns static prompt without dynamic data (date, sources)
+        to enable OpenAI prompt caching.
+        """
         template = cls._load_prompt_file(config.prompts.system_prompt_file)
-        available_tools_str_list = [
-            f"{i}. {tool.tool_name}: {tool.description}" for i, tool in enumerate(available_tools, start=1)
-        ]
-        try:
-            return template.format(
-                current_date=datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
-                date_format="d-m-Y HH:MM:SS",
-                available_tools="\n".join(available_tools_str_list),
-                sources_formatted=sources_formatted,
-            )
-        except KeyError as e:
-            raise KeyError(f"Missing placeholder in system prompt template: {e}") from e
+        return template
+
+    @classmethod
+    def _get_current_date(cls) -> str:
+        """Get current date in ISO format for user messages."""
+        return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    @classmethod
+    def get_initial_user_request(cls, task: str) -> str:
+        """Get formatted initial user request with current date.
+        
+        Date is included in user message to keep system prompt static for caching.
+        """
+        template = cls._load_prompt_file("initial_user_request.txt")
+        return template.format(
+            task=task,
+            current_date=cls._get_current_date()
+        )
+
+    @classmethod
+    def get_clarification_response(cls, clarifications: str) -> str:
+        """Get formatted clarification response with current date.
+        
+        Date is included in user message to keep system prompt static for caching.
+        """
+        template = cls._load_prompt_file("clarification_response.txt")
+        return template.format(
+            clarifications=clarifications,
+            current_date=cls._get_current_date()
+        )

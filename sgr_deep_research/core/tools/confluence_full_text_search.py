@@ -211,12 +211,12 @@ class ConfluencePageRetrievalTool(BaseTool):
     - Previous ConfluenceSpaceSearchTool results (use 'Page ID' field)
     - Direct URL (pageId parameter in URL)
     
-    IMPORTANT: Page ID must be a numeric string like '4266429013', NOT space keys like 'GPP' or paths like 'GPP/PageName'.
+    IMPORTANT: Page ID must be a numeric string like '123456789', NOT space keys like 'GPP' or paths like 'GPP/PageName'.
     """
 
     reasoning: str = Field(description="Why retrieving this specific page")
     page_id: str = Field(
-        description="Confluence page ID - MUST be numeric string like '4266429013'. "
+        description="Confluence page ID - MUST be numeric string (e.g., '123456789'). "
         "Get it from search results 'Page ID' field or URL 'pageId' parameter. "
         "NOT space key (like 'GPP') or page path (like 'GPP/Zaman')."
     )
@@ -232,12 +232,12 @@ class ConfluencePageRetrievalTool(BaseTool):
         if not self.page_id.isdigit():
             error_msg = (
                 f"❌ Invalid page_id format: '{self.page_id}'\n\n"
-                f"Page ID must be numeric (e.g., '4266429013'), not a space key or path.\n"
+                f"Page ID must be numeric (e.g., '123456789'), not a space key or path.\n"
                 f"To get the correct page ID:\n"
                 f"1. Use ConfluenceSearchTool or ConfluenceSpaceSearchTool first\n"
                 f"2. Look for 'Page ID' field in results\n"
                 f"3. Use that numeric ID with this tool\n\n"
-                f"Example: If search shows 'Page ID: 4266429013', use '4266429013' not 'GPP/Zaman'."
+                f"Example: If search shows 'Page ID: 123456789', use '123456789' not 'GPP/Zaman'."
             )
             logger.error(error_msg)
             return error_msg

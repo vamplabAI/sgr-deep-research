@@ -64,7 +64,8 @@ class BaseAgent:
 
     async def provide_clarification(self, clarifications: str):
         """Receive clarification from external source (e.g. user input)"""
-        self.conversation.append({"role": "user", "content": f"CLARIFICATIONS: {clarifications}"})
+        clarification_content = PromptLoader.get_clarification_response(clarifications)
+        self.conversation.append({"role": "user", "content": clarification_content})
         self._context.clarifications_used += 1
         self._context.clarification_received.set()
         self._context.state = AgentStatesEnum.RESEARCHING
@@ -130,12 +131,24 @@ class BaseAgent:
         json.dump(agent_log, open(filepath, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
 
     async def _prepare_context(self) -> list[dict]:
-        """Prepare conversation context with system prompt."""
-        system_prompt = PromptLoader.get_system_prompt(
-            sources=list(self._context.sources.values()),
-            available_tools=self.toolkit,
-        )
-        return [{"role": "system", "content": system_prompt}, *self.conversation]
+        """Prepare conversation context with system prompt.
+        
+        Optimized for OpenAI prompt caching per Anthropic best practices:
+        - Static system prompt at the beginning (FULLY CACHED)
+        - User messages contain date inline (no separate system message)
+        - Sources are in tool results within conversation history
+        
+        This ensures system prompt never changes → maximum cache efficiency.
+        """
+        # Static system prompt - will be cached by OpenAI
+        system_prompt = PromptLoader.get_system_prompt()
+        
+        # Structure: static system prompt + conversation
+        # Date is already included in each user message
+        return [
+            {"role": "system", "content": system_prompt},
+            *self.conversation,
+        ]
 
     async def _prepare_tools(self) -> list[ChatCompletionFunctionToolParam]:
         """Prepare available tools for current agent state and progress."""
@@ -163,11 +176,12 @@ class BaseAgent:
         self,
     ):
         self.logger.info(f"🚀 Starting for task: '{self.task}'")
+        initial_request = PromptLoader.get_initial_user_request(self.task)
         self.conversation.extend(
             [
                 {
                     "role": "user",
-                    "content": f"\nORIGINAL USER REQUEST: '{self.task}'\n",
+                    "content": initial_request,
                 }
             ]
         )
