@@ -88,22 +88,19 @@ class CreateReportTool(BaseTool):
 
 
 class WebSearchTool(BaseTool):
-    """Gather information.
+    """Quick web search returning page titles, URLs and short snippets.
 
     - Use SPECIFIC terms and context in search queries
     - For acronyms like "SGR", add context: "SGR Schema-Guided Reasoning"
     - Use quotes for exact phrases: "Structured Output OpenAI"
     - SEARCH QUERIES in SAME LANGUAGE as user request
-    - scrape_content=True for deeper analysis (fetches full page content)
+    - Returns only titles, links and 100-character snippets
+    - Use ExtractPageContentTool to get full content from specific URLs
     """
 
     reasoning: str = Field(description="Why this search is needed and what to expect")
     query: str = Field(description="Search query in same language as user request")
     max_results: int = Field(default=10, description="Maximum results", ge=1, le=10)
-    scrape_content: bool = Field(
-        default=False,
-        description="Fetch full page content for deeper analysis",
-    )
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -117,6 +114,7 @@ class WebSearchTool(BaseTool):
         sources = self._search_service.search(
             query=self.query,
             max_results=self.max_results,
+            include_raw_content=False,
         )
 
         sources = TavilySearchService.rearrange_sources(sources, starting_number=len(context.sources) + 1)
@@ -133,28 +131,74 @@ class WebSearchTool(BaseTool):
         context.searches.append(search_result)
 
         formatted_result = f"Search Query: {search_result.query}\n\n"
-
-        if search_result.answer:
-            formatted_result += f"AI Answer: {search_result.answer}\n\n"
-
-        formatted_result += "Search Results:\n\n"
+        formatted_result += "Search Results (titles, links, short snippets):\n\n"
 
         for source in sources:
-            if source.full_content:
-                formatted_result += (
-                    f"{str(source)}\n\n**Full Content (Markdown):**\n"
-                    f"{source.full_content[: config.scraping.content_limit]}\n\n"
-                )
-            else:
-                formatted_result += f"{str(source)}\n{source.snippet}\n\n"
+            snippet = source.snippet[:100] + "..." if len(source.snippet) > 100 else source.snippet
+            formatted_result += f"{str(source)}\n{snippet}\n\n"
 
         context.searches_used += 1
         logger.debug(formatted_result)
         return formatted_result
 
 
+class ExtractPageContentTool(BaseTool):
+    """Extract full content from specific web pages using Tavily Extract API.
+    
+    Use this tool when you need detailed information from specific URLs found in web search.
+    This tool fetches and extracts the complete page content in readable format.
+    """
+
+    reasoning: str = Field(description="Why extract these specific pages")
+    urls: list[str] = Field(description="List of URLs to extract full content from", min_length=1, max_length=5)
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self._search_service = TavilySearchService()
+
+    def __call__(self, context: ResearchContext) -> str:
+        """Extract full content from specified URLs."""
+
+        logger.info(f"📄 Extracting content from {len(self.urls)} URLs")
+
+        sources = self._search_service.extract(urls=self.urls)
+
+        # Update existing sources instead of overwriting
+        for source in sources:
+            if source.url in context.sources:
+                # URL already exists, update with full content but keep original number
+                existing = context.sources[source.url]
+                existing.full_content = source.full_content
+                existing.char_count = source.char_count
+            else:
+                # New URL, add with next number
+                source.number = len(context.sources) + 1
+                context.sources[source.url] = source
+
+        formatted_result = "Extracted Page Content:\n\n"
+
+        # Format results using sources from context (to get correct numbers)
+        for url in self.urls:
+            if url in context.sources:
+                source = context.sources[url]
+                if source.full_content:
+                    content_preview = source.full_content[:config.scraping.content_limit]
+                    formatted_result += (
+                        f"{str(source)}\n\n**Full Content:**\n"
+                        f"{content_preview}\n\n"
+                        f"*[Content length: {source.char_count} characters]*\n\n"
+                        "---\n\n"
+                    )
+                else:
+                    formatted_result += f"{str(source)}\n*Failed to extract content*\n\n"
+
+        logger.debug(formatted_result[:500])
+        return formatted_result
+
+
 research_agent_tools = [
     WebSearchTool,
+    ExtractPageContentTool,
     CreateReportTool,
 ]
 
@@ -165,4 +209,16 @@ try:
     research_agent_tools.extend(confluence_agent_tools)
 except ImportError:
     # Confluence tools not available (missing dependencies or config)
+    pass
+
+# Import and add Smart Platform vector search if configured
+try:
+    from sgr_deep_research.core.tools.confluence_vector_search import ConfluenceVectorSearchTool
+    from sgr_deep_research.settings import get_config
+    
+    config = get_config()
+    if config.smart_platform is not None:
+        research_agent_tools.append(ConfluenceVectorSearchTool)
+except (ImportError, AttributeError):
+    # Smart Platform not configured or not available
     pass

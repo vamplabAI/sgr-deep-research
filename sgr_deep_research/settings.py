@@ -38,6 +38,16 @@ class ConfluenceConfig(BaseModel):
     timeout: float = Field(default=30.0, description="Request timeout in seconds")
 
 
+class SmartPlatformConfig(BaseModel):
+    """Smart Platform API settings for KNN/vector search."""
+
+    base_url: str = Field(description="Smart Platform API base URL")
+    api_key: str = Field(description="Smart Platform API key (Basic auth)")
+    agent_id: str = Field(description="Default Smart Platform agent ID")
+    chat_id: str = Field(description="Default chat ID for queries")
+    timeout: float = Field(default=30.0, description="Request timeout in seconds")
+
+
 class SearchConfig(BaseModel):
     """Search settings."""
 
@@ -73,6 +83,7 @@ class AppConfig(BaseModel):
     openai: OpenAIConfig = Field(description="OpenAI settings")
     tavily: TavilyConfig = Field(description="Tavily settings")
     confluence: ConfluenceConfig | None = Field(default=None, description="Confluence settings (optional)")
+    smart_platform: SmartPlatformConfig | None = Field(default=None, description="Smart Platform settings (optional)")
     search: SearchConfig = Field(default_factory=SearchConfig, description="Search settings")
     scraping: ScrapingConfig = Field(default_factory=ScrapingConfig, description="Scraping settings")
     execution: ExecutionConfig = Field(default_factory=ExecutionConfig, description="Execution settings")

@@ -113,7 +113,21 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
             async for event in stream:
                 if event.type == "chunk":
                     self.streaming_generator.add_chunk(event.chunk)
-        tool = (await stream.get_final_completion()).choices[0].message.tool_calls[0].function.parsed_arguments
+        
+        completion = await stream.get_final_completion()
+        message = completion.choices[0].message
+        
+        # Handle case when LLM returns text without tool call (usually when task is complete)
+        if message.tool_calls is None or len(message.tool_calls) == 0:
+            from sgr_deep_research.core.tools import AgentCompletionTool
+            from sgr_deep_research.core.models import AgentStatesEnum
+            tool = AgentCompletionTool(
+                reasoning="Task completed, LLM returned final response without tool call",
+                completed_steps=[message.content or "Task completed successfully"],
+                status=AgentStatesEnum.COMPLETED
+            )
+        else:
+            tool = message.tool_calls[0].function.parsed_arguments
 
         if not isinstance(tool, BaseTool):
             raise ValueError("Selected tool is not a valid BaseTool instance")
