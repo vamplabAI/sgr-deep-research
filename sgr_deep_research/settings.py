@@ -29,6 +29,15 @@ class TavilyConfig(BaseModel):
     api_base_url: str = Field(default="https://api.tavily.com", description="Tavily API base URL")
 
 
+class ConfluenceConfig(BaseModel):
+    """Confluence API settings."""
+
+    base_url: str = Field(description="Confluence base URL (e.g., https://conf.company.com)")
+    username: str = Field(description="Confluence username")
+    password: str = Field(description="Confluence password or API token")
+    timeout: float = Field(default=30.0, description="Request timeout in seconds")
+
+
 class SearchConfig(BaseModel):
     """Search settings."""
 
@@ -63,6 +72,7 @@ class AppConfig(BaseModel):
 
     openai: OpenAIConfig = Field(description="OpenAI settings")
     tavily: TavilyConfig = Field(description="Tavily settings")
+    confluence: ConfluenceConfig | None = Field(default=None, description="Confluence settings (optional)")
     search: SearchConfig = Field(default_factory=SearchConfig, description="Search settings")
     scraping: ScrapingConfig = Field(default_factory=ScrapingConfig, description="Scraping settings")
     execution: ExecutionConfig = Field(default_factory=ExecutionConfig, description="Execution settings")

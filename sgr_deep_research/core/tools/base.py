@@ -35,12 +35,27 @@ class BaseTool(BaseModel):
 
 
 class ClarificationTool(BaseTool):
-    """Ask clarifying questions when facing ambiguous request."""
+    """Ask clarifying questions when facing ambiguous request.
 
-    reasoning: str = Field(description="Why clarification is needed")
-    unclear_terms: list[str] = Field(description="List of unclear terms or concepts", min_length=1, max_length=5)
-    assumptions: list[str] = Field(description="Possible interpretations to verify", min_length=2, max_length=4)
-    questions: list[str] = Field(description="3-5 specific clarifying questions", min_length=3, max_length=5)
+    Keep all fields concise - brief reasoning, short terms, and clear questions.
+    """
+
+    reasoning: str = Field(description="Why clarification is needed (1-2 sentences MAX)", max_length=200)
+    unclear_terms: list[str] = Field(
+        description="List of unclear terms (brief, 1-3 words each)",
+        min_length=1,
+        max_length=3,
+    )
+    assumptions: list[str] = Field(
+        description="Possible interpretations (short, 1 sentence each)",
+        min_length=2,
+        max_length=3,
+    )
+    questions: list[str] = Field(
+        description="3 specific clarifying questions (short and direct)",
+        min_length=3,
+        max_length=3,
+    )
 
     def __call__(self, context: ResearchContext) -> str:
         return "\n".join(self.questions)
@@ -100,23 +115,38 @@ class AgentCompletionTool(BaseTool):
 
 
 class ReasoningTool(BaseTool):
-    """Agent Core - Determines next reasoning step with adaptive planning"""
+    """Agent Core - Determines next reasoning step with adaptive planning.
+
+    Keep all text fields concise and focused.
+    """
 
     # Reasoning chain - step-by-step thinking process (helps stabilize model)
     reasoning_steps: list[str] = Field(
-        description="Step-by-step reasoning process leading to decision", min_length=2, max_length=4
+        description="Step-by-step reasoning (brief, 1 sentence each)",
+        min_length=2,
+        max_length=3,
     )
 
     # Reasoning and state assessment
-    current_situation: str = Field(description="Current research situation analysis")
-    plan_status: str = Field(description="Status of current plan execution")
+    current_situation: str = Field(
+        description="Current research situation (2-3 sentences MAX)",
+        max_length=300,
+    )
+    plan_status: str = Field(
+        description="Status of current plan (1 sentence)",
+        max_length=150,
+    )
     enough_data: bool = Field(
         default=False,
         description="Sufficient data collected for comprehensive report?",
     )
 
     # Next step planning
-    remaining_steps: list[str] = Field(description="1-3 remaining steps to complete task", min_length=1, max_length=3)
+    remaining_steps: list[str] = Field(
+        description="1-3 remaining steps (brief, action-oriented)",
+        min_length=1,
+        max_length=3,
+    )
     task_completed: bool = Field(description="Is the research task finished?")
 
     def __call__(self, *args, **kwargs):

@@ -44,6 +44,7 @@ dependencies = [
     # Web scraping and content extraction - веб-скрапинг и извлечение контента
     "trafilatura>=1.6.0",
     "youtube-transcript-api>=0.6.0",
+    "beautifulsoup4>=4.12.0",  # для парсинга Confluence HTML
     # Configuration and utilities - конфигурация и утилиты
     "PyYAML>=6.0",
     "envyaml>=1.10.0",
