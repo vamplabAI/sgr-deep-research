@@ -16,18 +16,15 @@ logger.setLevel(logging.INFO)
 
 
 class ConfluenceSearchTool(BaseTool):
-    """Search Confluence knowledge base for internal documentation and
-    information.
+    """Search company's internal Confluence knowledge base across all spaces.
 
-    Use this tool to find internal documentation, technical guides, project info,
-    architecture docs, and other knowledge stored in company Confluence.
+    Use for: Internal documentation, technical guides, project information, company processes
+    Best for: Architecture docs, deployment guides, internal APIs, project specifications
 
-    Best practices:
+    Tips:
     - Use specific technical terms and project names
     - Search queries in SAME LANGUAGE as user request
-    - For Russian requests use Russian: "архитектура проекта"
-    - For English requests use English: "project architecture"
-    - include_content=True when you need full page text for analysis
+    - Set include_content=True when you need full page text for analysis
     """
 
     reasoning: str = Field(description="Why searching Confluence and what information is expected")

@@ -88,14 +88,19 @@ class CreateReportTool(BaseTool):
 
 
 class WebSearchTool(BaseTool):
-    """Quick web search returning page titles, URLs and short snippets.
+    """Search the internet for public information, news, statistics, and
+    general knowledge.
 
-    - Use SPECIFIC terms and context in search queries
-    - For acronyms like "SGR", add context: "SGR Schema-Guided Reasoning"
+    Use for: Public information, news, market trends, external APIs, general knowledge
+    Returns: Page titles, URLs, and short snippets (100 characters)
+    Best for: Quick overview, finding relevant pages
+
+    Tips:
+    - Use SPECIFIC terms and context in queries
+    - For acronyms, add context: "SGR Schema-Guided Reasoning"
     - Use quotes for exact phrases: "Structured Output OpenAI"
-    - SEARCH QUERIES in SAME LANGUAGE as user request
-    - Returns only titles, links and 100-character snippets
-    - Use ExtractPageContentTool to get full content from specific URLs
+    - Search queries in SAME LANGUAGE as user request
+    - Use ExtractPageContentTool to get full content from found URLs
     """
 
     reasoning: str = Field(description="Why this search is needed and what to expect")
@@ -143,11 +148,13 @@ class WebSearchTool(BaseTool):
 
 
 class ExtractPageContentTool(BaseTool):
-    """Extract full content from specific web pages using Tavily Extract API.
+    """Extract full detailed content from specific web pages.
 
-    Use this tool when you need detailed information from specific URLs
-    found in web search. This tool fetches and extracts the complete
-    page content in readable format.
+    Use for: Getting complete page content from URLs found in web search
+    Returns: Full page content in readable format (via Tavily Extract API)
+    Best for: Deep analysis of specific pages, extracting structured data
+
+    Usage: Call after WebSearchTool to get detailed information from promising URLs
     """
 
     reasoning: str = Field(description="Why extract these specific pages")
