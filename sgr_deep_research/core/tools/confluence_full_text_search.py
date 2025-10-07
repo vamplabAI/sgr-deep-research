@@ -30,9 +30,6 @@ class ConfluenceFullTextSearchTool(BaseTool):
     - include_content=True when you need full page text for analysis
     """
 
-    tool_name: str = "confluence_full_text_search"
-    description: str = "Full-text search in Confluence for internal documentation using keyword matching"
-
     reasoning: str = Field(description="Why searching Confluence and what information is expected")
     query: str = Field(description="Search query in same language as user request")
     max_results: int = Field(default=10, description="Maximum results", ge=1, le=25)
@@ -121,9 +118,6 @@ class ConfluenceSpaceFullTextSearchTool(BaseTool):
     Use when you know the specific space (project/team area) to search
     in. More precise than general search when space is known.
     """
-
-    tool_name: str = "confluence_space_full_text_search"
-    description: str = "Full-text search within specific Confluence space using keyword matching"
 
     reasoning: str = Field(description="Why searching this specific space")
     query: str = Field(description="Search query in same language as user request")

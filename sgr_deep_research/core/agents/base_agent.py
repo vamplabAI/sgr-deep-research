@@ -64,49 +64,29 @@ class BaseAgent:
 
     async def provide_clarification(self, clarifications: str):
         """Receive clarification from external source (e.g. user input)"""
-        clarification_content = PromptLoader.get_clarification_response(clarifications)
-        self.conversation.append({"role": "user", "content": clarification_content})
+        self.conversation.append({"role": "user", "content": PromptLoader.get_clarification_template(clarifications)})
         self._context.clarifications_used += 1
         self._context.clarification_received.set()
         self._context.state = AgentStatesEnum.RESEARCHING
         self.logger.info(f"✅ Clarification received: {clarifications[:2000]}...")
 
-    def _log_reasoning(self, result: BaseTool) -> None:
-        """Log reasoning step.
-
-        Works with ReasoningTool or any other BaseTool.
-        """
-        # Handle ReasoningTool specifically
-        if isinstance(result, ReasoningTool):
-            next_step = result.remaining_steps[0] if result.remaining_steps else "Completing"
-            self.logger.info(
-                f"""
-###############################################
-🤖 LLM RESPONSE DEBUG:
-   🧠 Reasoning Steps: {result.reasoning_steps}
-   📊 Current Situation: '{result.current_situation[:400]}...'
-   📋 Plan Status: '{result.plan_status[:400]}...'
-   🔍 Searches Done: {self._context.searches_used}
-   🔍 Clarifications Done: {self._context.clarifications_used}
-   ✅ Enough Data: {result.enough_data}
-   📝 Remaining Steps: {result.remaining_steps}
-   🏁 Task Completed: {result.task_completed}
-   ➡️ Next Step: {next_step}
-###############################################"""
-            )
-        else:
-            # For other tools (like ClarificationTool)
-            self.logger.info(
-                f"""
-###############################################
-🤖 LLM RESPONSE DEBUG:
-   🔧 Tool: {result.__class__.__name__}
-   📝 Tool Content: {result.model_dump_json(indent=2)}
-   🔍 Searches Done: {self._context.searches_used}
-   🔍 Clarifications Done: {self._context.clarifications_used}
-###############################################"""
-            )
-
+    def _log_reasoning(self, result: ReasoningTool) -> None:
+        next_step = result.remaining_steps[0] if result.remaining_steps else "Completing"
+        self.logger.info(
+            f"""
+    ###############################################
+    🤖 LLM RESPONSE DEBUG:
+       🧠 Reasoning Steps: {result.reasoning_steps}
+       📊 Current Situation: '{result.current_situation[:400]}...'
+       📋 Plan Status: '{result.plan_status[:400]}...'
+       🔍 Searches Done: {self._context.searches_used}
+       🔍 Clarifications Done: {self._context.clarifications_used}
+       ✅ Enough Data: {result.enough_data}
+       📝 Remaining Steps: {result.remaining_steps}
+       🏁 Task Completed: {result.task_completed}
+       ➡️ Next Step: {next_step}
+    ###############################################"""
+        )
         self.log.append(
             {
                 "step_number": self._context.iteration,
@@ -150,22 +130,8 @@ class BaseAgent:
         json.dump(agent_log, open(filepath, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
 
     async def _prepare_context(self) -> list[dict]:
-        """Prepare conversation context with system prompt.
-
-        Optimized for OpenAI prompt caching per Anthropic best practices:
-        - Static system prompt at the beginning (FULLY CACHED)
-        - User messages contain date inline (no separate system message)
-        - Sources are in tool results within conversation history
-
-        This ensures system prompt never changes → maximum cache efficiency.
-        """
-        # Static system prompt - will be cached by OpenAI
-        system_prompt = PromptLoader.get_system_prompt()
-
-        # Structure: static system prompt + conversation
-        # Date is already included in each user message
         return [
-            {"role": "system", "content": system_prompt},
+            {"role": "system", "content": PromptLoader.get_system_prompt()},
             *self.conversation,
         ]
 
@@ -195,12 +161,11 @@ class BaseAgent:
         self,
     ):
         self.logger.info(f"🚀 Starting for task: '{self.task}'")
-        initial_request = PromptLoader.get_initial_user_request(self.task)
         self.conversation.extend(
             [
                 {
                     "role": "user",
-                    "content": initial_request,
+                    "content": PromptLoader.get_initial_user_request(self.task),
                 }
             ]
         )

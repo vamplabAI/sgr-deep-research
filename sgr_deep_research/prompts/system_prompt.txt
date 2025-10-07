@@ -48,5 +48,4 @@ CITATION FORMAT (MANDATORY):
 ❌ WRONG: Listing sources only at the end without inline citations
 
 CITATION EXAMPLES:
-- Russian: "Система использует микросервисную архитектуру [1] с базой данных PostgreSQL [2]. Среднее время ответа составляет менее 200мс [3]."
-- English: "The platform uses microservices architecture [1] with PostgreSQL database [2]. Average response time is under 200ms [3]."
+- "The platform uses microservices architecture [1] with PostgreSQL database [2]. Average response time is under 200ms [3]."

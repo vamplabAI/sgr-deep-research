@@ -4,6 +4,7 @@ from openai import pydantic_function_tool
 from openai.types.chat import ChatCompletionFunctionToolParam
 
 from sgr_deep_research.core.agents.sgr_agent import SGRResearchAgent
+from sgr_deep_research.core.models import AgentStatesEnum
 from sgr_deep_research.core.tools import (
     AgentCompletionTool,
     BaseTool,
@@ -63,25 +64,19 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
         return [pydantic_function_tool(tool, name=tool.tool_name, description=tool.description) for tool in tools]
 
     async def _reasoning_phase(self) -> ReasoningTool:
-        # Only provide ReasoningTool for reasoning phase to force its use
-        reasoning_tool = [
-            pydantic_function_tool(ReasoningTool, name=ReasoningTool.tool_name, description=ReasoningTool.description)
-        ]
-
         async with self.openai_client.chat.completions.stream(
             model=config.openai.model,
             messages=await self._prepare_context(),
             max_tokens=config.openai.max_tokens,
             temperature=config.openai.temperature,
-            tools=reasoning_tool,  # Only ReasoningTool
-            tool_choice="required",  # Force tool use
+            tools=await self._prepare_tools(),
+            tool_choice={"type": "function", "function": {"name": ReasoningTool.tool_name}},
         ) as stream:
             async for event in stream:
-                # print(event)
                 if event.type == "chunk":
                     self.streaming_generator.add_chunk(event.chunk)
-            reasoning: ReasoningTool = (  # noqa
-                (await stream.get_final_completion()).choices[0].message.tool_calls[0].function.parsed_arguments  #
+            reasoning: ReasoningTool = (
+                (await stream.get_final_completion()).choices[0].message.tool_calls[0].function.parsed_arguments
             )
         self.conversation.append(
             {
@@ -120,21 +115,15 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
                     self.streaming_generator.add_chunk(event.chunk)
 
         completion = await stream.get_final_completion()
-        message = completion.choices[0].message
 
-        # Handle case when LLM returns text without tool call (usually when task is complete)
-        if message.tool_calls is None or len(message.tool_calls) == 0:
-            from sgr_deep_research.core.models import AgentStatesEnum
-            from sgr_deep_research.core.tools import AgentCompletionTool
-
+        try:
+            tool = (await stream.get_final_completion()).choices[0].message.tool_calls[0].function.parsed_arguments
+        except (IndexError, AttributeError):
             tool = AgentCompletionTool(
-                reasoning="Task completed, LLM returned final response without tool call",
-                completed_steps=[message.content or "Task completed successfully"],
-                status=AgentStatesEnum.COMPLETED,
+                reasoning="Task execution stopped, LLM returned final response without tool call",
+                completed_steps=[completion.choices[0].message.content or "Task completed successfully"],
+                status=AgentStatesEnum.FAILED,
             )
-        else:
-            tool = message.tool_calls[0].function.parsed_arguments
-
         if not isinstance(tool, BaseTool):
             raise ValueError("Selected tool is not a valid BaseTool instance")
         self.conversation.append(
