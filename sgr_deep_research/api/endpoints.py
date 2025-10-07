@@ -21,8 +21,6 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="SGR Deep Research API", version="1.0.0")
 
-# Add CORS middleware
-
 # ToDo: better to move to a separate service
 agents_storage: dict[str, BaseAgent] = {}
 
