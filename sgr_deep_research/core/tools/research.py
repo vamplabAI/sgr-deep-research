@@ -24,7 +24,7 @@ config = get_config()
 class CreateReportTool(BaseTool):
     """Create comprehensive detailed report with citations as a final step of
     research.
-    
+
     CRITICAL: Every factual claim in content MUST have inline citations [1], [2], [3].
     Citations must be integrated directly into sentences, not just listed at the end.
     """
@@ -55,7 +55,7 @@ class CreateReportTool(BaseTool):
         full_content = f"# {self.title}\n\n"
         full_content += f"*Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*\n\n"
         full_content += self.content + "\n\n"
-        
+
         # Add sources reference section
         if context.sources:
             full_content += "---\n\n"
@@ -161,6 +161,7 @@ research_agent_tools = [
 # Import and add Confluence tools if available
 try:
     from sgr_deep_research.core.tools.confluence import confluence_agent_tools
+
     research_agent_tools.extend(confluence_agent_tools)
 except ImportError:
     # Confluence tools not available (missing dependencies or config)

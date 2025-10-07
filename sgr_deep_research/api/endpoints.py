@@ -2,7 +2,6 @@ import asyncio
 import logging
 
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
 from sgr_deep_research.api.models import (

@@ -26,7 +26,7 @@ You have access to TWO types of information sources:
    - ConfluencePageTool: Get full content of specific pages
    - Use for: Internal documentation, technical guides, project information, company processes
    - Best for: Architecture docs, deployment guides, internal APIs, project specifications
-   
+
 WHEN TO USE WHICH SOURCE:
 - For questions about internal projects, company tech stack, deployment procedures → Use Confluence Tools
 - For questions about public information, market trends, external APIs → Use WebSearchTool
@@ -35,7 +35,7 @@ WHEN TO USE WHICH SOURCE:
 
 CONFLUENCE SPACES:
 - NDTALL: NDT Smart Platform documentation
-- NH: General project documentation  
+- NH: General project documentation
 - BAN: Banking projects
 - GPP: Project committees
 

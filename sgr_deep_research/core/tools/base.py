@@ -36,7 +36,7 @@ class BaseTool(BaseModel):
 
 class ClarificationTool(BaseTool):
     """Ask clarifying questions when facing ambiguous request.
-    
+
     Keep all fields concise - brief reasoning, short terms, and clear questions.
     """
 
@@ -116,7 +116,7 @@ class AgentCompletionTool(BaseTool):
 
 class ReasoningTool(BaseTool):
     """Agent Core - Determines next reasoning step with adaptive planning.
-    
+
     Keep all text fields concise and focused.
     """
 

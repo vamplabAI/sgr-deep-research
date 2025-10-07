@@ -16,7 +16,8 @@ logger.setLevel(logging.INFO)
 
 
 class ConfluenceSearchTool(BaseTool):
-    """Search Confluence knowledge base for internal documentation and information.
+    """Search Confluence knowledge base for internal documentation and
+    information.
 
     Use this tool to find internal documentation, technical guides, project info,
     architecture docs, and other knowledge stored in company Confluence.
@@ -61,7 +62,7 @@ class ConfluenceSearchTool(BaseTool):
         for i, page in enumerate(result.pages, starting_number):
             # Create SourceData-compatible entry
             from sgr_deep_research.core.models import SourceData
-            
+
             source = SourceData(
                 number=i,
                 title=page.title,
@@ -75,7 +76,6 @@ class ConfluenceSearchTool(BaseTool):
         formatted_result = f"Confluence Search Query: {self.query}\n"
         formatted_result += f"Total Found: {result.total_size} items\n"
         formatted_result += f"Showing: {len(result.pages)} results\n\n"
-
 
         formatted_result += "Results:\n\n"
 
@@ -148,7 +148,7 @@ class ConfluenceSpaceSearchTool(BaseTool):
         starting_number = len(context.sources) + 1
         for i, page in enumerate(result.pages, starting_number):
             from sgr_deep_research.core.models import SourceData
-            
+
             source = SourceData(
                 number=i,
                 title=page.title,
@@ -159,7 +159,7 @@ class ConfluenceSpaceSearchTool(BaseTool):
             )
             context.sources[page.url] = source
 
-        formatted_result = f"Confluence Space Search\n"
+        formatted_result = "Confluence Space Search\n"
         formatted_result += f"Query: {self.query}\n"
         formatted_result += f"Space: {self.space_key}\n"
         formatted_result += f"Total Found: {result.total_size} pages\n"
@@ -201,14 +201,12 @@ class ConfluencePageTool(BaseTool):
     - Previous ConfluenceSearchTool results (use 'Page ID' field)
     - Previous ConfluenceSpaceSearchTool results (use 'Page ID' field)
     - Direct URL (pageId parameter in URL)
-    
-    IMPORTANT: Page ID must be a numeric string like '4266429013', NOT space keys like 'GPP' or paths like 'GPP/PageName'.
     """
 
     reasoning: str = Field(description="Why retrieving this specific page")
     page_id: int = Field(
         description="Numeric Confluence page ID. Get it from search results 'Page ID' field or URL 'pageId' parameter.",
-        gt=0
+        gt=0,
     )
 
     def __init__(self, **data):
@@ -238,7 +236,7 @@ class ConfluencePageTool(BaseTool):
 
         # Add page to context sources for citations
         from sgr_deep_research.core.models import SourceData
-        
+
         # Check if this page is already in sources, if not add it
         if page.url not in context.sources:
             starting_number = len(context.sources) + 1
@@ -252,7 +250,7 @@ class ConfluencePageTool(BaseTool):
             )
             context.sources[page.url] = source
 
-        formatted_result = f"Confluence Page\n"
+        formatted_result = "Confluence Page\n"
         formatted_result += f"{'='*80}\n\n"
         formatted_result += f"Title: {page.title}\n"
         formatted_result += f"ID: {page.id}\n"
