@@ -18,18 +18,11 @@ tavily:
 
 # Confluence Configuration (Optional - for internal knowledge base search)
 confluence:
+  enabled: true                              # Enable/disable Confluence tools
   base_url: "https://conf.yourcompany.com"  # Your Confluence base URL
   username: "your-username"                  # Confluence username
   password: "your-password-or-api-token"     # Confluence password or API token
   timeout: 30.0                              # Request timeout in seconds
-
-# Smart Platform Configuration (Optional - for KNN/vector search in knowledge base)
-smart_platform:
-  base_url: "https://smartplatform-dev.neuraldeep.tech"  # Smart Platform API base URL
-  api_key: "your-base64-encoded-credentials"              # Basic auth credentials (base64 encoded)
-  agent_id: "your-agent-id-here"                          # Smart Platform agent ID
-  chat_id: "your-chat-id-here"                            # Default chat ID for queries
-  timeout: 30.0                                           # Request timeout in seconds
 
 # Search Settings
 search:

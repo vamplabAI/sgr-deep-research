@@ -24,8 +24,8 @@ class ConfluenceFullTextSearchTool(BaseTool):
     Best practices:
     - Use specific technical terms and project names
     - Search queries in SAME LANGUAGE as user request
-    - For Russian requests use Russian: "архитектура SmartPlatform"
-    - For English requests use English: "SmartPlatform architecture"
+    - For Russian requests use Russian: "архитектура системы"
+    - For English requests use English: "system architecture"
     - include_content=True when you need full page text for analysis
     """
 
@@ -118,11 +118,6 @@ class ConfluenceSpaceFullTextSearchTool(BaseTool):
 
     Use when you know the specific space (project/team area) to search in.
     More precise than general search when space is known.
-
-    Common spaces:
-    - NDTALL - NDT Smart Platform documentation
-    - NH - General project documentation
-    - BAN - Banking projects
     """
 
     tool_name: str = "confluence_space_full_text_search"
@@ -211,7 +206,6 @@ class ConfluencePageRetrievalTool(BaseTool):
     - Previous ConfluenceSpaceSearchTool results (use 'Page ID' field)
     - Direct URL (pageId parameter in URL)
     
-    IMPORTANT: Page ID must be a numeric string like '123456789', NOT space keys like 'GPP' or paths like 'GPP/PageName'.
     """
 
     reasoning: str = Field(description="Why retrieving this specific page")

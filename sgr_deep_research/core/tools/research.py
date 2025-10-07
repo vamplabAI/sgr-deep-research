@@ -202,23 +202,18 @@ research_agent_tools = [
     CreateReportTool,
 ]
 
-# Import and add Confluence tools if available
+# Import and add Confluence tools if enabled in config
 try:
-    from sgr_deep_research.core.tools.confluence import confluence_agent_tools
+    if config.confluence is not None and config.confluence.enabled:
+        from sgr_deep_research.core.tools.confluence import confluence_agent_tools
 
-    research_agent_tools.extend(confluence_agent_tools)
-except ImportError:
-    # Confluence tools not available (missing dependencies or config)
-    pass
-
-# Import and add Smart Platform vector search if configured
-try:
-    from sgr_deep_research.core.tools.confluence_vector_search import ConfluenceVectorSearchTool
-    from sgr_deep_research.settings import get_config
-    
-    config = get_config()
-    if config.smart_platform is not None:
-        research_agent_tools.append(ConfluenceVectorSearchTool)
-except (ImportError, AttributeError):
-    # Smart Platform not configured or not available
-    pass
+        research_agent_tools.extend(confluence_agent_tools)
+        logger.info("✅ Confluence tools enabled and loaded")
+    else:
+        logger.info("ℹ️ Confluence tools disabled in config")
+except ImportError as e:
+    # Confluence tools not available (missing dependencies)
+    logger.warning(f"⚠️ Confluence tools not available: {e}")
+except AttributeError:
+    # Config doesn't have confluence section
+    logger.info("ℹ️ Confluence not configured")
