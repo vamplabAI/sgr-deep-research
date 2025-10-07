@@ -765,7 +765,7 @@ research_agent_tools = [
 ]
 
 # Confluence tools are dynamically added if available
-# Including: ConfluenceSearchTool, ConfluenceSpaceSearchTool, ConfluencePageTool, ConfluenceVectorSearchTool
+# Including: ConfluenceSearchTool, ConfluenceSpaceSearchTool, ConfluencePageTool
 ```
 
 **Цикл работы:**
@@ -835,7 +835,7 @@ research_agent_tools = [
 ]
 
 # Confluence tools are dynamically added if available
-# Including: ConfluenceSearchTool, ConfluenceSpaceSearchTool, ConfluencePageTool, ConfluenceVectorSearchTool
+# Including: ConfluenceSearchTool, ConfluenceSpaceSearchTool, ConfluencePageTool
 ```
 
 **Цикл работы:**
