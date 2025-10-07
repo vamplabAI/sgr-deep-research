@@ -18,7 +18,7 @@ tavily:
 
 # Confluence Configuration (Optional - for internal knowledge base search)
 confluence:
-  base_url: "https://conf.redmadrobot.com"  # Your Confluence base URL
+  base_url: "https://conf.yourcompany.com"  # Your Confluence base URL
   username: "your-username"                  # Confluence username
   password: "your-password-or-api-token"     # Confluence password or API token
   timeout: 30.0                              # Request timeout in seconds

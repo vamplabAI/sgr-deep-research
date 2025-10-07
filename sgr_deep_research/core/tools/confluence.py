@@ -24,8 +24,8 @@ class ConfluenceSearchTool(BaseTool):
     Best practices:
     - Use specific technical terms and project names
     - Search queries in SAME LANGUAGE as user request
-    - For Russian requests use Russian: "архитектура SmartPlatform"
-    - For English requests use English: "SmartPlatform architecture"
+    - For Russian requests use Russian: "архитектура проекта"
+    - For English requests use English: "project architecture"
     - include_content=True when you need full page text for analysis
     """
 
@@ -76,8 +76,6 @@ class ConfluenceSearchTool(BaseTool):
         formatted_result += f"Total Found: {result.total_size} items\n"
         formatted_result += f"Showing: {len(result.pages)} results\n\n"
 
-        if result.search_duration:
-            formatted_result += f"Search Duration: {result.search_duration}ms\n\n"
 
         formatted_result += "Results:\n\n"
 
@@ -117,14 +115,13 @@ class ConfluenceSpaceSearchTool(BaseTool):
     More precise than general search when space is known.
 
     Common spaces:
-    - NDTALL - NDT Smart Platform documentation
-    - NH - General project documentation
-    - BAN - Banking projects
+    - Use space keys from your Confluence instance
+    - Example: DOCS, PROJ, TEAM
     """
 
     reasoning: str = Field(description="Why searching this specific space")
     query: str = Field(description="Search query in same language as user request")
-    space_key: str = Field(description="Confluence space key (e.g., 'NDTALL', 'NH', 'BAN')")
+    space_key: str = Field(description="Confluence space key (e.g., 'DOCS', 'PROJ', 'TEAM')")
     max_results: int = Field(default=10, description="Maximum results", ge=1, le=25)
     include_content: bool = Field(
         default=False,
@@ -209,10 +206,9 @@ class ConfluencePageTool(BaseTool):
     """
 
     reasoning: str = Field(description="Why retrieving this specific page")
-    page_id: str = Field(
-        description="Confluence page ID - MUST be numeric string like '4266429013'. "
-        "Get it from search results 'Page ID' field or URL 'pageId' parameter. "
-        "NOT space key (like 'GPP') or page path (like 'GPP/Zaman')."
+    page_id: int = Field(
+        description="Numeric Confluence page ID. Get it from search results 'Page ID' field or URL 'pageId' parameter.",
+        gt=0
     )
 
     def __init__(self, **data):
