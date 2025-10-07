@@ -217,21 +217,6 @@ class ConfluencePageTool(BaseTool):
 
     def __call__(self, context: ResearchContext) -> str:
         """Retrieve Confluence page content."""
-        
-        # Validate page_id format
-        if not self.page_id.isdigit():
-            error_msg = (
-                f"❌ Invalid page_id format: '{self.page_id}'\n\n"
-                f"Page ID must be numeric (e.g., '4266429013'), not a space key or path.\n"
-                f"To get the correct page ID:\n"
-                f"1. Use ConfluenceSearchTool or ConfluenceSpaceSearchTool first\n"
-                f"2. Look for 'Page ID' field in results\n"
-                f"3. Use that numeric ID with this tool\n\n"
-                f"Example: If search shows 'Page ID: 4266429013', use '4266429013' not 'GPP/Zaman'."
-            )
-            logger.error(error_msg)
-            return error_msg
-        
         logger.info(f"📄 Retrieving Confluence page: {self.page_id}")
 
         try:
