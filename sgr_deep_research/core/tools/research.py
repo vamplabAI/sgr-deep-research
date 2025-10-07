@@ -144,9 +144,10 @@ class WebSearchTool(BaseTool):
 
 class ExtractPageContentTool(BaseTool):
     """Extract full content from specific web pages using Tavily Extract API.
-    
-    Use this tool when you need detailed information from specific URLs found in web search.
-    This tool fetches and extracts the complete page content in readable format.
+
+    Use this tool when you need detailed information from specific URLs
+    found in web search. This tool fetches and extracts the complete
+    page content in readable format.
     """
 
     reasoning: str = Field(description="Why extract these specific pages")
@@ -182,7 +183,7 @@ class ExtractPageContentTool(BaseTool):
             if url in context.sources:
                 source = context.sources[url]
                 if source.full_content:
-                    content_preview = source.full_content[:config.scraping.content_limit]
+                    content_preview = source.full_content[: config.scraping.content_limit]
                     formatted_result += (
                         f"{str(source)}\n\n**Full Content:**\n"
                         f"{content_preview}\n\n"

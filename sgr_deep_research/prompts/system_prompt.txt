@@ -66,7 +66,7 @@ AGENT CONTROL TOOLS (Workflow Management):
     - Finalize research task and complete agent execution
     - Use when: All steps completed OR task cannot be completed
     - Status: COMPLETED or FAILED
-   
+
 WHEN TO USE WHICH TOOL:
 - For questions about internal projects, company tech stack, deployment procedures → Use ConfluenceSearchTool or ConfluenceSpaceSearchTool
 - For questions about public information, market trends, external APIs → Use WebSearchTool

@@ -64,8 +64,10 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
 
     async def _reasoning_phase(self) -> ReasoningTool:
         # Only provide ReasoningTool for reasoning phase to force its use
-        reasoning_tool = [pydantic_function_tool(ReasoningTool, name=ReasoningTool.tool_name, description=ReasoningTool.description)]
-        
+        reasoning_tool = [
+            pydantic_function_tool(ReasoningTool, name=ReasoningTool.tool_name, description=ReasoningTool.description)
+        ]
+
         async with self.openai_client.chat.completions.stream(
             model=config.openai.model,
             messages=await self._prepare_context(),
@@ -116,18 +118,19 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
             async for event in stream:
                 if event.type == "chunk":
                     self.streaming_generator.add_chunk(event.chunk)
-        
+
         completion = await stream.get_final_completion()
         message = completion.choices[0].message
-        
+
         # Handle case when LLM returns text without tool call (usually when task is complete)
         if message.tool_calls is None or len(message.tool_calls) == 0:
-            from sgr_deep_research.core.tools import AgentCompletionTool
             from sgr_deep_research.core.models import AgentStatesEnum
+            from sgr_deep_research.core.tools import AgentCompletionTool
+
             tool = AgentCompletionTool(
                 reasoning="Task completed, LLM returned final response without tool call",
                 completed_steps=[message.content or "Task completed successfully"],
-                status=AgentStatesEnum.COMPLETED
+                status=AgentStatesEnum.COMPLETED,
             )
         else:
             tool = message.tool_calls[0].function.parsed_arguments

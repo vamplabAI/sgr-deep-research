@@ -72,7 +72,10 @@ class BaseAgent:
         self.logger.info(f"✅ Clarification received: {clarifications[:2000]}...")
 
     def _log_reasoning(self, result: BaseTool) -> None:
-        """Log reasoning step. Works with ReasoningTool or any other BaseTool."""
+        """Log reasoning step.
+
+        Works with ReasoningTool or any other BaseTool.
+        """
         # Handle ReasoningTool specifically
         if isinstance(result, ReasoningTool):
             next_step = result.remaining_steps[0] if result.remaining_steps else "Completing"
@@ -103,7 +106,7 @@ class BaseAgent:
    🔍 Clarifications Done: {self._context.clarifications_used}
 ###############################################"""
             )
-        
+
         self.log.append(
             {
                 "step_number": self._context.iteration,
@@ -148,17 +151,17 @@ class BaseAgent:
 
     async def _prepare_context(self) -> list[dict]:
         """Prepare conversation context with system prompt.
-        
+
         Optimized for OpenAI prompt caching per Anthropic best practices:
         - Static system prompt at the beginning (FULLY CACHED)
         - User messages contain date inline (no separate system message)
         - Sources are in tool results within conversation history
-        
+
         This ensures system prompt never changes → maximum cache efficiency.
         """
         # Static system prompt - will be cached by OpenAI
         system_prompt = PromptLoader.get_system_prompt()
-        
+
         # Structure: static system prompt + conversation
         # Date is already included in each user message
         return [

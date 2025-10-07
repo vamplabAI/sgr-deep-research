@@ -16,7 +16,8 @@ logger.setLevel(logging.INFO)
 
 
 class ConfluenceFullTextSearchTool(BaseTool):
-    """Full-text search in Confluence knowledge base for internal documentation.
+    """Full-text search in Confluence knowledge base for internal
+    documentation.
 
     Use this tool to find internal documentation, technical guides, project info,
     architecture docs, and other knowledge stored in company Confluence using full-text search.
@@ -64,7 +65,7 @@ class ConfluenceFullTextSearchTool(BaseTool):
         for i, page in enumerate(result.pages, starting_number):
             # Create SourceData-compatible entry
             from sgr_deep_research.core.models import SourceData
-            
+
             source = SourceData(
                 number=i,
                 title=page.title,
@@ -114,10 +115,11 @@ class ConfluenceFullTextSearchTool(BaseTool):
 
 
 class ConfluenceSpaceFullTextSearchTool(BaseTool):
-    """Full-text search within specific Confluence space for targeted information.
+    """Full-text search within specific Confluence space for targeted
+    information.
 
-    Use when you know the specific space (project/team area) to search in.
-    More precise than general search when space is known.
+    Use when you know the specific space (project/team area) to search
+    in. More precise than general search when space is known.
     """
 
     tool_name: str = "confluence_space_full_text_search"
@@ -152,7 +154,7 @@ class ConfluenceSpaceFullTextSearchTool(BaseTool):
         starting_number = len(context.sources) + 1
         for i, page in enumerate(result.pages, starting_number):
             from sgr_deep_research.core.models import SourceData
-            
+
             source = SourceData(
                 number=i,
                 title=page.title,
@@ -163,7 +165,7 @@ class ConfluenceSpaceFullTextSearchTool(BaseTool):
             )
             context.sources[page.url] = source
 
-        formatted_result = f"Confluence Space Search\n"
+        formatted_result = "Confluence Space Search\n"
         formatted_result += f"Query: {self.query}\n"
         formatted_result += f"Space: {self.space_key}\n"
         formatted_result += f"Total Found: {result.total_size} pages\n"
@@ -205,7 +207,6 @@ class ConfluencePageRetrievalTool(BaseTool):
     - Previous ConfluenceSearchTool results (use 'Page ID' field)
     - Previous ConfluenceSpaceSearchTool results (use 'Page ID' field)
     - Direct URL (pageId parameter in URL)
-    
     """
 
     reasoning: str = Field(description="Why retrieving this specific page")
@@ -221,7 +222,7 @@ class ConfluencePageRetrievalTool(BaseTool):
 
     def __call__(self, context: ResearchContext) -> str:
         """Retrieve Confluence page content."""
-        
+
         # Validate page_id format
         if not self.page_id.isdigit():
             error_msg = (
@@ -235,7 +236,7 @@ class ConfluencePageRetrievalTool(BaseTool):
             )
             logger.error(error_msg)
             return error_msg
-        
+
         logger.info(f"📄 Retrieving Confluence page: {self.page_id}")
 
         try:
@@ -257,7 +258,7 @@ class ConfluencePageRetrievalTool(BaseTool):
 
         # Add page to context sources for citations
         from sgr_deep_research.core.models import SourceData
-        
+
         # Check if this page is already in sources, if not add it
         if page.url not in context.sources:
             starting_number = len(context.sources) + 1
@@ -271,7 +272,7 @@ class ConfluencePageRetrievalTool(BaseTool):
             )
             context.sources[page.url] = source
 
-        formatted_result = f"Confluence Page\n"
+        formatted_result = "Confluence Page\n"
         formatted_result += f"{'='*80}\n\n"
         formatted_result += f"Title: {page.title}\n"
         formatted_result += f"ID: {page.id}\n"

@@ -2,8 +2,6 @@ import os
 from datetime import datetime
 from functools import cache
 
-from sgr_deep_research.core.models import SourceData
-from sgr_deep_research.core.tools import BaseTool
 from sgr_deep_research.settings import get_config
 
 config = get_config()
@@ -30,9 +28,9 @@ class PromptLoader:
     @cache
     def get_system_prompt(cls) -> str:
         """Get static system prompt for caching optimization.
-        
-        Returns static prompt without dynamic data (date, sources)
-        to enable OpenAI prompt caching.
+
+        Returns static prompt without dynamic data (date, sources) to
+        enable OpenAI prompt caching.
         """
         template = cls._load_prompt_file(config.prompts.system_prompt_file)
         return template
@@ -40,28 +38,24 @@ class PromptLoader:
     @classmethod
     def _get_current_date(cls) -> str:
         """Get current date in ISO format for user messages."""
-        return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     @classmethod
     def get_initial_user_request(cls, task: str) -> str:
         """Get formatted initial user request with current date.
-        
-        Date is included in user message to keep system prompt static for caching.
+
+        Date is included in user message to keep system prompt static
+        for caching.
         """
         template = cls._load_prompt_file("initial_user_request.txt")
-        return template.format(
-            task=task,
-            current_date=cls._get_current_date()
-        )
+        return template.format(task=task, current_date=cls._get_current_date())
 
     @classmethod
     def get_clarification_response(cls, clarifications: str) -> str:
         """Get formatted clarification response with current date.
-        
-        Date is included in user message to keep system prompt static for caching.
+
+        Date is included in user message to keep system prompt static
+        for caching.
         """
         template = cls._load_prompt_file("clarification_response.txt")
-        return template.format(
-            clarifications=clarifications,
-            current_date=cls._get_current_date()
-        )
+        return template.format(clarifications=clarifications, current_date=cls._get_current_date())
