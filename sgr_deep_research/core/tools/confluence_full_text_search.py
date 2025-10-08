@@ -15,16 +15,19 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-class ConfluenceSearchTool(BaseTool):
-    """Search company's internal Confluence knowledge base across all spaces.
+class ConfluenceFullTextSearchTool(BaseTool):
+    """Full-text search in Confluence knowledge base for internal
+    documentation.
 
-    Use for: Internal documentation, technical guides, project information, company processes
-    Best for: Architecture docs, deployment guides, internal APIs, project specifications
+    Use this tool to find internal documentation, technical guides, project info,
+    architecture docs, and other knowledge stored in company Confluence using full-text search.
 
-    Tips:
+    Best practices:
     - Use specific technical terms and project names
     - Search queries in SAME LANGUAGE as user request
-    - Set include_content=True when you need full page text for analysis
+    - For Russian requests use Russian: "архитектура системы"
+    - For English requests use English: "system architecture"
+    - include_content=True when you need full page text for analysis
     """
 
     reasoning: str = Field(description="Why searching Confluence and what information is expected")
@@ -74,6 +77,9 @@ class ConfluenceSearchTool(BaseTool):
         formatted_result += f"Total Found: {result.total_size} items\n"
         formatted_result += f"Showing: {len(result.pages)} results\n\n"
 
+        if result.search_duration:
+            formatted_result += f"Search Duration: {result.search_duration}ms\n\n"
+
         formatted_result += "Results:\n\n"
 
         for i, page in enumerate(result.pages, 1):
@@ -105,20 +111,17 @@ class ConfluenceSearchTool(BaseTool):
         return formatted_result
 
 
-class ConfluenceSpaceSearchTool(BaseTool):
-    """Search within specific Confluence space for targeted information.
+class ConfluenceSpaceFullTextSearchTool(BaseTool):
+    """Full-text search within specific Confluence space for targeted
+    information.
 
-    Use when you know the specific space (project/team area) to search in.
-    More precise than general search when space is known.
-
-    Common spaces:
-    - Use space keys from your Confluence instance
-    - Example: DOCS, PROJ, TEAM
+    Use when you know the specific space (project/team area) to search
+    in. More precise than general search when space is known.
     """
 
     reasoning: str = Field(description="Why searching this specific space")
     query: str = Field(description="Search query in same language as user request")
-    space_key: str = Field(description="Confluence space key (e.g., 'DOCS', 'PROJ', 'TEAM')")
+    space_key: str = Field(description="Confluence space key (e.g., 'NDTALL', 'NH', 'BAN')")
     max_results: int = Field(default=10, description="Maximum results", ge=1, le=25)
     include_content: bool = Field(
         default=False,
@@ -188,7 +191,7 @@ class ConfluenceSpaceSearchTool(BaseTool):
         return formatted_result
 
 
-class ConfluencePageTool(BaseTool):
+class ConfluencePageRetrievalTool(BaseTool):
     """Retrieve full content of specific Confluence page by ID.
 
     Use when you have page ID from search results and need complete page content.
@@ -201,9 +204,10 @@ class ConfluencePageTool(BaseTool):
     """
 
     reasoning: str = Field(description="Why retrieving this specific page")
-    page_id: int = Field(
-        description="Numeric Confluence page ID. Get it from search results 'Page ID' field or URL 'pageId' parameter.",
-        gt=0,
+    page_id: str = Field(
+        description="Confluence page ID - MUST be numeric string (e.g., '123456789'). "
+        "Get it from search results 'Page ID' field or URL 'pageId' parameter. "
+        "NOT space key (like 'GPP') or page path (like 'GPP/Zaman')."
     )
 
     def __init__(self, **data):
@@ -212,6 +216,21 @@ class ConfluencePageTool(BaseTool):
 
     def __call__(self, context: ResearchContext) -> str:
         """Retrieve Confluence page content."""
+
+        # Validate page_id format
+        if not self.page_id.isdigit():
+            error_msg = (
+                f"❌ Invalid page_id format: '{self.page_id}'\n\n"
+                f"Page ID must be numeric (e.g., '123456789'), not a space key or path.\n"
+                f"To get the correct page ID:\n"
+                f"1. Use ConfluenceSearchTool or ConfluenceSpaceSearchTool first\n"
+                f"2. Look for 'Page ID' field in results\n"
+                f"3. Use that numeric ID with this tool\n\n"
+                f"Example: If search shows 'Page ID: 123456789', use '123456789' not 'GPP/Zaman'."
+            )
+            logger.error(error_msg)
+            return error_msg
+
         logger.info(f"📄 Retrieving Confluence page: {self.page_id}")
 
         try:
@@ -279,8 +298,8 @@ class ConfluencePageTool(BaseTool):
         return formatted_result
 
 
-confluence_agent_tools = [
-    ConfluenceSearchTool,
-    ConfluenceSpaceSearchTool,
-    ConfluencePageTool,
+confluence_full_text_search_tools = [
+    ConfluenceFullTextSearchTool,
+    ConfluenceSpaceFullTextSearchTool,
+    ConfluencePageRetrievalTool,
 ]

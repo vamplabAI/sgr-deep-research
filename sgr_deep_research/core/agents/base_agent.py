@@ -64,7 +64,7 @@ class BaseAgent:
 
     async def provide_clarification(self, clarifications: str):
         """Receive clarification from external source (e.g. user input)"""
-        self.conversation.append({"role": "user", "content": f"CLARIFICATIONS: {clarifications}"})
+        self.conversation.append({"role": "user", "content": PromptLoader.get_clarification_template(clarifications)})
         self._context.clarifications_used += 1
         self._context.clarification_received.set()
         self._context.state = AgentStatesEnum.RESEARCHING
@@ -74,18 +74,18 @@ class BaseAgent:
         next_step = result.remaining_steps[0] if result.remaining_steps else "Completing"
         self.logger.info(
             f"""
-###############################################
-🤖 LLM RESPONSE DEBUG:
-   🧠 Reasoning Steps: {result.reasoning_steps}
-   📊 Current Situation: '{result.current_situation[:400]}...'
-   📋 Plan Status: '{result.plan_status[:400]}...'
-   🔍 Searches Done: {self._context.searches_used}
-   🔍 Clarifications Done: {self._context.clarifications_used}
-   ✅ Enough Data: {result.enough_data}
-   📝 Remaining Steps: {result.remaining_steps}
-   🏁 Task Completed: {result.task_completed}
-   ➡️ Next Step: {next_step}
-###############################################"""
+    ###############################################
+    🤖 LLM RESPONSE DEBUG:
+       🧠 Reasoning Steps: {result.reasoning_steps}
+       📊 Current Situation: '{result.current_situation[:400]}...'
+       📋 Plan Status: '{result.plan_status[:400]}...'
+       🔍 Searches Done: {self._context.searches_used}
+       🔍 Clarifications Done: {self._context.clarifications_used}
+       ✅ Enough Data: {result.enough_data}
+       📝 Remaining Steps: {result.remaining_steps}
+       🏁 Task Completed: {result.task_completed}
+       ➡️ Next Step: {next_step}
+    ###############################################"""
         )
         self.log.append(
             {
@@ -130,12 +130,10 @@ class BaseAgent:
         json.dump(agent_log, open(filepath, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
 
     async def _prepare_context(self) -> list[dict]:
-        """Prepare conversation context with system prompt."""
-        system_prompt = PromptLoader.get_system_prompt(
-            sources=list(self._context.sources.values()),
-            available_tools=self.toolkit,
-        )
-        return [{"role": "system", "content": system_prompt}, *self.conversation]
+        return [
+            {"role": "system", "content": PromptLoader.get_system_prompt()},
+            *self.conversation,
+        ]
 
     async def _prepare_tools(self) -> list[ChatCompletionFunctionToolParam]:
         """Prepare available tools for current agent state and progress."""
@@ -167,7 +165,7 @@ class BaseAgent:
             [
                 {
                     "role": "user",
-                    "content": f"\nORIGINAL USER REQUEST: '{self.task}'\n",
+                    "content": PromptLoader.get_initial_user_request(self.task),
                 }
             ]
         )

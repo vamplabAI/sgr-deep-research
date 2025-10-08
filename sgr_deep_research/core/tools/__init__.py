@@ -17,6 +17,7 @@ from sgr_deep_research.core.tools.confluence import (
 )
 from sgr_deep_research.core.tools.research import (
     CreateReportTool,
+    ExtractPageContentTool,
     WebSearchTool,
     research_agent_tools,
 )
@@ -27,6 +28,7 @@ __all__ = [
     "ClarificationTool",
     "GeneratePlanTool",
     "WebSearchTool",
+    "ExtractPageContentTool",
     "AdaptPlanTool",
     "CreateReportTool",
     "AgentCompletionTool",

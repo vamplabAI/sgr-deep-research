@@ -32,6 +32,7 @@ class TavilyConfig(BaseModel):
 class ConfluenceConfig(BaseModel):
     """Confluence API settings."""
 
+    enabled: bool = Field(default=True, description="Enable/disable Confluence tools")
     base_url: str = Field(description="Confluence base URL (e.g., https://conf.company.com)")
     username: str = Field(description="Confluence username")
     password: str = Field(description="Confluence password or API token")

@@ -88,22 +88,24 @@ class CreateReportTool(BaseTool):
 
 
 class WebSearchTool(BaseTool):
-    """Gather information.
+    """Search the internet for public information, news, statistics, and
+    general knowledge.
 
-    - Use SPECIFIC terms and context in search queries
-    - For acronyms like "SGR", add context: "SGR Schema-Guided Reasoning"
+    Use for: Public information, news, market trends, external APIs, general knowledge
+    Returns: Page titles, URLs, and short snippets (100 characters)
+    Best for: Quick overview, finding relevant pages
+
+    Tips:
+    - Use SPECIFIC terms and context in queries
+    - For acronyms, add context: "SGR Schema-Guided Reasoning"
     - Use quotes for exact phrases: "Structured Output OpenAI"
-    - SEARCH QUERIES in SAME LANGUAGE as user request
-    - scrape_content=True for deeper analysis (fetches full page content)
+    - Search queries in SAME LANGUAGE as user request
+    - Use ExtractPageContentTool to get full content from found URLs
     """
 
     reasoning: str = Field(description="Why this search is needed and what to expect")
     query: str = Field(description="Search query in same language as user request")
     max_results: int = Field(default=10, description="Maximum results", ge=1, le=10)
-    scrape_content: bool = Field(
-        default=False,
-        description="Fetch full page content for deeper analysis",
-    )
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -117,6 +119,7 @@ class WebSearchTool(BaseTool):
         sources = self._search_service.search(
             query=self.query,
             max_results=self.max_results,
+            include_raw_content=False,
         )
 
         sources = TavilySearchService.rearrange_sources(sources, starting_number=len(context.sources) + 1)
@@ -133,36 +136,92 @@ class WebSearchTool(BaseTool):
         context.searches.append(search_result)
 
         formatted_result = f"Search Query: {search_result.query}\n\n"
-
-        if search_result.answer:
-            formatted_result += f"AI Answer: {search_result.answer}\n\n"
-
-        formatted_result += "Search Results:\n\n"
+        formatted_result += "Search Results (titles, links, short snippets):\n\n"
 
         for source in sources:
-            if source.full_content:
-                formatted_result += (
-                    f"{str(source)}\n\n**Full Content (Markdown):**\n"
-                    f"{source.full_content[: config.scraping.content_limit]}\n\n"
-                )
-            else:
-                formatted_result += f"{str(source)}\n{source.snippet}\n\n"
+            snippet = source.snippet[:100] + "..." if len(source.snippet) > 100 else source.snippet
+            formatted_result += f"{str(source)}\n{snippet}\n\n"
 
         context.searches_used += 1
         logger.debug(formatted_result)
         return formatted_result
 
 
+class ExtractPageContentTool(BaseTool):
+    """Extract full detailed content from specific web pages.
+
+    Use for: Getting complete page content from URLs found in web search
+    Returns: Full page content in readable format (via Tavily Extract API)
+    Best for: Deep analysis of specific pages, extracting structured data
+
+    Usage: Call after WebSearchTool to get detailed information from promising URLs
+    """
+
+    reasoning: str = Field(description="Why extract these specific pages")
+    urls: list[str] = Field(description="List of URLs to extract full content from", min_length=1, max_length=5)
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self._search_service = TavilySearchService()
+
+    def __call__(self, context: ResearchContext) -> str:
+        """Extract full content from specified URLs."""
+
+        logger.info(f"📄 Extracting content from {len(self.urls)} URLs")
+
+        sources = self._search_service.extract(urls=self.urls)
+
+        # Update existing sources instead of overwriting
+        for source in sources:
+            if source.url in context.sources:
+                # URL already exists, update with full content but keep original number
+                existing = context.sources[source.url]
+                existing.full_content = source.full_content
+                existing.char_count = source.char_count
+            else:
+                # New URL, add with next number
+                source.number = len(context.sources) + 1
+                context.sources[source.url] = source
+
+        formatted_result = "Extracted Page Content:\n\n"
+
+        # Format results using sources from context (to get correct numbers)
+        for url in self.urls:
+            if url in context.sources:
+                source = context.sources[url]
+                if source.full_content:
+                    content_preview = source.full_content[: config.scraping.content_limit]
+                    formatted_result += (
+                        f"{str(source)}\n\n**Full Content:**\n"
+                        f"{content_preview}\n\n"
+                        f"*[Content length: {source.char_count} characters]*\n\n"
+                        "---\n\n"
+                    )
+                else:
+                    formatted_result += f"{str(source)}\n*Failed to extract content*\n\n"
+
+        logger.debug(formatted_result[:500])
+        return formatted_result
+
+
 research_agent_tools = [
     WebSearchTool,
+    ExtractPageContentTool,
     CreateReportTool,
 ]
 
-# Import and add Confluence tools if available
+# Import and add Confluence tools if enabled in config
 try:
-    from sgr_deep_research.core.tools.confluence import confluence_agent_tools
+    if config.confluence is not None and config.confluence.enabled:
+        from sgr_deep_research.core.tools.confluence import confluence_agent_tools
 
-    research_agent_tools.extend(confluence_agent_tools)
-except ImportError:
-    # Confluence tools not available (missing dependencies or config)
-    pass
+        research_agent_tools.extend(confluence_agent_tools)
+        logger.info("✅ Confluence tools enabled and loaded")
+    else:
+        logger.info("ℹ️ Confluence tools disabled in config")
+except ImportError as e:
+    # Confluence tools not available (missing dependencies)
+    logger.warning(f"⚠️ Confluence tools not available: {e}")
+except AttributeError:
+    # Config doesn't have confluence section
+    logger.info("ℹ️ Confluence not configured")
