@@ -67,6 +67,7 @@ class AppConfig(BaseModel):
     scraping: ScrapingConfig = Field(default_factory=ScrapingConfig, description="Scraping settings")
     execution: ExecutionConfig = Field(default_factory=ExecutionConfig, description="Execution settings")
     prompts: PromptsConfig = Field(default_factory=PromptsConfig, description="Prompts settings")
+    mcp: dict = Field(default_factory=dict, description="MCP settings")
 
 
 class ServerConfig(BaseModel):

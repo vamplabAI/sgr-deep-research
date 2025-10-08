@@ -2,39 +2,70 @@
 #    uv pip compile pyproject.toml -o requirements.txt
 annotated-types==0.7.0
     # via pydantic
-anyio==4.10.0
+anyio==4.11.0
     # via
     #   httpx
+    #   mcp
     #   openai
+    #   sse-starlette
     #   starlette
+attrs==25.4.0
+    # via
+    #   cyclopts
+    #   jsonschema
+    #   referencing
+authlib==1.6.5
+    # via fastmcp
 babel==2.17.0
     # via courlan
-certifi==2025.8.3
+certifi==2025.10.5
     # via
     #   httpcore
     #   httpx
     #   requests
     #   trafilatura
+cffi==2.0.0
+    # via cryptography
 charset-normalizer==3.4.3
     # via
     #   htmldate
     #   requests
     #   trafilatura
-click==8.2.1
+click==8.3.0
     # via uvicorn
+colorama==0.4.6
+    # via
+    #   click
+    #   tqdm
 courlan==1.3.2
     # via trafilatura
+cryptography==46.0.2
+    # via authlib
+cyclopts==3.24.0
+    # via fastmcp
 dateparser==1.2.2
     # via htmldate
 defusedxml==0.7.1
     # via youtube-transcript-api
 distro==1.9.0
     # via openai
+dnspython==2.8.0
+    # via email-validator
+docstring-parser==0.17.0
+    # via
+    #   cyclopts
+    #   tooldantic
+docutils==0.22.2
+    # via rich-rst
+email-validator==2.3.0
+    # via pydantic
 envyaml==1.10.211231
     # via sgr-deep-research (pyproject.toml)
 exceptiongroup==1.3.0
-    # via anyio
-fastapi==0.116.1
+    # via fastmcp
+fastapi==0.118.2
+    # via sgr-deep-research (pyproject.toml)
+fastmcp==2.12.4
     # via sgr-deep-research (pyproject.toml)
 h11==0.16.0
     # via
@@ -47,17 +78,40 @@ httpcore==1.0.9
 httpx==0.28.1
     # via
     #   sgr-deep-research (pyproject.toml)
+    #   fastmcp
+    #   mcp
     #   openai
     #   tavily-python
+httpx-sse==0.4.2
+    # via mcp
 idna==3.10
     # via
     #   anyio
+    #   email-validator
     #   httpx
     #   requests
-jiter==0.10.0
+isodate==0.7.2
+    # via openapi-core
+jiter==0.11.0
     # via openai
+jsonschema==4.25.1
+    # via
+    #   mcp
+    #   openapi-core
+    #   openapi-schema-validator
+    #   openapi-spec-validator
+jsonschema-path==0.3.4
+    # via
+    #   openapi-core
+    #   openapi-spec-validator
+jsonschema-specifications==2025.9.1
+    # via
+    #   jsonschema
+    #   openapi-schema-validator
 justext==3.0.2
     # via trafilatura
+lazy-object-proxy==1.12.0
+    # via openapi-spec-validator
 lxml==5.4.0
     # via
     #   sgr-deep-research (pyproject.toml)
@@ -65,66 +119,127 @@ lxml==5.4.0
     #   justext
     #   lxml-html-clean
     #   trafilatura
-lxml-html-clean==0.4.2
+lxml-html-clean==0.4.3
     # via lxml
 markdown-it-py==4.0.0
     # via rich
+markupsafe==3.0.3
+    # via werkzeug
+mcp==1.16.0
+    # via fastmcp
 mdurl==0.1.2
     # via markdown-it-py
-openai==1.106.1
+more-itertools==10.8.0
+    # via openapi-core
+openai==2.2.0
     # via sgr-deep-research (pyproject.toml)
-pydantic==2.11.7
+openapi-core==0.19.5
+    # via fastmcp
+openapi-pydantic==0.5.1
+    # via fastmcp
+openapi-schema-validator==0.6.3
+    # via
+    #   openapi-core
+    #   openapi-spec-validator
+openapi-spec-validator==0.7.2
+    # via openapi-core
+parse==1.20.2
+    # via openapi-core
+pathable==0.4.4
+    # via jsonschema-path
+pycparser==2.23
+    # via cffi
+pydantic==2.12.0
     # via
     #   sgr-deep-research (pyproject.toml)
     #   fastapi
+    #   fastmcp
+    #   mcp
     #   openai
+    #   openapi-pydantic
     #   pydantic-settings
-pydantic-core==2.33.2
+    #   tooldantic
+pydantic-core==2.41.1
     # via pydantic
-pydantic-settings==2.10.1
-    # via sgr-deep-research (pyproject.toml)
+pydantic-settings==2.11.0
+    # via
+    #   sgr-deep-research (pyproject.toml)
+    #   mcp
 pygments==2.19.2
     # via rich
+pyperclip==1.11.0
+    # via fastmcp
 python-dateutil==2.9.0.post0
     # via
     #   sgr-deep-research (pyproject.toml)
     #   dateparser
     #   htmldate
 python-dotenv==1.1.1
-    # via pydantic-settings
+    # via
+    #   fastmcp
+    #   pydantic-settings
+python-multipart==0.0.20
+    # via mcp
 pytz==2025.2
     # via dateparser
-pyyaml==6.0.2
+pyyaml==6.0.3
     # via
     #   sgr-deep-research (pyproject.toml)
     #   envyaml
-regex==2025.9.1
+    #   jsonschema-path
+referencing==0.36.2
+    # via
+    #   jsonschema
+    #   jsonschema-path
+    #   jsonschema-specifications
+regex==2025.9.18
     # via
     #   dateparser
     #   tiktoken
 requests==2.32.5
     # via
+    #   jsonschema-path
     #   tavily-python
     #   tiktoken
     #   youtube-transcript-api
+rfc3339-validator==0.1.4
+    # via openapi-schema-validator
 rich==14.1.0
-    # via sgr-deep-research (pyproject.toml)
+    # via
+    #   sgr-deep-research (pyproject.toml)
+    #   cyclopts
+    #   fastmcp
+    #   rich-rst
+rich-rst==1.3.1
+    # via cyclopts
+rpds-py==0.27.1
+    # via
+    #   jsonschema
+    #   referencing
 six==1.17.0
-    # via python-dateutil
+    # via
+    #   python-dateutil
+    #   rfc3339-validator
 sniffio==1.3.1
     # via
     #   anyio
     #   openai
 socksio==1.0.0
     # via sgr-deep-research (pyproject.toml)
-starlette==0.47.3
-    # via fastapi
-tavily-python==0.7.11
+sse-starlette==3.0.2
+    # via mcp
+starlette==0.48.0
+    # via
+    #   fastapi
+    #   mcp
+tavily-python==0.7.12
     # via sgr-deep-research (pyproject.toml)
-tiktoken==0.11.0
+tiktoken==0.12.0
     # via tavily-python
 tld==0.13.1
     # via courlan
+tooldantic @ git+https://github.com/nicholishen/tooldantic.git@b16592ba2b3a7892f01e9405c0c45b8819102ba9
+    # via sgr-deep-research (pyproject.toml)
 tqdm==4.67.1
     # via openai
 trafilatura==2.0.0
@@ -135,15 +250,18 @@ typing-extensions==4.15.0
     #   exceptiongroup
     #   fastapi
     #   openai
+    #   openapi-core
     #   pydantic
     #   pydantic-core
+    #   referencing
     #   starlette
     #   typing-inspection
-    #   uvicorn
-typing-inspection==0.4.1
+typing-inspection==0.4.2
     # via
     #   pydantic
     #   pydantic-settings
+tzdata==2025.2
+    # via tzlocal
 tzlocal==5.3.1
     # via dateparser
 urllib3==2.5.0
@@ -152,7 +270,11 @@ urllib3==2.5.0
     #   htmldate
     #   requests
     #   trafilatura
-uvicorn==0.35.0
-    # via sgr-deep-research (pyproject.toml)
+uvicorn==0.37.0
+    # via
+    #   sgr-deep-research (pyproject.toml)
+    #   mcp
+werkzeug==3.1.1
+    # via openapi-core
 youtube-transcript-api==1.2.2
     # via sgr-deep-research (pyproject.toml)

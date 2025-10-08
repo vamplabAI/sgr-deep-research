@@ -51,7 +51,9 @@ dependencies = [
     "pydantic-settings>=2.10.1",
     "fastapi>=0.116.1",
     "uvicorn>=0.35.0",
-    "lxml<6"
+    "lxml<6",
+    "fastmcp>=2.12.4",
+    "tooldantic",
 ]
 
 [project.urls]
@@ -91,3 +93,6 @@ version = {attr = "sgr_deep_research.__version__"}
 
 [tool.setuptools.package-data]
 "sgr_deep_research" = ["**/*.yaml", "**/*.yml", "**/*.json", "**/*.txt"]
+
+[tool.uv.sources]
+tooldantic = { git = "https://github.com/nicholishen/tooldantic.git" }

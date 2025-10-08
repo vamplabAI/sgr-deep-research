@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from fastapi import FastAPI, HTTPException
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
 from sgr_deep_research.api.models import (
@@ -19,18 +19,18 @@ from sgr_deep_research.core.models import AgentStatesEnum
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="SGR Deep Research API", version="1.0.0")
+router = APIRouter()
 
 # ToDo: better to move to a separate service
 agents_storage: dict[str, BaseAgent] = {}
 
 
-@app.get("/health", response_model=HealthResponse)
+@router.get("/health", response_model=HealthResponse)
 async def health_check():
     return HealthResponse()
 
 
-@app.get("/agents/{agent_id}/state", response_model=AgentStateResponse)
+@router.get("/agents/{agent_id}/state", response_model=AgentStateResponse)
 async def get_agent_state(agent_id: str):
     if agent_id not in agents_storage:
         raise HTTPException(status_code=404, detail="Agent not found")
@@ -45,7 +45,7 @@ async def get_agent_state(agent_id: str):
     )
 
 
-@app.get("/agents", response_model=AgentListResponse)
+@router.get("/agents", response_model=AgentListResponse)
 async def get_agents_list():
     agents_list = [
         AgentListItem(agent_id=agent.id, task=agent.task, state=agent._context.state)
@@ -55,7 +55,7 @@ async def get_agents_list():
     return AgentListResponse(agents=agents_list, total=len(agents_list))
 
 
-@app.get("/v1/models")
+@router.get("/v1/models")
 async def get_available_models():
     """Get list of available agent models."""
     return {
@@ -74,7 +74,7 @@ def extract_user_content_from_messages(messages):
     raise ValueError("User message not found in messages")
 
 
-@app.post("/agents/{agent_id}/provide_clarification")
+@router.post("/agents/{agent_id}/provide_clarification")
 async def provide_clarification(agent_id: str, request: ClarificationRequest):
     try:
         agent = agents_storage.get(agent_id)
@@ -105,7 +105,7 @@ def _is_agent_id(model_str: str) -> bool:
     return "_" in model_str and len(model_str) > 20
 
 
-@app.post("/v1/chat/completions")
+@router.post("/v1/chat/completions")
 async def create_chat_completion(request: ChatCompletionRequest):
     if not request.stream:
         raise HTTPException(status_code=501, detail="Only streaming responses are supported. Set 'stream=true'")
