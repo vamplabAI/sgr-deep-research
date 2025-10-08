@@ -564,6 +564,81 @@ See `docs/example_report.md` for a complete sample of SGR research output.
 
 ______________________________________________________________________
 
+## 📊 Benchmarking with SimpleQA
+
+The project includes benchmarking capabilities using the **SimpleQA Verified** dataset from DeepMind/Kaggle.
+
+### What is SimpleQA?
+
+SimpleQA Verified is a benchmark dataset designed to evaluate factual accuracy of AI systems. It contains questions with verified ground truth answers that can be graded as:
+- ✅ **CORRECT** - Answer fully contains the correct information
+- ❌ **INCORRECT** - Answer contains contradictions or false information
+- ⏭️ **NOT_ATTEMPTED** - System did not attempt to answer
+
+### Requirements
+
+Before running the benchmark, ensure you have:
+1. SGR Deep Research server running (`localhost:8010`)
+2. Access to an LLM judge model (e.g., GPT-4, Claude) for answer grading
+3. SimpleQA Verified dataset downloaded from [Kaggle](https://www.kaggle.com/datasets/deepmind/simpleqa-verified/data)
+
+### Running the Benchmark
+
+# Basic usage
+```bash
+python benchmark/run_simpleqa_bench.py \
+    --path_to_simpleqa ./data/simpleqa_verified.csv \
+    --path_to_sgr_reports ./reports \
+    --output_path ./results/simpleqa_bench_results.xlsx \
+    --judge_model_name gpt-4o \
+    --judge_model_base_url https://api.openai.com/v1 \
+    --judge_model_api_key YOUR_API_KEY
+```
+
+### Command Line Arguments
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `--path_to_simpleqa` | Yes | Path to simpleqa_verified.csv dataset |
+| `--path_to_sgr_reports` | Yes | Directory where SGR reports are saved |
+| `--output_path` | No | Output Excel file path (default: simpleqa_bench_results.xlsx) |
+| `--judge_model_name` | Yes | Name of the LLM judge model |
+| `--judge_model_base_url` | Yes | Base URL for judge model API |
+| `--judge_model_api_key` | Yes | API key for judge model |
+
+### Output Files
+
+The benchmark generates two files:
+
+1. **Results Excel** (`simpleqa_bench_results.xlsx`):
+   - Full results for each question
+   - Predicted answers vs ground truth
+   - Grade classifications
+   - Detailed grading reports
+
+2. **Metrics Summary** (`simpleqa_bench_results_metrics.txt`):
+   ```
+   F1 score: ...
+   Количество правильных: ...
+   Количество неправильных: ...
+   ```
+
+### Metrics Explained
+
+- **F1 Score**: Harmonic mean of precision and recall on attempted answers
+- **Correct Count**: Number of questions answered correctly
+- **Incorrect Count**: Number of questions answered incorrectly
+- **Not Attempted**: Questions where the system declined to answer
+
+### How It Works
+
+1. **Research Phase**: Each question is sent to SGR agent for deep research
+2. **Report Generation**: Agent creates a detailed markdown report
+3. **Answer Grading**: LLM judge evaluates the report against ground truth
+4. **Metrics Calculation**: F1 score and accuracy metrics are computed
+5. **Results Export**: Results saved to Excel with full grading details
+______________________________________________________________________
+
 <details>
 <summary>🛠️ <strong>Advanced Integration Examples</strong> - Production-ready code for streaming, monitoring & state management</summary>
 

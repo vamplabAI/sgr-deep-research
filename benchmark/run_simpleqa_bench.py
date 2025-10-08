@@ -99,7 +99,7 @@ if __name__ == "__main__":
 
     # For test
     # df_sample_10 = df.sample(10)
-    n_samples = 5
+    n_samples = 200
 
     df_sample = df.head(n_samples)
 
