@@ -88,7 +88,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run SimpleQA Benchmark")
     parser.add_argument('--path_to_simpleqa', type=str, required=True, help='Path to simpleqa_verified.csv')
     parser.add_argument('--path_to_sgr_reports', type=str, required=True, help='Path to SGR reports directory')
-    parser.add_argument('--output_path', type=str, required=False, help='Path to output Excel file', default='simpleqa_bench_results.xlsx')
+    parser.add_argument(
+        '--output_path', type=str, required=False,
+        help='Path to output Excel file', default='simpleqa_bench_results.xlsx'
+    )
 
     parser.add_argument('--judge_model_name', type=str, required=True, help='Judge model name')
     parser.add_argument('--judge_model_base_url', type=str, required=True, help='Judge model base URL')
