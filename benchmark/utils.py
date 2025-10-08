@@ -40,7 +40,7 @@ def grading_answer(report_path, problem, answer, judge_model_config):
 def call_sgr_agent(agent, problem):
     # Make research request
     try:
-        response = agent.chat.completions.create(
+        agent.chat.completions.create(
             model="sgr_auto_tool_calling_agent",
             messages=[{"role": "user", "content": problem}],
             temperature=0.4,
