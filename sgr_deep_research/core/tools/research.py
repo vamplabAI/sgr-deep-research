@@ -105,7 +105,12 @@ class WebSearchTool(BaseTool):
 
     reasoning: str = Field(description="Why this search is needed and what to expect")
     query: str = Field(description="Search query in same language as user request")
-    max_results: int = Field(default=10, description="Maximum results", ge=1, le=10)
+    max_results: int = Field(
+        default_factory=lambda: min(config.search.max_results, 10),
+        description="Maximum results",
+        ge=1,
+        le=10,
+    )
 
     def __init__(self, **data):
         super().__init__(**data)

@@ -117,12 +117,14 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
         completion = await stream.get_final_completion()
 
         try:
-            tool = (await stream.get_final_completion()).choices[0].message.tool_calls[0].function.parsed_arguments
-        except (IndexError, AttributeError):
+            tool = completion.choices[0].message.tool_calls[0].function.parsed_arguments
+        except (IndexError, AttributeError, TypeError):
+            # LLM returned a text response instead of a tool call - treat as completion
+            final_content = completion.choices[0].message.content or "Task completed successfully"
             tool = AgentCompletionTool(
-                reasoning="Task execution stopped, LLM returned final response without tool call",
-                completed_steps=[completion.choices[0].message.content or "Task completed successfully"],
-                status=AgentStatesEnum.FAILED,
+                reasoning="Agent decided to complete the task",
+                completed_steps=[final_content],
+                status=AgentStatesEnum.COMPLETED,
             )
         if not isinstance(tool, BaseTool):
             raise ValueError("Selected tool is not a valid BaseTool instance")

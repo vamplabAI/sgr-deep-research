@@ -54,6 +54,8 @@ dependencies = [
     "uvicorn>=0.35.0",
     "lxml<6",
     "bs4>=0.0.2",
+    "pandas>=2.3.3",
+    "openpyxl>=3.1.5"
 ]
 
 [project.urls]
