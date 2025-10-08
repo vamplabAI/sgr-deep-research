@@ -45,7 +45,17 @@ def simpleqa_run_task(row, judge_model_config, sgr_reports_path):
     
     if len(new_report) == 0:
         logger.error("Failed to create report")
-        return None
+        return {
+        "problem": problem,
+        "answer": answer,
+        "predicted_answer": "None",
+        "grade_str": "None",
+        "is_correct": False,
+        "is_incorrect": False,
+        "is_not_attempted": False,
+        "fail_search": True,
+        "grade_answer_report": "None",
+    }
     
     curr_report_path = os.path.join(sgr_reports_path, new_report[0])
     logger.info(f"Report created: {curr_report_path}")
@@ -68,6 +78,7 @@ def simpleqa_run_task(row, judge_model_config, sgr_reports_path):
         "is_correct": is_correct_val,
         "is_incorrect": is_incorrect_val,
         "is_not_attempted": is_not_attempted_val,
+        "fail_search": False,
         "grade_answer_report": grade_answer_report
     }
 
@@ -98,15 +109,25 @@ if __name__ == "__main__":
     df = pd.read_csv(simpleqa_path)
 
     # For test
-    # df_sample_10 = df.sample(10)
     n_samples = 200
 
     df_sample = df.head(n_samples)
 
     results_list = []
     
+    if os.path.exists(output_path):
+        results_df = pd.read_excel(output_path)
+        results_list = results_df.to_dict(orient="records")
+        processed_indices = set(range(len(results_df)))
+    else:
+        results_df = pd.DataFrame()
+        results_list = []
+        processed_indices = set()
+
     for idx, row in df_sample.iterrows():
-        logger.info(f"Processing problem: id:{idx}, problem:{row['problem']}")
+        if idx <= max(processed_indices):
+            continue
+        logger.info(f"Processing problem: idx:{idx}, problem:{row['problem']}")
         
         result_run_task = simpleqa_run_task(row, judge_model_config, sgr_reports_path)
 
