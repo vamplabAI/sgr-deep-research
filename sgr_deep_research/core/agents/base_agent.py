@@ -94,8 +94,9 @@ class BaseAgent:
             f"""
 ###############################################
 🛠️ TOOL EXECUTION DEBUG:
-   🔧 Tool Name: {tool.tool_name}
-   📋 Tool Model: {tool.model_dump_json(indent=2)}
+    🔧 Tool Name: {tool.tool_name}
+    📋 Tool Model: {tool.model_dump_json(indent=2)}
+    🔍 Result: '{result[:400]}...'
 ###############################################"""
         )
         self.log.append(
