@@ -41,7 +41,7 @@ class BaseAgent:
         self,
         task: str,
         toolkit: list[Type[BaseTool]] | None = None,
-        max_iterations: int = 10,
+        max_iterations: int = 20,
         max_clarifications: int = 3,
     ):
         self.id = f"{self.name}_{uuid.uuid4()}"

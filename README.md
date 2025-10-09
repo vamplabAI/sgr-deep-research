@@ -592,7 +592,9 @@ python benchmark/run_simpleqa_bench.py \
     --output_path ./results/simpleqa_bench_results.xlsx \
     --judge_model_name gpt-4o \
     --judge_model_base_url https://api.openai.com/v1 \
-    --judge_model_api_key YOUR_API_KEY
+    --judge_model_api_key YOUR_API_KEY \
+    --sgr_agent_name sgr-auto-tools-agent \
+    --n_samples 100
 ```
 
 ### Command Line Arguments
@@ -605,6 +607,8 @@ python benchmark/run_simpleqa_bench.py \
 | `--judge_model_name` | Yes | Name of the LLM judge model |
 | `--judge_model_base_url` | Yes | Base URL for judge model API |
 | `--judge_model_api_key` | Yes | API key for judge model |
+| `--sgr_agent_name` | Yes | SGR agent name (e.g., sgr-agent, sgr-tools-agent, sgr-auto-tools-agent) |
+| `--n_samples` | Yes | Number of samples from dataset to process |
 
 ### Output Files
 

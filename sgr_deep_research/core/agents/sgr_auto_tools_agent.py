@@ -16,7 +16,7 @@ class SGRAutoToolCallingResearchAgent(SGRToolCallingResearchAgent):
         toolkit: list[Type[BaseTool]] | None = None,
         max_clarifications: int = 3,
         max_searches: int = 4,
-        max_iterations: int = 5,
+        max_iterations: int = 10,
     ):
         super().__init__(task, toolkit, max_clarifications, max_searches, max_iterations)
         self.tool_choice: Literal["auto"] = "auto"

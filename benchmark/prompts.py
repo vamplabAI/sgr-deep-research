@@ -100,9 +100,7 @@ Predicted answer: {predicted_answer}
 ```
 
 Grade the predicted answer of this new question as one of:
-A: CORRECT
-B: INCORRECT
-C: NOT_ATTEMPTED
-
-Just return the letters "A", "B", or "C", with no text around it.
+CORRECT
+INCORRECT
+NOT_ATTEMPTED
 """.strip()
