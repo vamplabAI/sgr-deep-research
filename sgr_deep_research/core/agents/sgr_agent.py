@@ -116,3 +116,20 @@ class SGRResearchAgent(BaseAgent):
         self.streaming_generator.add_chunk_from_str(f"{result}\n")
         self._log_tool_execution(tool, result)
         return result
+
+
+if __name__ == "__main__":
+    import asyncio
+
+    async def main():
+        await MCP2ToolConverter().build_tools_from_mcp()
+        agent = SGRResearchAgent(
+            task="найди информацию о репозитории на гитхаб sgr-deep-research и ответь на вопрос, "
+            "какая основная концепция этого репозитория?",
+            max_iterations=5,
+            max_clarifications=2,
+            max_searches=3,
+        )
+        await agent.execute()
+
+    asyncio.run(main())

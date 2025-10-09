@@ -40,13 +40,15 @@ prompts:
 # Logging Settings
 logging:
   config_file: "logging_config.yaml"  # Logging configuration file path
-  level: "INFO"                       # Default logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
 
 mcp:
-  # https://gofastmcp.com/clients/transports#mcp-json-configuration-transport
-  mcpServers:
-    deepwiki:
-      url: "https://mcp.deepwiki.com/mcp"
+  context_limit: 15000               # Maximum context length from MCP server response
 
-    context7:
-      "url": "https://mcp.context7.com/mcp"
+  # https://gofastmcp.com/clients/transports#mcp-json-configuration-transport
+  transport_config:
+    mcpServers:
+      deepwiki:
+        url: "https://mcp.deepwiki.com/mcp"
+
+      context7:
+        url: "https://mcp.context7.com/mcp"

@@ -65,7 +65,13 @@ class LoggingConfig(BaseModel):
     """Logging configuration settings."""
 
     config_file: str = Field(default="logging_config.yaml", description="Logging configuration file path")
-    level: str = Field(default="INFO", description="Default logging level")
+
+
+class MCPConfig(BaseModel):
+    """MCP (Model Context Protocol) configuration settings."""
+
+    context_limit: int = Field(default=15000, gt=0, description="Maximum context length from MCP server response")
+    transport_config: dict = Field(default_factory=dict, description="MCP servers configuration")
 
 
 class AppConfig(BaseModel):
@@ -78,7 +84,7 @@ class AppConfig(BaseModel):
     execution: ExecutionConfig = Field(default_factory=ExecutionConfig, description="Execution settings")
     prompts: PromptsConfig = Field(default_factory=PromptsConfig, description="Prompts settings")
     logging: LoggingConfig = Field(default_factory=LoggingConfig, description="Logging settings")
-    mcp: dict = Field(default_factory=dict, description="MCP settings")
+    mcp: MCPConfig = Field(default_factory=MCPConfig, description="MCP settings")
 
 
 class ServerConfig(BaseModel):
@@ -104,7 +110,6 @@ def get_config() -> AppConfig:
 def setup_logging() -> None:
     """Setup logging configuration from YAML file."""
     logging_config_path = Path(get_config().logging.config_file)
-    print(logging_config_path)
     if not logging_config_path.exists():
         raise FileNotFoundError(f"Logging config file not found: {logging_config_path}")
 

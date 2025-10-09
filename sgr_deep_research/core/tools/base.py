@@ -11,13 +11,13 @@ from fastmcp import Client
 from pydantic import BaseModel, Field, create_model
 
 from sgr_deep_research.core.models import AgentStatesEnum
+from sgr_deep_research.settings import get_config
 
 if TYPE_CHECKING:
     from sgr_deep_research.core.models import ResearchContext
 
-
+config = get_config()
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 class BaseTool(BaseModel):
@@ -46,7 +46,9 @@ class MCPBaseTool(BaseTool):
         try:
             async with self._client:
                 result = await self._client.call_tool(self.tool_name, payload)
-                return json.dumps([m.model_dump_json() for m in result.content], ensure_ascii=False)[:15000]
+                return json.dumps([m.model_dump_json() for m in result.content], ensure_ascii=False)[
+                    : config.mcp.context_limit
+                ]
         except Exception as e:
             logger.error(f"Error processing MCP tool {self.tool_name}: {e}")
             return f"Error: {e}"

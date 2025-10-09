@@ -25,17 +25,17 @@ class Singleton(type):
 class MCP2ToolConverter(metaclass=Singleton):
     def __init__(self):
         self.toolkit: list[Type[BaseTool]] = []
-        if not get_config().mcp:
+        if not get_config().mcp.transport_config:
             logger.warning("No MCP configuration found. MCP2ToolConverter will not function properly.")
             return
         self.mb = td.ModelBuilder()
-        self.client: Client = Client(get_config().mcp)
+        self.client: Client = Client(get_config().mcp.transport_config)
 
     def _to_CamelCase(self, name: str) -> str:
         return name.replace("_", " ").title().replace(" ", "")
 
     async def build_tools_from_mcp(self):
-        if not get_config().mcp:
+        if not get_config().mcp.transport_config:
             logger.warning("No MCP configuration found. MCP2ToolConverter will not function properly.")
             return
 
