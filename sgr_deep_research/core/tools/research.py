@@ -103,7 +103,9 @@ class WebSearchTool(BaseTool):
 
         logger.info(f"🔍 Search query: '{self.query}'")
 
-        sources = self._search_service.search(query=self.query, max_results=self.max_results, include_raw_content=False)
+        sources = await self._search_service.search(
+            query=self.query, max_results=self.max_results, include_raw_content=False
+        )
 
         sources = TavilySearchService.rearrange_sources(sources, starting_number=len(context.sources) + 1)
 
