@@ -22,13 +22,6 @@ from sgr_deep_research.core.tools import (
 )
 from sgr_deep_research.settings import get_config
 
-logging.basicConfig(
-    level=logging.INFO,
-    encoding="utf-8",
-    format="%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler()],
-)
-
 config = get_config()
 
 
@@ -45,7 +38,7 @@ class BaseAgent:
         max_clarifications: int = 3,
     ):
         self.id = f"{self.name}_{uuid.uuid4()}"
-        self.logger = logging.getLogger(f"{self.id}")
+        self.logger = logging.getLogger(f"sgr_deep_research.agents.{self.id}")
         self.task = task
         self.toolkit = [*system_agent_tools, *(toolkit or [])]
 
@@ -124,6 +117,7 @@ class BaseAgent:
             "id": self.id,
             "model_config": config.openai.model_dump(exclude={"api_key", "proxy"}),
             "task": self.task,
+            "toolkit": [tool.tool_name for tool in self.toolkit],
             "log": self.log,
         }
 

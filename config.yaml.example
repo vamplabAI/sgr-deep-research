@@ -37,6 +37,10 @@ prompts:
   prompts_dir: "prompts"               # Directory with prompts
   system_prompt_file: "system_prompt.txt"  # System prompt file
 
+# Logging Settings
+logging:
+  config_file: "logging_config.yaml"  # Logging configuration file path
+  level: "INFO"                       # Default logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
 
 mcp:
   # https://gofastmcp.com/clients/transports#mcp-json-configuration-transport

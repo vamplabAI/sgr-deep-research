@@ -3,10 +3,13 @@
 Loads configuration from YAML file with environment variables support.
 """
 
+import logging
+import logging.config
 import os
 from functools import cache
 from pathlib import Path
 
+import yaml
 from envyaml import EnvYAML
 from pydantic import BaseModel, Field
 
@@ -58,6 +61,13 @@ class ExecutionConfig(BaseModel):
     logs_dir: str = Field(default="logs", description="Directory for saving bot logs")
 
 
+class LoggingConfig(BaseModel):
+    """Logging configuration settings."""
+
+    config_file: str = Field(default="logging_config.yaml", description="Logging configuration file path")
+    level: str = Field(default="INFO", description="Default logging level")
+
+
 class AppConfig(BaseModel):
     """Main application configuration."""
 
@@ -67,6 +77,7 @@ class AppConfig(BaseModel):
     scraping: ScrapingConfig = Field(default_factory=ScrapingConfig, description="Scraping settings")
     execution: ExecutionConfig = Field(default_factory=ExecutionConfig, description="Execution settings")
     prompts: PromptsConfig = Field(default_factory=PromptsConfig, description="Prompts settings")
+    logging: LoggingConfig = Field(default_factory=LoggingConfig, description="Logging settings")
     mcp: dict = Field(default_factory=dict, description="MCP settings")
 
 
@@ -88,3 +99,16 @@ def get_config() -> AppConfig:
         app_config_path = Path(app_config_env)
 
     return AppConfig.model_validate(dict(EnvYAML(str(app_config_path))))
+
+
+def setup_logging() -> None:
+    """Setup logging configuration from YAML file."""
+    logging_config_path = Path(get_config().logging.config_file)
+    print(logging_config_path)
+    if not logging_config_path.exists():
+        raise FileNotFoundError(f"Logging config file not found: {logging_config_path}")
+
+    with open(logging_config_path, "r", encoding="utf-8") as f:
+        logging_config = yaml.safe_load(f)
+
+    logging.config.dictConfig(logging_config)

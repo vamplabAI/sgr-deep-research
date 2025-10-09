@@ -5,7 +5,6 @@ ENV UV_COMPILE_BYTECODE=1 \
     UV_PYTHON_DOWNLOADS=0 \
     UV_PROJECT_ENVIRONMENT=/opt/venv
 
-# Install Git for git-based dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends git && \
     apt-get clean && \

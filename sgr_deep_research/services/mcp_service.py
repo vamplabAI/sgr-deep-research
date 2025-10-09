@@ -31,9 +31,6 @@ class MCP2ToolConverter(metaclass=Singleton):
         self.mb = td.ModelBuilder()
         self.client: Client = Client(get_config().mcp)
 
-        logging.getLogger("httpx").setLevel(logging.WARNING)
-        logging.getLogger("mcp").setLevel(logging.WARNING)
-
     def _to_CamelCase(self, name: str) -> str:
         return name.replace("_", " ").title().replace(" ", "")
 
