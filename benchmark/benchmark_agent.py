@@ -40,8 +40,12 @@ async def benchmark_agent(question) -> tuple[str, str]:
     return agent.id, agent._context.execution_result
 
 
-async def main():
-    results = await asyncio.gather(*[benchmark_agent(question) for question in questions])
+async def main(batch_size: int = 3):
+    results = []
+    for i in range(0, len(questions), batch_size):
+        batch_results = await asyncio.gather(*[benchmark_agent(q) for q in questions[i : i + batch_size]])
+        results.extend(batch_results)
+
     for id, result in results:
         print(f"Question: {id}")
         print(f"Result: {result}")
