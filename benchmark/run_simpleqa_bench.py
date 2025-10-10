@@ -2,15 +2,13 @@
 # URL: https://www.kaggle.com/datasets/deepmind/simpleqa-verified/data
 
 
-from utils import grading_answer, call_sgr_agent, get_f1_score
-
-from openai import OpenAI
-import pandas as pd
 import argparse
 import logging
-
-
 import os
+
+import pandas as pd
+from openai import OpenAI
+from utils import call_sgr_agent, get_f1_score, grading_answer
 
 # Configure logging
 logging.basicConfig(
@@ -22,7 +20,6 @@ logger = logging.getLogger(__name__)
 
 
 def simpleqa_run_task(row, judge_model_config, sgr_reports_path, sgr_agent_name):
-
     curr_reports = os.listdir(sgr_reports_path)
 
     problem = row["problem"]
@@ -72,9 +69,7 @@ def simpleqa_run_task(row, judge_model_config, sgr_reports_path, sgr_agent_name)
 
     # Оценка происходит методом LLM-as-a-judge
     logger.info("Starting answer grading...")
-    grade_answer_report, report_content = grading_answer(
-        curr_report_path, problem, answer, judge_model_config
-    )
+    grade_answer_report, report_content = grading_answer(curr_report_path, problem, answer, judge_model_config)
     grade_answer = grade_answer_report.grade_answer
 
     logger.info(f"Answer grading completed: {grade_answer}")
@@ -97,7 +92,6 @@ def simpleqa_run_task(row, judge_model_config, sgr_reports_path, sgr_agent_name)
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(description="Run SimpleQA Benchmark")
     parser.add_argument(
         "--path_to_simpleqa",
@@ -119,19 +113,11 @@ if __name__ == "__main__":
         default="simpleqa_bench_results.xlsx",
     )
 
-    parser.add_argument(
-        "--judge_model_name", type=str, required=True, help="Judge model name"
-    )
-    parser.add_argument(
-        "--judge_model_base_url", type=str, required=True, help="Judge model base URL"
-    )
-    parser.add_argument(
-        "--judge_model_api_key", type=str, required=True, help="Judge model API key"
-    )
+    parser.add_argument("--judge_model_name", type=str, required=True, help="Judge model name")
+    parser.add_argument("--judge_model_base_url", type=str, required=True, help="Judge model base URL")
+    parser.add_argument("--judge_model_api_key", type=str, required=True, help="Judge model API key")
 
-    parser.add_argument(
-        "--sgr_agent_name", type=str, required=True, help="SGR agent name"
-    )
+    parser.add_argument("--sgr_agent_name", type=str, required=True, help="SGR agent name")
 
     parser.add_argument(
         "--n_samples",
@@ -178,9 +164,7 @@ if __name__ == "__main__":
         logger.info("=============================================")
         logger.info(f"Processing problem: idx:{idx}, problem:{row['problem']}")
 
-        result_run_task = simpleqa_run_task(
-            row, judge_model_config, sgr_reports_path, sgr_agent_name
-        )
+        result_run_task = simpleqa_run_task(row, judge_model_config, sgr_reports_path, sgr_agent_name)
 
         results_list.append(result_run_task)
 

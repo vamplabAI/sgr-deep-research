@@ -1,7 +1,8 @@
-from pydantic import BaseModel, Field
 from typing import Literal
+
 from openai import OpenAI
 from prompts import GRADER_TEMPLATE
+from pydantic import BaseModel, Field
 
 
 class GradeAnswerModel(BaseModel):
@@ -14,15 +15,11 @@ class GradeAnswerModel(BaseModel):
     reasoning: str = Field(..., description="Brief rationale for the choice")
     truth_answer: str = Field(..., description="Repeat ground truth answer")
     answer_from_report: str = Field(..., description="Extract main answer from report")
-    grade_answer: Literal["CORRECT", "INCORRECT", "NOT_ATTEMPTED"] = Field(
-        ..., description="Grade of the answer"
-    )
+    grade_answer: Literal["CORRECT", "INCORRECT", "NOT_ATTEMPTED"] = Field(..., description="Grade of the answer")
 
 
 def _grade_answer(report_content, problem, answer, judge_model_config):
-    client = OpenAI(
-        base_url=judge_model_config["base_url"], api_key=judge_model_config["api_key"]
-    )
+    client = OpenAI(base_url=judge_model_config["base_url"], api_key=judge_model_config["api_key"])
 
     completion = client.beta.chat.completions.parse(
         model=judge_model_config["model"],
@@ -38,13 +35,10 @@ def _grade_answer(report_content, problem, answer, judge_model_config):
 
 
 def grading_answer(report_path, problem, answer, judge_model_config):
-
     with open(report_path, "r", encoding="utf-8") as f:
         report_content = f.read()
 
-    grade_answer_report = _grade_answer(
-        report_content, problem, answer, judge_model_config
-    )
+    grade_answer_report = _grade_answer(report_content, problem, answer, judge_model_config)
 
     return grade_answer_report, report_content
 
@@ -77,13 +71,9 @@ def get_f1_score(df) -> float:
     if num_total_samples == 0:
         return 0.0
 
-    mean_correct = (
-        df["is_correct"].sum() / num_total_samples
-    )  # Precision-like term over all samples
+    mean_correct = df["is_correct"].sum() / num_total_samples  # Precision-like term over all samples
 
-    accuracy_given_attempted_val = get_accuracy_given_attempted(
-        df
-    )  # Recall-like term on attempted samples
+    accuracy_given_attempted_val = get_accuracy_given_attempted(df)  # Recall-like term on attempted samples
 
     numerator = 2 * accuracy_given_attempted_val * mean_correct
     denominator = accuracy_given_attempted_val + mean_correct
