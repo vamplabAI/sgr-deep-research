@@ -2,10 +2,10 @@ from typing import Type
 
 from sgr_deep_research.core.agents.base_agent import BaseAgent
 from sgr_deep_research.core.tools import (
-    AgentCompletionTool,
     BaseTool,
     ClarificationTool,
     CreateReportTool,
+    FinalAnswerTool,
     NextStepToolsBuilder,
     NextStepToolStub,
     ReasoningTool,
@@ -52,7 +52,7 @@ class SGRResearchAgent(BaseAgent):
         if self._context.iteration >= self.max_iterations:
             tools = {
                 CreateReportTool,
-                AgentCompletionTool,
+                FinalAnswerTool,
             }
         if self._context.clarifications_used >= self.max_clarifications:
             tools -= {
@@ -107,7 +107,7 @@ class SGRResearchAgent(BaseAgent):
         return tool
 
     async def _action_phase(self, tool: BaseTool) -> str:
-        result = tool(self._context)
+        result = await tool(self._context)
         self.conversation.append(
             {"role": "tool", "content": result, "tool_call_id": f"{self._context.iteration}-action"}
         )

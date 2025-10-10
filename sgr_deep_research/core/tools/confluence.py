@@ -43,7 +43,7 @@ class ConfluenceSearchTool(BaseTool):
         super().__init__(**data)
         self._confluence_service = ConfluenceService()
 
-    def __call__(self, context: ResearchContext) -> str:
+    async def __call__(self, context: ResearchContext) -> str:
         """Execute Confluence search."""
         logger.info(f"🔍 Confluence search query: '{self.query}'")
 
@@ -129,7 +129,7 @@ class ConfluenceSpaceSearchTool(BaseTool):
         super().__init__(**data)
         self._confluence_service = ConfluenceService()
 
-    def __call__(self, context: ResearchContext) -> str:
+    async def __call__(self, context: ResearchContext) -> str:
         """Execute Confluence space search."""
         logger.info(f"🔍 Confluence space search: '{self.query}' in space '{self.space_key}'")
 
@@ -210,7 +210,7 @@ class ConfluencePageTool(BaseTool):
         super().__init__(**data)
         self._confluence_service = ConfluenceService()
 
-    def __call__(self, context: ResearchContext) -> str:
+    async def __call__(self, context: ResearchContext) -> str:
         """Retrieve Confluence page content."""
         logger.info(f"📄 Retrieving Confluence page: {self.page_id}")
 

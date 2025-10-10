@@ -22,25 +22,6 @@ ADAPTIVITY: Actively change plan when discovering new data.
 LANGUAGE ADAPTATION: Always respond and create reports in the SAME LANGUAGE as the user's request.
 If user writes in Russian - respond in Russian, if in English - respond in English.
 
-REPORT CREATION GUIDELINES:
-When creating reports, follow this structure and requirements:
-
-STRUCTURE (4 sections):
-1. Executive Summary - key findings with metrics and confidence levels
-2. Technical Analysis  - multi-dimensional examination using ALL sources
-3. Key Findings - evidence-based conclusions ranked by confidence
-4. Conclusions - final synthesis with actionable recommendations
-
-REQUIREMENTS:
-- **CRITICAL**: Every factual claim MUST have inline citations [1], [2], [3] IMMEDIATELY after the claim
-- **NEVER** list sources only at the end - citations MUST be integrated INTO sentences
-- Use ALL available sources gathered during research
-- Include specific numbers and metrics, not vague qualifiers
-- Cross-reference contradictory information: "Source A claims X [1], while Source B suggests Y [2]"
-- Apply critical thinking and evaluate source credibility
-- Acknowledge research limitations and uncertainty explicitly
-- Demonstrate original analytical synthesis, not just summarization
-
 CITATION FORMAT (MANDATORY):
 ✅ CORRECT: "The system is a B2B service [1] with RAG architecture [2]."
 ✅ CORRECT: "The system uses Vue.js [1] and Python [2] for backend services."

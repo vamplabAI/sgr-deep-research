@@ -24,7 +24,7 @@ class BaseTool(BaseModel):
     tool_name: ClassVar[str] = None
     description: ClassVar[str] = None
 
-    def __call__(self, context: ResearchContext) -> str:
+    async def __call__(self, context: ResearchContext) -> str:
         """Result should be a string or dumped json."""
         raise NotImplementedError("Execute method must be implemented by subclass")
 
@@ -57,7 +57,7 @@ class ClarificationTool(BaseTool):
         max_length=3,
     )
 
-    def __call__(self, context: ResearchContext) -> str:
+    async def __call__(self, context: ResearchContext) -> str:
         return "\n".join(self.questions)
 
 
@@ -72,7 +72,7 @@ class GeneratePlanTool(BaseTool):
     planned_steps: list[str] = Field(description="List of 3-4 planned steps", min_length=3, max_length=4)
     search_strategies: list[str] = Field(description="Information search strategies", min_length=2, max_length=3)
 
-    def __call__(self, context: ResearchContext) -> str:
+    async def __call__(self, context: ResearchContext) -> str:
         return self.model_dump_json(
             indent=2,
             exclude={
@@ -90,7 +90,7 @@ class AdaptPlanTool(BaseTool):
     plan_changes: list[str] = Field(description="Specific changes made to plan", min_length=1, max_length=3)
     next_steps: list[str] = Field(description="Updated remaining steps", min_length=2, max_length=4)
 
-    def __call__(self, context: ResearchContext) -> str:
+    async def __call__(self, context: ResearchContext) -> str:
         return self.model_dump_json(
             indent=2,
             exclude={
@@ -99,16 +99,18 @@ class AdaptPlanTool(BaseTool):
         )
 
 
-class AgentCompletionTool(BaseTool):
+class FinalAnswerTool(BaseTool):
     """Finalize research task and complete agent execution after all steps are
     completed."""
 
     reasoning: str = Field(description="Why task is now complete")
     completed_steps: list[str] = Field(description="Summary of completed steps", min_length=1, max_length=5)
+    answer: str = Field(description="Comprehensive final answer to the research task")
     status: Literal[AgentStatesEnum.COMPLETED, AgentStatesEnum.FAILED] = Field(description="Task completion status")
 
-    def __call__(self, context: ResearchContext) -> str:
+    async def __call__(self, context: ResearchContext) -> str:
         context.state = self.status
+        context.execution_result = self.answer
         return self.model_dump_json(
             indent=2,
         )
@@ -149,7 +151,7 @@ class ReasoningTool(BaseTool):
     )
     task_completed: bool = Field(description="Is the research task finished?")
 
-    def __call__(self, *args, **kwargs):
+    async def __call__(self, *args, **kwargs):
         return self.model_dump_json(
             indent=2,
         )
@@ -207,6 +209,6 @@ system_agent_tools = [
     ClarificationTool,
     GeneratePlanTool,
     AdaptPlanTool,
-    AgentCompletionTool,
+    FinalAnswerTool,
     ReasoningTool,
 ]

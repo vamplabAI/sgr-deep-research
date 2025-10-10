@@ -6,10 +6,10 @@ from openai.types.chat import ChatCompletionFunctionToolParam
 from sgr_deep_research.core.agents.sgr_agent import SGRResearchAgent
 from sgr_deep_research.core.models import AgentStatesEnum
 from sgr_deep_research.core.tools import (
-    AgentCompletionTool,
     BaseTool,
     ClarificationTool,
     CreateReportTool,
+    FinalAnswerTool,
     ReasoningTool,
     WebSearchTool,
     research_agent_tools,
@@ -51,7 +51,7 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
             tools = {
                 ReasoningTool,
                 CreateReportTool,
-                AgentCompletionTool,
+                FinalAnswerTool,
             }
         if self._context.clarifications_used >= self.max_clarifications:
             tools -= {
@@ -94,7 +94,7 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
                 ],
             }
         )
-        tool_call_result = reasoning(self._context)
+        tool_call_result = await reasoning(self._context)
         self.conversation.append(
             {"role": "tool", "content": tool_call_result, "tool_call_id": f"{self._context.iteration}-reasoning"}
         )
@@ -121,7 +121,7 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
         except (IndexError, AttributeError, TypeError):
             # LLM returned a text response instead of a tool call - treat as completion
             final_content = completion.choices[0].message.content or "Task completed successfully"
-            tool = AgentCompletionTool(
+            tool = FinalAnswerTool(
                 reasoning="Agent decided to complete the task",
                 completed_steps=[final_content],
                 status=AgentStatesEnum.COMPLETED,

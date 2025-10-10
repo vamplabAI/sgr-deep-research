@@ -42,7 +42,7 @@ class CreateReportTool(BaseTool):
     )
     confidence: Literal["high", "medium", "low"] = Field(description="Confidence in findings")
 
-    def __call__(self, context: ResearchContext) -> str:
+    async def __call__(self, context: ResearchContext) -> str:
         # Save report
         reports_dir = config.execution.reports_dir
         os.makedirs(reports_dir, exist_ok=True)
@@ -116,12 +116,12 @@ class WebSearchTool(BaseTool):
         super().__init__(**data)
         self._search_service = TavilySearchService()
 
-    def __call__(self, context: ResearchContext) -> str:
+    async def __call__(self, context: ResearchContext) -> str:
         """Execute web search using TavilySearchService."""
 
         logger.info(f"🔍 Search query: '{self.query}'")
 
-        sources = self._search_service.search(
+        sources = await self._search_service.search(
             query=self.query,
             max_results=self.max_results,
             include_raw_content=False,
@@ -169,12 +169,12 @@ class ExtractPageContentTool(BaseTool):
         super().__init__(**data)
         self._search_service = TavilySearchService()
 
-    def __call__(self, context: ResearchContext) -> str:
+    async def __call__(self, context: ResearchContext) -> str:
         """Extract full content from specified URLs."""
 
         logger.info(f"📄 Extracting content from {len(self.urls)} URLs")
 
-        sources = self._search_service.extract(urls=self.urls)
+        sources = await self._search_service.extract(urls=self.urls)
 
         # Update existing sources instead of overwriting
         for source in sources:

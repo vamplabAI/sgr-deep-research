@@ -1,6 +1,6 @@
 import logging
 
-from tavily import TavilyClient
+from tavily import AsyncTavilyClient
 
 from sgr_deep_research.core.models import SourceData
 from sgr_deep_research.settings import get_config
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class TavilySearchService:
     def __init__(self):
         config = get_config()
-        self._client = TavilyClient(api_key=config.tavily.api_key, api_base_url=config.tavily.api_base_url)
+        self._client = AsyncTavilyClient(api_key=config.tavily.api_key, api_base_url=config.tavily.api_base_url)
         self._config = config
 
     @staticmethod
@@ -20,7 +20,7 @@ class TavilySearchService:
             source.number = i
         return sources
 
-    def search(
+    async def search(
         self,
         query: str,
         max_results: int | None = None,
@@ -41,7 +41,7 @@ class TavilySearchService:
         logger.info(f"🔍 Tavily search: '{query}' (max_results={max_results})")
 
         # Execute search through Tavily
-        response = self._client.search(
+        response = await self._client.search(
             query=query,
             max_results=max_results,
             include_raw_content=include_raw_content,
@@ -52,7 +52,7 @@ class TavilySearchService:
 
         return sources
 
-    def extract(self, urls: list[str]) -> list[SourceData]:
+    async def extract(self, urls: list[str]) -> list[SourceData]:
         """Extract full content from specific URLs using Tavily Extract API.
 
         Args:
@@ -63,7 +63,7 @@ class TavilySearchService:
         """
         logger.info(f"📄 Tavily extract: {len(urls)} URLs")
 
-        response = self._client.extract(urls=urls)
+        response = await self._client.extract(urls=urls)
 
         sources = []
         for i, result in enumerate(response.get("results", [])):
