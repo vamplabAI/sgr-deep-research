@@ -49,7 +49,6 @@ class MCP2ToolConverter(metaclass=Singleton):
                 try:
                     t.inputSchema["title"] = self._to_CamelCase(t.name)
                     PdModel = SchemaConverter.build(t.inputSchema)
-                    print(PdModel.model_json_schema())
                 except Exception as e:
                     logger.error(f"Error creating model {t.name} from schema: {t.inputSchema}: {e}")
                     continue
