@@ -52,18 +52,18 @@ distro==1.9.0
 dnspython==2.8.0
     # via email-validator
 docstring-parser==0.17.0
-    # via
-    #   cyclopts
-    #   tooldantic
+    # via cyclopts
 docutils==0.22.2
     # via rich-rst
 email-validator==2.3.0
-    # via pydantic
+    # via
+    #   jambo
+    #   pydantic
 envyaml==1.10.211231
     # via sgr-deep-research (pyproject.toml)
 exceptiongroup==1.3.0
     # via fastmcp
-fastapi==0.118.2
+fastapi==0.119.0
     # via sgr-deep-research (pyproject.toml)
 fastmcp==2.12.4
     # via sgr-deep-research (pyproject.toml)
@@ -82,9 +82,9 @@ httpx==0.28.1
     #   mcp
     #   openai
     #   tavily-python
-httpx-sse==0.4.2
+httpx-sse==0.4.3
     # via mcp
-idna==3.10
+idna==3.11
     # via
     #   anyio
     #   email-validator
@@ -92,10 +92,13 @@ idna==3.10
     #   requests
 isodate==0.7.2
     # via openapi-core
+jambo==0.1.3.post2
+    # via sgr-deep-research (pyproject.toml)
 jiter==0.11.0
     # via openai
 jsonschema==4.25.1
     # via
+    #   jambo
     #   mcp
     #   openapi-core
     #   openapi-schema-validator
@@ -125,13 +128,13 @@ markdown-it-py==4.0.0
     # via rich
 markupsafe==3.0.3
     # via werkzeug
-mcp==1.16.0
+mcp==1.17.0
     # via fastmcp
 mdurl==0.1.2
     # via markdown-it-py
 more-itertools==10.8.0
     # via openapi-core
-openai==2.2.0
+openai==2.3.0
     # via sgr-deep-research (pyproject.toml)
 openapi-core==0.19.5
     # via fastmcp
@@ -154,11 +157,11 @@ pydantic==2.12.0
     #   sgr-deep-research (pyproject.toml)
     #   fastapi
     #   fastmcp
+    #   jambo
     #   mcp
     #   openai
     #   openapi-pydantic
     #   pydantic-settings
-    #   tooldantic
 pydantic-core==2.41.1
     # via pydantic
 pydantic-settings==2.11.0
@@ -204,7 +207,7 @@ requests==2.32.5
     #   youtube-transcript-api
 rfc3339-validator==0.1.4
     # via openapi-schema-validator
-rich==14.1.0
+rich==14.2.0
     # via
     #   sgr-deep-research (pyproject.toml)
     #   cyclopts
@@ -238,8 +241,6 @@ tiktoken==0.12.0
     # via tavily-python
 tld==0.13.1
     # via courlan
-tooldantic @ git+https://github.com/nicholishen/tooldantic.git@b16592ba2b3a7892f01e9405c0c45b8819102ba9
-    # via sgr-deep-research (pyproject.toml)
 tqdm==4.67.1
     # via openai
 trafilatura==2.0.0
