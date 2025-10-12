@@ -16,8 +16,19 @@ handlers:
     formatter: standard
     stream: ext://sys.stdout
 
+  console_error:
+    class: logging.StreamHandler
+    level: ERROR
+    formatter: standard
+    stream: ext://sys.stderr
+
 loggers:
   # Main application logger - all our modules inherit from it
+  root:
+    level: INFO
+    handlers: [ console, console_error ]
+
+
   sgr_deep_research:
     level: INFO
 
@@ -32,7 +43,3 @@ loggers:
 
   urllib3:
     level: WARNING
-
-root:
-  level: INFO
-  handlers: [console]

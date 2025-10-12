@@ -1,8 +1,8 @@
 import logging
 from typing import Type
 
-import tooldantic as td
 from fastmcp import Client
+from jambo import SchemaConverter
 from pydantic import create_model
 
 from sgr_deep_research.core.tools import BaseTool, MCPBaseTool
@@ -28,7 +28,6 @@ class MCP2ToolConverter(metaclass=Singleton):
         if not get_config().mcp.transport_config:
             logger.warning("No MCP configuration found. MCP2ToolConverter will not function properly.")
             return
-        self.mb = td.ModelBuilder()
         self.client: Client = Client(get_config().mcp.transport_config)
 
     def _to_CamelCase(self, name: str) -> str:
@@ -48,7 +47,9 @@ class MCP2ToolConverter(metaclass=Singleton):
                     continue
 
                 try:
-                    PdModel = self.mb.model_from_json_schema(t.inputSchema, model_name=t.name)
+                    t.inputSchema["title"] = self._to_CamelCase(t.name)
+                    PdModel = SchemaConverter.build(t.inputSchema)
+                    print(PdModel.model_json_schema())
                 except Exception as e:
                     logger.error(f"Error creating model {t.name} from schema: {t.inputSchema}: {e}")
                     continue

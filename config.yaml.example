@@ -42,7 +42,11 @@ logging:
   config_file: "logging_config.yaml"  # Logging configuration file path
 
 mcp:
-  context_limit: 15000               # Maximum context length from MCP server response
+
+  # Limit on the result of MCP tool invocation.
+  # A balanced constant value: not too large to avoid filling the entire context window with potentially unimportant data,
+  # yet not too small to ensure critical information from a single MCP fits through
+  context_limit: 15000
 
   # https://gofastmcp.com/clients/transports#mcp-json-configuration-transport
   transport_config:
