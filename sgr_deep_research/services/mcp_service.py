@@ -35,7 +35,7 @@ class MCP2ToolConverter(metaclass=Singleton):
 
     async def build_tools_from_mcp(self):
         if not get_config().mcp.transport_config:
-            logger.warning("No MCP configuration found. MCP2ToolConverter will not function properly.")
+            logger.warning("No MCP configuration found. Nothing to build.")
             return
 
         async with self.client:
