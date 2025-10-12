@@ -14,6 +14,7 @@ from sgr_deep_research.core.tools import (
     research_agent_tools,
     system_agent_tools,
 )
+from sgr_deep_research.services import MCP2ToolConverter
 from sgr_deep_research.settings import get_config
 
 config = get_config()
@@ -40,7 +41,12 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
             max_iterations=max_iterations,
             max_searches=max_searches,
         )
-        self.toolkit = [*system_agent_tools, *research_agent_tools, *(toolkit if toolkit else [])]
+        self.toolkit = [
+            *system_agent_tools,
+            *research_agent_tools,
+            *MCP2ToolConverter().toolkit,
+            *(toolkit if toolkit else []),
+        ]
         self.tool_choice: Literal["required"] = "required"
 
     async def _prepare_tools(self) -> list[ChatCompletionFunctionToolParam]:

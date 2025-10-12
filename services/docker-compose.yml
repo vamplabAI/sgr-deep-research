@@ -11,6 +11,7 @@ services:
     volumes:
       - ../sgr_deep_research:/app/sgr_deep_research:ro
       - ../config.yaml:/app/config.yaml:ro
+      - ../logging_config.yaml:/app/logging_config.yaml:ro
       -  ./logs:/app/logs
       -  ./reports:/app/reports
 

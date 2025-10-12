@@ -1,21 +1,23 @@
 from __future__ import annotations
 
+import json
 import logging
 import operator
 from abc import ABC
 from functools import reduce
 from typing import TYPE_CHECKING, Annotated, ClassVar, Literal, Type, TypeVar
 
+from fastmcp import Client
 from pydantic import BaseModel, Field, create_model
 
 from sgr_deep_research.core.models import AgentStatesEnum
+from sgr_deep_research.settings import get_config
 
 if TYPE_CHECKING:
     from sgr_deep_research.core.models import ResearchContext
 
-
+config = get_config()
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 class BaseTool(BaseModel):
@@ -24,7 +26,7 @@ class BaseTool(BaseModel):
     tool_name: ClassVar[str] = None
     description: ClassVar[str] = None
 
-    def __call__(self, context: ResearchContext) -> str:
+    async def __call__(self, context: ResearchContext) -> str:
         """Result should be a string or dumped json."""
         raise NotImplementedError("Execute method must be implemented by subclass")
 
@@ -32,6 +34,24 @@ class BaseTool(BaseModel):
         super().__init_subclass__(**kwargs)
         cls.tool_name = cls.tool_name or cls.__name__.lower()
         cls.description = cls.description or cls.__doc__ or ""
+
+
+class MCPBaseTool(BaseTool):
+    """Base model for MCP Tool schema."""
+
+    _client: ClassVar[Client | None] = None
+
+    async def __call__(self, _context) -> str:
+        payload = self.model_dump()
+        try:
+            async with self._client:
+                result = await self._client.call_tool(self.tool_name, payload)
+                return json.dumps([m.model_dump_json() for m in result.content], ensure_ascii=False)[
+                    : config.mcp.context_limit
+                ]
+        except Exception as e:
+            logger.error(f"Error processing MCP tool {self.tool_name}: {e}")
+            return f"Error: {e}"
 
 
 class ClarificationTool(BaseTool):
@@ -42,7 +62,7 @@ class ClarificationTool(BaseTool):
     assumptions: list[str] = Field(description="Possible interpretations to verify", min_length=2, max_length=4)
     questions: list[str] = Field(description="3-5 specific clarifying questions", min_length=3, max_length=5)
 
-    def __call__(self, context: ResearchContext) -> str:
+    async def __call__(self, context: ResearchContext) -> str:
         return "\n".join(self.questions)
 
 
@@ -57,7 +77,7 @@ class GeneratePlanTool(BaseTool):
     planned_steps: list[str] = Field(description="List of 3-4 planned steps", min_length=3, max_length=4)
     search_strategies: list[str] = Field(description="Information search strategies", min_length=2, max_length=3)
 
-    def __call__(self, context: ResearchContext) -> str:
+    async def __call__(self, context: ResearchContext) -> str:
         return self.model_dump_json(
             indent=2,
             exclude={
@@ -75,7 +95,7 @@ class AdaptPlanTool(BaseTool):
     plan_changes: list[str] = Field(description="Specific changes made to plan", min_length=1, max_length=3)
     next_steps: list[str] = Field(description="Updated remaining steps", min_length=2, max_length=4)
 
-    def __call__(self, context: ResearchContext) -> str:
+    async def __call__(self, context: ResearchContext) -> str:
         return self.model_dump_json(
             indent=2,
             exclude={
@@ -92,7 +112,7 @@ class AgentCompletionTool(BaseTool):
     completed_steps: list[str] = Field(description="Summary of completed steps", min_length=1, max_length=5)
     status: Literal[AgentStatesEnum.COMPLETED, AgentStatesEnum.FAILED] = Field(description="Task completion status")
 
-    def __call__(self, context: ResearchContext) -> str:
+    async def __call__(self, context: ResearchContext) -> str:
         context.state = self.status
         return self.model_dump_json(
             indent=2,
@@ -119,7 +139,7 @@ class ReasoningTool(BaseTool):
     remaining_steps: list[str] = Field(description="1-3 remaining steps to complete task", min_length=1, max_length=3)
     task_completed: bool = Field(description="Is the research task finished?")
 
-    def __call__(self, *args, **kwargs):
+    async def __call__(self, *args, **kwargs):
         return self.model_dump_json(
             indent=2,
         )
@@ -138,6 +158,12 @@ class NextStepToolStub(ReasoningTool, ABC):
 class DiscriminantToolMixin(BaseModel):
     tool_name_discriminator: str = Field(..., description="Tool name discriminator")
 
+    def model_dump(self, *args, **kwargs):
+        # it could cause unexpected field issues if not excluded
+        exclude = kwargs.pop("exclude", set())
+        exclude = exclude.union({"tool_name_discriminator"})
+        return super().model_dump(*args, exclude=exclude, **kwargs)
+
 
 class NextStepToolsBuilder:
     """SGR Core - Builder for NextStepTool with dynamic union tool function type on
@@ -149,7 +175,7 @@ class NextStepToolsBuilder:
         field."""
 
         return create_model(
-            f"{tool_class.__name__}WithDiscriminant",
+            f"D_{tool_class.__name__}",
             __base__=(tool_class, DiscriminantToolMixin),  # the order matters here
             tool_name_discriminator=(Literal[tool_class.tool_name], Field(..., description="Tool name discriminator")),
         )  # noqa
