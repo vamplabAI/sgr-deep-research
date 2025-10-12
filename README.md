@@ -18,13 +18,13 @@ Production-ready open-source system for automated research using Schema-Guided R
 
 ## 📊 Summary Table of Agents
 
-| Agent                   | SGR Implementation | ReasoningTool        | Tools                 | API Requests | Selection Mechanism  |
-| ----------------------- | ------------------ | -------------------- | --------------------- | ------------ | -------------------- |
-| **1. SGR-Agent**        | Structured Output  | ❌ Built into schema | 6 basic               | 1            | SO Union Type        |
-| **2. FCAgent**          | ❌ Absent          | ❌ Absent            | 6 basic               | 1            | FC "required"        |
-| **3. HybridSGRAgent**   | FC Tool enforced   | ✅ First step FC     | 7 (6 + ReasoningTool) | 2            | FC → FC    TOP AGENT |
-| **4. OptionalSGRAgent** | FC Tool optional   | ✅ At model’s choice | 7 (6 + ReasoningTool) | 1–2          | FC "auto"            |
-| **5. ReasoningFC_SO**   | FC → SO → FC auto  | ✅ FC enforced       | 7 (6 + ReasoningTool) | 3            | FC → SO → FC auto    |
+| Agent                              | SGR Implementation | ReasoningTool        | Tools                 | API Requests | Selection Mechanism  |
+| ---------------------------------- | ------------------ | -------------------- | --------------------- | ------------ | -------------------- |
+| **1. sgr_agent**                   | Structured Output  | ❌ Built into schema | 6 basic               | 1            | SO Union Type        |
+| **2. tool_calling_agent**          | ❌ Absent          | ❌ Absent            | 6 basic               | 1            | FC "required"        |
+| **3. sgr_tool_calling_agent**      | FC Tool enforced   | ✅ First step FC     | 7 (6 + ReasoningTool) | 2            | FC → FC    TOP AGENT |
+| **4. sgr_auto_tool_calling_agent** | FC Tool optional   | ✅ At model's choice | 7 (6 + ReasoningTool) | 1–2          | FC "auto"            |
+| **5. sgr_so_tool_calling_agent**   | FC → SO → FC auto  | ✅ FC enforced       | 7 (6 + ReasoningTool) | 3            | FC → SO → FC auto    |
 
 ## 👥 Open-Source Development Team
 
@@ -116,7 +116,7 @@ client = OpenAI(
 
 # Make research request
 response = client.chat.completions.create(
-    model="sgr-agent",
+    model="sgr_agent",
     messages=[{"role": "user", "content": "Research BMW X6 2025 prices in Russia"}],
     stream=True,
     temperature=0.4,
@@ -141,7 +141,7 @@ client = OpenAI(base_url="http://localhost:8010/v1", api_key="dummy")
 # Step 1: Initial research request
 print("Starting research...")
 response = client.chat.completions.create(
-    model="sgr-agent",
+    model="sgr_agent",
     messages=[{"role": "user", "content": "Research AI market trends"}],
     stream=True,
     temperature=0,
@@ -527,13 +527,13 @@ python sgr_deep_research --host 127.0.0.1 --port 8080
 
 ### Agent Types Overview
 
-| Agent Model            | Description                        |
-| ---------------------- | ---------------------------------- |
-| `sgr-agent`            | Pure SGR (Schema-Guided Reasoning) |
-| `sgr-tools-agent`      | SGR + Function Calling hybrid      |
-| `sgr-auto-tools-agent` | SGR + Auto Function Calling        |
-| `sgr-so-tools-agent`   | SGR + Structured Output            |
-| `tools-agent`          | Pure Function Calling              |
+| Agent Model                   | Description                        |
+| ----------------------------- | ---------------------------------- |
+| `sgr_agent`                   | Pure SGR (Schema-Guided Reasoning) |
+| `sgr_tool_calling_agent`      | SGR + Function Calling hybrid      |
+| `sgr_auto_tool_calling_agent` | SGR + Auto Function Calling        |
+| `sgr_so_tool_calling_agent`   | SGR + Structured Output            |
+| `tool_calling_agent`          | Pure Function Calling              |
 
 ### Models Endpoint
 
