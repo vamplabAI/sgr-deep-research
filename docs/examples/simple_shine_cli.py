@@ -1,4 +1,5 @@
 import json
+
 from openai import OpenAI
 from rich.console import Console
 from rich.prompt import Prompt
@@ -17,9 +18,7 @@ def safe_get_delta(chunk):
 
 
 def stream_response_until_tool_call_or_end(model, messages):
-    """
-    Real-time streaming
-    """
+    """Real-time streaming."""
     response = client.chat.completions.create(
         model=model,
         messages=messages,
