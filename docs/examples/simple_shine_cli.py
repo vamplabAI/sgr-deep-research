@@ -3,7 +3,7 @@ from agent.
 
 Usage:
     pip install rich openai
-    python -m docs.examples.simple_shine_cli.py
+    python -m docs.examples.simple_shine_cli
 """
 
 import json
@@ -100,4 +100,4 @@ while True:
         console.print()
         break
 
-console.print("\n[bold gren] Report will be prepared in appropriate directory![/bold green]")
+console.print("\n[bold green] Report will be prepared in appropriate directory![/bold green]")
