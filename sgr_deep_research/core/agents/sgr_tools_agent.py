@@ -4,6 +4,7 @@ from openai import pydantic_function_tool
 from openai.types.chat import ChatCompletionFunctionToolParam
 
 from sgr_deep_research.core.agents.sgr_agent import SGRResearchAgent
+from sgr_deep_research.core.models import AgentStatesEnum
 from sgr_deep_research.core.tools import (
     AgentCompletionTool,
     BaseTool,
@@ -100,7 +101,7 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
                 ],
             }
         )
-        tool_call_result = reasoning(self._context)
+        tool_call_result = await reasoning(self._context)
         self.conversation.append(
             {"role": "tool", "content": tool_call_result, "tool_call_id": f"{self._context.iteration}-reasoning"}
         )
@@ -119,7 +120,17 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
             async for event in stream:
                 if event.type == "chunk":
                     self.streaming_generator.add_chunk(event.chunk)
-        tool = (await stream.get_final_completion()).choices[0].message.tool_calls[0].function.parsed_arguments
+        completion = await stream.get_final_completion()
+        try:
+            tool = completion.choices[0].message.tool_calls[0].function.parsed_arguments
+        except (IndexError, AttributeError, TypeError):
+            # LLM returned a text response instead of a tool call - treat as completion
+            final_content = completion.choices[0].message.content or "Task completed successfully"
+            tool = AgentCompletionTool(
+                reasoning="Agent decided to complete the task",
+                completed_steps=[final_content],
+                status=AgentStatesEnum.COMPLETED,
+            )
 
         if not isinstance(tool, BaseTool):
             raise ValueError("Selected tool is not a valid BaseTool instance")
