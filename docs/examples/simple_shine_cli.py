@@ -1,3 +1,10 @@
+"""
+Very basic demo for processing research queries and clarification requests from agent
+
+Usage:
+    pip install rich openai
+    python -m docs.examples.simple_shine_cli.py
+"""
 import json
 
 from openai import OpenAI
