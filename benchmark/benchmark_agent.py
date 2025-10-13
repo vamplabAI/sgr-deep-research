@@ -1,10 +1,11 @@
 import asyncio
 
-from sgr_deep_research.core.agents.sgr_auto_tools_agent import SGRAutoToolCallingResearchAgent
-from sgr_deep_research.core.tools import ExtractPageContentTool, WebSearchTool, system_agent_tools
+from sgr_deep_research.core import AdaptPlanTool, FinalAnswerTool, GeneratePlanTool, ReasoningTool
+from sgr_deep_research.core.agents.sgr_tools_agent import SGRToolCallingResearchAgent
+from sgr_deep_research.core.tools import ExtractPageContentTool, WebSearchTool
 
 
-class BenchmarkAgent(SGRAutoToolCallingResearchAgent):
+class BenchmarkAgent(SGRToolCallingResearchAgent):
     """Agent for benchmarking with automatic tool selection."""
 
     name: str = "benchmark_agent"
@@ -15,7 +16,14 @@ class BenchmarkAgent(SGRAutoToolCallingResearchAgent):
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        self.toolkit = [*system_agent_tools, WebSearchTool, ExtractPageContentTool]
+        self.toolkit = [
+            GeneratePlanTool,
+            AdaptPlanTool,
+            ReasoningTool,
+            WebSearchTool,
+            ExtractPageContentTool,
+            FinalAnswerTool,
+        ]
 
     async def execute(
         self,
