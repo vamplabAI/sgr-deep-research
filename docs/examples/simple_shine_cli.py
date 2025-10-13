@@ -1,7 +1,6 @@
 import json
 from openai import OpenAI
 from rich.console import Console
-from rich.markdown import Markdown
 from rich.prompt import Prompt
 
 console = Console()
@@ -19,11 +18,7 @@ def safe_get_delta(chunk):
 
 def stream_response_until_tool_call_or_end(model, messages):
     """
-    Стримит ответ в реальном времени.
-    Возвращает:
-        - full_content: полный текст (если был до tool_call или весь, если tool_call не было)
-        - clarification_questions: list или None
-        - agent_id: str или None
+    Real-time streaming
     """
     response = client.chat.completions.create(
         model=model,
@@ -37,7 +32,6 @@ def stream_response_until_tool_call_or_end(model, messages):
     clarification_questions = None
 
     for chunk in response:
-        # Обновляем agent_id, если пришёл
         if hasattr(chunk, "model") and chunk.model and chunk.model.startswith("sgr_agent_"):
             agent_id = chunk.model
 
@@ -45,7 +39,6 @@ def stream_response_until_tool_call_or_end(model, messages):
         if delta is None:
             continue
 
-        # Проверяем tool_calls — если есть, прерываем немедленно
         if hasattr(delta, "tool_calls") and delta.tool_calls:
             for tool_call in delta.tool_calls:
                 if tool_call.function and tool_call.function.name == "clarificationtool":
@@ -54,7 +47,7 @@ def stream_response_until_tool_call_or_end(model, messages):
                         clarification_questions = args.get("questions", [])
                     except Exception as e:
                         console.print(f"[red]Error parsing clarification: {e}[/red]")
-            # Прерываем поток сразу при первом tool_call
+            # stop streaming after tool calling detect
             return full_content, clarification_questions, agent_id
 
         # Обрабатываем контент: выводим сразу и сохраняем
@@ -63,7 +56,6 @@ def stream_response_until_tool_call_or_end(model, messages):
             full_content += text
             console.print(text, end="", style="white")
 
-    # Если дошли до конца — tool_call не было
     return full_content, None, agent_id
 
 
@@ -76,7 +68,7 @@ messages = [{"role": "user", "content": initial_request}]
 agent_id = None
 
 while True:
-    console.print()  # пустая строка перед новым блоком вывода
+    console.print()
 
     full_content, clarification_questions, returned_agent_id = stream_response_until_tool_call_or_end(
         model=current_model, messages=messages
@@ -85,12 +77,8 @@ while True:
     if returned_agent_id:
         agent_id = returned_agent_id
         current_model = agent_id
-
-    # Если агент запросил уточнение
     if clarification_questions is not None:
-        console.print()  # завершить строку после последнего символа контента
-        # Промежуточный контент уже был напечатан в реальном времени!
-        # (если был — например, "Я думаю, вам нужно уточнить...")
+        console.print()
 
         console.print("\n[bold red]Clarification needed:[/bold red]")
         for i, question in enumerate(clarification_questions, 1):
@@ -103,9 +91,7 @@ while True:
         continue
 
     else:
-        # Нет уточнений — это финальный ответ.
-        # Контент уже напечатан в реальном времени выше!
-        console.print()  # завершаем последнюю строку
+        console.print()
         break
 
 console.print("\n[bold gren] Report will be prepared in appropriate directory![/bold green]")
