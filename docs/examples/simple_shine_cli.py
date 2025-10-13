@@ -57,7 +57,6 @@ def stream_response_until_tool_call_or_end(model, messages):
             # stop streaming after tool calling detect
             return full_content, clarification_questions, agent_id
 
-        # Обрабатываем контент: выводим сразу и сохраняем
         if hasattr(delta, "content") and delta.content:
             text = delta.content
             full_content += text
