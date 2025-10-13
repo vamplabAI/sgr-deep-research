@@ -36,7 +36,7 @@ class CreateReportTool(BaseTool):
     )
     confidence: Literal["high", "medium", "low"] = Field(description="Confidence in findings")
 
-    def __call__(self, context: ResearchContext) -> str:
+    async def __call__(self, context: ResearchContext) -> str:
         # Save report
         reports_dir = config.execution.reports_dir
         os.makedirs(reports_dir, exist_ok=True)
@@ -98,14 +98,13 @@ class WebSearchTool(BaseTool):
         super().__init__(**data)
         self._search_service = TavilySearchService()
 
-    def __call__(self, context: ResearchContext) -> str:
+    async def __call__(self, context: ResearchContext) -> str:
         """Execute web search using TavilySearchService."""
 
         logger.info(f"🔍 Search query: '{self.query}'")
 
-        sources = self._search_service.search(
-            query=self.query,
-            max_results=self.max_results,
+        sources = await self._search_service.search(
+            query=self.query, max_results=self.max_results, include_raw_content=False
         )
 
         sources = TavilySearchService.rearrange_sources(sources, starting_number=len(context.sources) + 1)

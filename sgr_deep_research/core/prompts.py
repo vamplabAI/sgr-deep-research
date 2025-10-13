@@ -35,8 +35,8 @@ class PromptLoader:
         ]
         try:
             return template.format(
-                current_date=datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
-                date_format="d-m-Y HH:MM:SS",
+                current_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                date_format="YYYY-MM-DD HH:MM:SS (ISO 8601)",
                 available_tools="\n".join(available_tools_str_list),
                 sources_formatted=sources_formatted,
             )

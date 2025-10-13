@@ -4,6 +4,7 @@ from sgr_deep_research.core.tools.base import (
     BaseTool,
     ClarificationTool,
     GeneratePlanTool,
+    MCPBaseTool,
     NextStepToolsBuilder,
     NextStepToolStub,
     ReasoningTool,
@@ -29,4 +30,5 @@ __all__ = [
     "NextStepToolsBuilder",
     "system_agent_tools",
     "research_agent_tools",
+    "MCPBaseTool",
 ]

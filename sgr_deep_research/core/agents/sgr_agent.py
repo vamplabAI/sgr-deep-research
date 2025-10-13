@@ -13,6 +13,7 @@ from sgr_deep_research.core.tools import (
     research_agent_tools,
     system_agent_tools,
 )
+from sgr_deep_research.services import MCP2ToolConverter
 from sgr_deep_research.settings import get_config
 
 config = get_config()
@@ -41,6 +42,7 @@ class SGRResearchAgent(BaseAgent):
         self.toolkit = [
             *system_agent_tools,
             *research_agent_tools,
+            *MCP2ToolConverter().toolkit,
             *(toolkit or []),
         ]
         self.toolkit.remove(ReasoningTool)  # we use our own reasoning scheme
@@ -107,10 +109,27 @@ class SGRResearchAgent(BaseAgent):
         return tool
 
     async def _action_phase(self, tool: BaseTool) -> str:
-        result = tool(self._context)
+        result = await tool(self._context)
         self.conversation.append(
             {"role": "tool", "content": result, "tool_call_id": f"{self._context.iteration}-action"}
         )
         self.streaming_generator.add_chunk_from_str(f"{result}\n")
         self._log_tool_execution(tool, result)
         return result
+
+
+if __name__ == "__main__":
+    import asyncio
+
+    async def main():
+        await MCP2ToolConverter().build_tools_from_mcp()
+        agent = SGRResearchAgent(
+            task="найди информацию о репозитории на гитхаб sgr-deep-research и ответь на вопрос, "
+            "какая основная концепция этого репозитория?",
+            max_iterations=5,
+            max_clarifications=2,
+            max_searches=3,
+        )
+        await agent.execute()
+
+    asyncio.run(main())

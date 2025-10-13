@@ -1,0 +1,45 @@
+# SGR Deep Research - Logging Configuration
+# Based on Python logging.config dictionary schema
+# https://docs.python.org/3/library/logging.config.html#configuration-dictionary-schema
+
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  standard:
+    format: '%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(message)s'
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: standard
+    stream: ext://sys.stdout
+
+  console_error:
+    class: logging.StreamHandler
+    level: ERROR
+    formatter: standard
+    stream: ext://sys.stderr
+
+loggers:
+  # Main application logger - all our modules inherit from it
+  root:
+    level: INFO
+    handlers: [ console, console_error ]
+
+
+  sgr_deep_research:
+    level: INFO
+
+  sgr_deep_research.agents:
+    level: INFO
+
+  httpx:
+    level: WARNING
+
+  mcp:
+    level: WARNING
+
+  urllib3:
+    level: WARNING
