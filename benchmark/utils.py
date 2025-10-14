@@ -1,5 +1,6 @@
 from typing import Literal
 
+import pandas as pd
 from openai import OpenAI
 from prompts import GRADER_TEMPLATE
 from pydantic import BaseModel, Field
@@ -18,15 +19,15 @@ class GradeAnswerModel(BaseModel):
     grade_answer: Literal["CORRECT", "INCORRECT", "NOT_ATTEMPTED"] = Field(..., description="Grade of the answer")
 
 
-def _grade_answer(report_content, problem, answer, judge_model_config):
-    client = OpenAI(base_url=judge_model_config["base_url"], api_key=judge_model_config["api_key"])
+def grading_answer(predicted_answer, problem, answer, model_config):
+    client = OpenAI(base_url=model_config["base_url"], api_key=model_config["api_key"])
 
     completion = client.beta.chat.completions.parse(
-        model=judge_model_config["model"],
+        model=model_config["model"],
         messages=[
             {
                 "role": "user",
-                "content": GRADER_TEMPLATE(problem, answer, report_content),
+                "content": GRADER_TEMPLATE(problem, answer, predicted_answer),
             },
         ],
         response_format=GradeAnswerModel,
@@ -34,26 +35,9 @@ def _grade_answer(report_content, problem, answer, judge_model_config):
     return completion.choices[0].message.parsed
 
 
-def grading_answer(report_path, problem, answer, judge_model_config):
-    with open(report_path, "r", encoding="utf-8") as f:
-        report_content = f.read()
-
-    grade_answer_report = _grade_answer(report_content, problem, answer, judge_model_config)
-
-    return grade_answer_report, report_content
-
-
-def call_sgr_agent(agent, problem, sgr_agent_name):
-    # Make research request
-    try:
-        agent.chat.completions.create(
-            model=sgr_agent_name,
-            messages=[{"role": "user", "content": problem}],
-            temperature=0.4,
-        )
-        return True, None
-    except Exception as ex:
-        return False, str(ex)
+def save_result(results, output_path):
+    results_df = pd.DataFrame(results)
+    results_df.to_excel(output_path, index=False)
 
 
 def get_accuracy_given_attempted(df) -> float:

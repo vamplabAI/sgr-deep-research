@@ -13,7 +13,6 @@ from sgr_deep_research.core.models import AgentStatesEnum
 if TYPE_CHECKING:
     from sgr_deep_research.core.models import ResearchContext
 
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -205,8 +204,9 @@ class NextStepToolsBuilder:
         )
 
 
+# TODO: оставляем или убираем?
 system_agent_tools = [
-    ClarificationTool,
+    # ClarificationTool,
     GeneratePlanTool,
     AdaptPlanTool,
     FinalAnswerTool,

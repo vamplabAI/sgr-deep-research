@@ -7,7 +7,7 @@ from sgr_deep_research.core.agents.sgr_agent import SGRResearchAgent
 from sgr_deep_research.core.models import AgentStatesEnum
 from sgr_deep_research.core.tools import (
     BaseTool,
-    ClarificationTool,
+    # ClarificationTool,
     CreateReportTool,
     FinalAnswerTool,
     ReasoningTool,
@@ -53,10 +53,10 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
                 CreateReportTool,
                 FinalAnswerTool,
             }
-        if self._context.clarifications_used >= self.max_clarifications:
-            tools -= {
-                ClarificationTool,
-            }
+        # if self._context.clarifications_used >= self.max_clarifications:
+        #     tools -= {
+        #         ClarificationTool,
+        #     }
         if self._context.searches_used >= self.max_searches:
             tools -= {
                 WebSearchTool,

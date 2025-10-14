@@ -566,7 +566,7 @@ ______________________________________________________________________
 
 ## 📊 Benchmarking with SimpleQA
 
-The project includes benchmarking capabilities using the **SimpleQA Verified** dataset from DeepMind/Kaggle.
+The project includes benchmarking capabilities using the **SimpleQA** dataset from DeepMind/Kaggle. The benchmark automatically runs the SGR agent on each question and uses an LLM judge to grade the answers.
 
 ### What is SimpleQA?
 
@@ -580,72 +580,116 @@ SimpleQA Verified is a benchmark dataset designed to evaluate factual accuracy o
 
 Before running the benchmark, ensure you have:
 
-1. SGR Deep Research server running (`localhost:8010`)
-2. Access to an LLM judge model (e.g., GPT-4, Claude) for answer grading
-3. SimpleQA Verified dataset downloaded from [Kaggle](https://www.kaggle.com/datasets/deepmind/simpleqa-verified/data)
+1. **SimpleQA Dataset**: Download from [Hugging Face](https://huggingface.co/datasets/basicv8vc/SimpleQA)
+2. **Judge Model Access**: An LLM for grading answers (e.g., GPT-4, Claude, or local model)
+3. **Dependencies**: Install benchmark requirements
+   ```bash
+   cd benchmark
+   uv pip install -r requirements.txt  # or pip install openai pandas python-dotenv openpyxl
+   ```
+
+### Setup Environment Variables
+
+The benchmark uses a separate `.env` file for judge model configuration:
+
+1. **Create `.env` file in benchmark directory:**
+
+   ```bash
+   cd benchmark
+   cp env.example .env
+   ```
+
+2. **Configure judge model settings in `.env`:**
+
+   ```bash
+   # Judge Model Configuration
+   JUDGE_BASE_URL=https://api.openai.com/v1
+   JUDGE_API_KEY=your-api-key-here
+   JUDGE_MODEL_NAME=gpt-4o-mini
+   ```
+
+**Judge Model Options:**
+
+- `gpt-4o-mini` - Recommended for cost-effectiveness
+- `gpt-4o` - Highest accuracy
+- `claude-3-sonnet` - Alternative provider
+- Local model endpoint (e.g., `http://localhost:8090/v1`)
 
 ### Running the Benchmark
 
-# Basic usage
+Navigate to the benchmark directory and run:
 
 ```bash
-python benchmark/run_simpleqa_bench.py \
+cd benchmark
+
+# Basic usage with default settings
+python benchmark_agent.py \
     --path_to_simpleqa ./data/simpleqa_verified.csv \
-    --path_to_sgr_reports ./reports \
-    --output_path ./results/simpleqa_bench_results.xlsx \
-    --judge_model_name gpt-4o \
-    --judge_model_base_url https://api.openai.com/v1 \
-    --judge_model_api_key YOUR_API_KEY \
-    --sgr_agent_name sgr-auto-tools-agent \
-    --n_samples 100
+    --output_path ./simpleqa_bench_results.xlsx \
+    --n_samples 100 \
+    --batch_size 3
+
+# Process entire dataset with larger batches
+python benchmark_agent.py \
+    --path_to_simpleqa ./data/simpleqa_verified.csv \
+    --output_path ./simpleqa_bench_results.xlsx \
+    --batch_size 10
 ```
 
 ### Command Line Arguments
 
-| Parameter                | Required | Description                                                             |
-| ------------------------ | -------- | ----------------------------------------------------------------------- |
-| `--path_to_simpleqa`     | Yes      | Path to simpleqa_verified.csv dataset                                   |
-| `--path_to_sgr_reports`  | Yes      | Directory where SGR reports are saved                                   |
-| `--output_path`          | No       | Output Excel file path (default: simpleqa_bench_results.xlsx)           |
-| `--judge_model_name`     | Yes      | Name of the LLM judge model                                             |
-| `--judge_model_base_url` | Yes      | Base URL for judge model API                                            |
-| `--judge_model_api_key`  | Yes      | API key for judge model                                                 |
-| `--sgr_agent_name`       | Yes      | SGR agent name (e.g., sgr-agent, sgr-tools-agent, sgr-auto-tools-agent) |
-| `--n_samples`            | Yes      | Number of samples from dataset to process                               |
+| Parameter            | Required | Default                     | Description                                |
+| -------------------- | -------- | --------------------------- | ------------------------------------------ |
+| `--path_to_simpleqa` | Yes      | -                           | Path to simpleqa_verified.csv dataset      |
+| `--output_path`      | No       | simpleqa_bench_results.xlsx | Output Excel file path                     |
+| `--n_samples`        | No       | All samples                 | Number of samples to process from dataset  |
+| `--batch_size`       | No       | 10                          | Number of questions to process in parallel |
+
+**Note:** Judge model settings are loaded from `.env` file (JUDGE_BASE_URL, JUDGE_API_KEY, JUDGE_MODEL_NAME)
 
 ### Output Files
 
-The benchmark generates two files:
+The benchmark generates an Excel file with detailed results:
 
-1. **Results Excel** (`simpleqa_bench_results.xlsx`):
+**Results Excel** (`simpleqa_bench_results.xlsx`):
 
-   - Full results for each question
-   - Predicted answers vs ground truth
-   - Grade classifications
-   - Detailed grading reports
+- Question and ground truth answer
+- Predicted answer from SGR agent
+- Grade classification (CORRECT/INCORRECT/NOT_ATTEMPTED)
+- Detailed grading report with reasoning
+- Error tracking for failed attempts
 
-2. **Metrics Summary** (`simpleqa_bench_results_metrics.txt`):
+### Benchmark Features
 
-   ```
-   F1 score: ...
-   Количество правильных: ...
-   Количество неправильных: ...
-   ```
+🔄 **Resume Support**: The benchmark automatically resumes from the last completed question if interrupted. Simply rerun the same command.
 
-### Metrics Explained
+📊 **Batch Processing**: Process questions in parallel batches for faster execution (configurable via `--batch_size`)
 
-- **F1 Score**: Harmonic mean of precision and recall on attempted answers
-- **Correct Count**: Number of questions answered correctly
-- **Incorrect Count**: Number of questions answered incorrectly
-- **Not Attempted**: Questions where the system declined to answer
+📝 **Detailed Logging**: Real-time logging shows:
+
+- Batch progress (e.g., "Начался батч 3/10")
+- Number of processed questions
+- Configuration being used
 
 ### How It Works
 
-1. **Research Phase**: Each question is sent to SGR agent for deep research
-2. **Report Generation**: Agent creates a detailed markdown report
-3. **Answer Grading**: LLM judge evaluates the report against ground truth
-4. **Metrics Calculation**: F1 score and accuracy metrics are computed
-5. **Results Export**: Results saved to Excel with full grading details
+1. **Configuration Loading**: Loads `config.yaml` from project root for SGR agent settings
+2. **Batch Processing**: Processes questions in parallel batches for efficiency
+3. **Research Phase**: Each question is researched by BenchmarkAgent using web search
+4. **Answer Extraction**: Extracts the final answer from agent's execution result
+5. **Judge Grading**: LLM judge evaluates answer against ground truth
+6. **Results Export**: Results are saved to Excel after each batch (auto-resume support)
+
+### Example Output
+
+```bash
+2024-01-13 12:00:00 - __main__ - INFO - Using config file: C:\path\to\config.yaml
+2024-01-13 12:00:05 - __main__ - INFO - Начался батч 1/34 (вопросы 1-3)
+2024-01-13 12:00:45 - __main__ - INFO - Завершен батч 1/34. Обработано вопросов: 3/100
+2024-01-13 12:00:45 - __main__ - INFO - Начался батч 2/34 (вопросы 4-6)
+...
+2024-01-13 12:45:30 - __main__ - INFO - Benchmark completed!
+```
 
 ______________________________________________________________________
 
