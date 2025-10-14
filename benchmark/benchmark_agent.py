@@ -6,6 +6,8 @@ from typing import Any, Dict, List
 
 import pandas as pd
 from dotenv import load_dotenv
+from openai import pydantic_function_tool
+from openai.types.chat import ChatCompletionFunctionToolParam
 
 from benchmark.utils import GradeAnswerModel, get_f1_score, grading_answer, save_result
 from sgr_deep_research.core import (
@@ -16,6 +18,7 @@ from sgr_deep_research.core import (
 )
 from sgr_deep_research.core.agents.sgr_tools_agent import SGRToolCallingResearchAgent
 from sgr_deep_research.core.tools import ExtractPageContentTool, WebSearchTool
+from sgr_deep_research.settings import get_config
 
 # Set config path to project root BEFORE importing sgr_deep_research modules
 # This ensures get_config() will load config.yaml from the correct location
@@ -54,6 +57,20 @@ class BenchmarkAgent(SGRToolCallingResearchAgent):
             FinalAnswerTool,
         ]
 
+    async def _prepare_tools(self) -> list[ChatCompletionFunctionToolParam]:
+        """Prepare available tools for current agent state and progress."""
+        tools = set(self.toolkit)
+        if self._context.iteration >= self.max_iterations:
+            tools = {
+                ReasoningTool,
+                FinalAnswerTool,
+            }
+        if self._context.searches_used >= self.max_searches:
+            tools -= {
+                WebSearchTool,
+            }
+        return [pydantic_function_tool(tool, name=tool.tool_name, description=tool.description) for tool in tools]
+
     async def execute(
         self,
     ):
@@ -62,7 +79,8 @@ class BenchmarkAgent(SGRToolCallingResearchAgent):
 
 async def benchmark_agent(question, answer, model_config) -> Dict[str, Any]:
     try:
-        agent = BenchmarkAgent(task=question)
+        system_conf = get_config()
+        agent = BenchmarkAgent(task=question, max_iterations=system_conf.execution.max_steps)
         await agent.execute()
 
         predicted_answer = agent._context.execution_result
