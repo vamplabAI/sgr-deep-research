@@ -39,11 +39,11 @@ python benchmark_agent.py \
 
 ### Environment Variables
 
-| Variable           | Description                              | Example                          |
-| ------------------ | ---------------------------------------- | -------------------------------- |
-| `JUDGE_BASE_URL`   | Base URL for judge model API             | `https://api.openai.com/v1`      |
-| `JUDGE_API_KEY`    | API key for judge model                  | `sk-...`                         |
-| `JUDGE_MODEL_NAME` | Judge model name                         | `gpt-4o-mini`                    |
+| Variable           | Description                  | Example                     |
+| ------------------ | ---------------------------- | --------------------------- |
+| `JUDGE_BASE_URL`   | Base URL for judge model API | `https://api.openai.com/v1` |
+| `JUDGE_API_KEY`    | API key for judge model      | `sk-...`                    |
+| `JUDGE_MODEL_NAME` | Judge model name             | `gpt-4o-mini`               |
 
 ### Command Line Arguments
 
@@ -82,6 +82,7 @@ Process multiple questions in parallel for faster execution. Adjust `--batch_siz
 ### 📝 Detailed Logging
 
 Real-time logs show:
+
 - Config file being used
 - Batch progress (e.g., "Начался батч 3/10")
 - Number of processed questions
@@ -98,6 +99,7 @@ Example log output:
 ## 🎯 Judge Model Options
 
 **Recommended Models:**
+
 - `gpt-4o-mini` - Best cost/accuracy balance
 - `gpt-4o` - Highest accuracy
 - `claude-3-sonnet` - Alternative provider
@@ -108,6 +110,7 @@ Example log output:
 ### BenchmarkAgent
 
 Extends `SGRToolCallingResearchAgent` with tools:
+
 - GeneratePlanTool
 - AdaptPlanTool
 - ReasoningTool
@@ -133,7 +136,7 @@ Extends `SGRToolCallingResearchAgent` with tools:
 ## 🤝 Contributing
 
 Contributions are welcome! Please ensure:
+
 - Code follows project style
 - Tests pass
 - Documentation is updated
-

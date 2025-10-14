@@ -25,18 +25,16 @@ class PromptLoader:
         raise FileNotFoundError(f"Prompt file not found: {user_file_path} or {lib_file_path}")
 
     @classmethod
-    def get_system_prompt(cls, sources: list[SourceData], available_tools: list[BaseTool]) -> str:
-        sources_formatted = "\n".join([str(source) for source in sources])
-        template = cls._load_prompt_file(config.prompts.system_prompt_file)
-        available_tools_str_list = [
-            f"{i}. {tool.tool_name}: {tool.description}" for i, tool in enumerate(available_tools, start=1)
-        ]
-        try:
-            return template.format(
-                current_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                date_format="YYYY-MM-DD HH:MM:SS (ISO 8601)",
-                available_tools="\n".join(available_tools_str_list),
-                sources_formatted=sources_formatted,
-            )
-        except KeyError as e:
-            raise KeyError(f"Missing placeholder in system prompt template: {e}") from e
+    @cache
+    def get_system_prompt(cls) -> str:
+        return cls._load_prompt_file(config.prompts.system_prompt_file)
+
+    @classmethod
+    def get_initial_user_request(cls, task: str) -> str:
+        template = cls._load_prompt_file("initial_user_request.txt")
+        return template.format(task=task, current_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+    @classmethod
+    def get_clarification_template(cls, clarifications: str) -> str:
+        template = cls._load_prompt_file("clarification_response.txt")
+        return template.format(clarifications=clarifications, current_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
