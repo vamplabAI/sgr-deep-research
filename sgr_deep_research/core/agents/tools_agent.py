@@ -68,7 +68,7 @@ class ToolCallingResearchAgent(BaseAgent):
             tools -= {
                 WebSearchTool,
             }
-        return [pydantic_function_tool(tool, name=tool.tool_name, description=tool.description) for tool in tools]
+        return [pydantic_function_tool(tool, name=tool.tool_name, description="") for tool in tools]
 
     async def _reasoning_phase(self) -> None:
         """No explicit reasoning phase, reasoning is done internally by LLM."""
