@@ -25,7 +25,7 @@ class TavilySearchService:
         query: str,
         max_results: int | None = None,
         include_raw_content: bool = True,
-    ) -> (str, list[SourceData]):
+    ) -> list[SourceData]:
         """Perform search through Tavily API and return results with
         SourceData.
 
@@ -49,7 +49,6 @@ class TavilySearchService:
 
         # Convert results to SourceData
         sources = self._convert_to_source_data(response)
-
         return sources
 
     async def extract(self, urls: list[str]) -> list[SourceData]:

@@ -1,11 +1,30 @@
 """Основная точка входа для SGR Deep Research API сервера."""
 
 import argparse
+import logging
 import os
+from contextlib import asynccontextmanager
 
 import uvicorn
+from fastapi import FastAPI
 
-from sgr_deep_research.api.endpoints import app
+from sgr_deep_research import __version__
+from sgr_deep_research.api.endpoints import router
+from sgr_deep_research.services import MCP2ToolConverter
+from sgr_deep_research.settings import setup_logging
+
+setup_logging()
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await MCP2ToolConverter().build_tools_from_mcp()
+    yield
+
+
+app = FastAPI(title="SGR Deep Research API", version=__version__, lifespan=lifespan)
+app.include_router(router)
 
 
 def main():

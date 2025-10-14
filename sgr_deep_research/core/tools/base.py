@@ -1,20 +1,23 @@
 from __future__ import annotations
 
+import json
 import logging
 import operator
 from abc import ABC
 from functools import reduce
 from typing import TYPE_CHECKING, Annotated, ClassVar, Literal, Type, TypeVar
 
+from fastmcp import Client
 from pydantic import BaseModel, Field, create_model
 
 from sgr_deep_research.core.models import AgentStatesEnum
+from sgr_deep_research.settings import get_config
 
 if TYPE_CHECKING:
     from sgr_deep_research.core.models import ResearchContext
 
+config = get_config()
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 class BaseTool(BaseModel):
@@ -31,6 +34,24 @@ class BaseTool(BaseModel):
         super().__init_subclass__(**kwargs)
         cls.tool_name = cls.tool_name or cls.__name__.lower()
         cls.description = cls.description or cls.__doc__ or ""
+
+
+class MCPBaseTool(BaseTool):
+    """Base model for MCP Tool schema."""
+
+    _client: ClassVar[Client | None] = None
+
+    async def __call__(self, _context) -> str:
+        payload = self.model_dump()
+        try:
+            async with self._client:
+                result = await self._client.call_tool(self.tool_name, payload)
+                return json.dumps([m.model_dump_json() for m in result.content], ensure_ascii=False)[
+                    : config.mcp.context_limit
+                ]
+        except Exception as e:
+            logger.error(f"Error processing MCP tool {self.tool_name}: {e}")
+            return f"Error: {e}"
 
 
 class ClarificationTool(BaseTool):
@@ -169,6 +190,12 @@ class NextStepToolStub(ReasoningTool, ABC):
 class DiscriminantToolMixin(BaseModel):
     tool_name_discriminator: str = Field(..., description="Tool name discriminator")
 
+    def model_dump(self, *args, **kwargs):
+        # it could cause unexpected field issues if not excluded
+        exclude = kwargs.pop("exclude", set())
+        exclude = exclude.union({"tool_name_discriminator"})
+        return super().model_dump(*args, exclude=exclude, **kwargs)
+
 
 class NextStepToolsBuilder:
     """SGR Core - Builder for NextStepTool with dynamic union tool function type on
@@ -180,7 +207,7 @@ class NextStepToolsBuilder:
         field."""
 
         return create_model(
-            f"{tool_class.__name__}WithDiscriminant",
+            f"D_{tool_class.__name__}",
             __base__=(tool_class, DiscriminantToolMixin),  # the order matters here
             tool_name_discriminator=(Literal[tool_class.tool_name], Field(..., description="Tool name discriminator")),
         )  # noqa

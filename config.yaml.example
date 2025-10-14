@@ -44,3 +44,23 @@ execution:
 prompts:
   prompts_dir: "prompts"               # Directory with prompts
   system_prompt_file: "system_prompt.txt"  # System prompt file
+
+# Logging Settings
+logging:
+  config_file: "logging_config.yaml"  # Logging configuration file path
+
+mcp:
+
+  # Limit on the result of MCP tool invocation.
+  # A balanced constant value: not too large to avoid filling the entire context window with potentially unimportant data,
+  # yet not too small to ensure critical information from a single MCP fits through
+  context_limit: 15000
+
+  # https://gofastmcp.com/clients/transports#mcp-json-configuration-transport
+  transport_config:
+    mcpServers:
+      deepwiki:
+        url: "https://mcp.deepwiki.com/mcp"
+
+      context7:
+        url: "https://mcp.context7.com/mcp"

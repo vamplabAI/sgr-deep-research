@@ -5,6 +5,7 @@ ENV UV_COMPILE_BYTECODE=1 \
     UV_PYTHON_DOWNLOADS=0 \
     UV_PROJECT_ENVIRONMENT=/opt/venv
 
+
 WORKDIR /app
 
 COPY requirements.txt ./

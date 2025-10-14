@@ -8,7 +8,7 @@ from sgr_deep_research.api import *  # noqa: F403
 from sgr_deep_research.core import *  # noqa: F403
 from sgr_deep_research.services import *  # noqa: F403
 
-__version__ = "0.1.0"
+__version__ = "0.2.5"
 __author__ = "sgr-deep-research-team"
 
 
