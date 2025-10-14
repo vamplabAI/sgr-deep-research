@@ -15,7 +15,7 @@ class GradeAnswerModel(BaseModel):
 
     reasoning: str = Field(..., description="Brief rationale for the choice")
     truth_answer: str = Field(..., description="Repeat ground truth answer")
-    answer_from_report: str = Field(..., description="Extract main answer from report")
+    predicted_answer: str = Field(..., description="Extracted main answer")
     grade_answer: Literal["CORRECT", "INCORRECT", "NOT_ATTEMPTED"] = Field(..., description="Grade of the answer")
 
 

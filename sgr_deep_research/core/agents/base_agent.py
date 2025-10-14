@@ -125,7 +125,7 @@ class BaseAgent:
 
     async def _prepare_context(self) -> list[dict]:
         return [
-            {"role": "system", "content": PromptLoader.get_system_prompt()},
+            {"role": "system", "content": PromptLoader.get_system_prompt(self.toolkit)},
             *self.conversation,
         ]
 

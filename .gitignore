@@ -282,6 +282,8 @@ performance_*.json
 benchmark/.env
 benchmark/simpleqa_bench_results*.xlsx
 benchmark/~$*.xlsx
+*.xlsx
+benchmark_logs/
 
 # Временные скрипты
 temp_*.py

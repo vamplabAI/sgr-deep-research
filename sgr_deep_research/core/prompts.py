@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 from functools import cache
 
+from sgr_deep_research.core.tools import BaseTool
 from sgr_deep_research.settings import get_config
 
 config = get_config()
@@ -25,9 +26,19 @@ class PromptLoader:
         raise FileNotFoundError(f"Prompt file not found: {user_file_path} or {lib_file_path}")
 
     @classmethod
-    @cache
-    def get_system_prompt(cls) -> str:
-        return cls._load_prompt_file(config.prompts.system_prompt_file)
+    def get_system_prompt(cls, available_tools: list[BaseTool]) -> str:
+        template = cls._load_prompt_file(config.prompts.system_prompt_file)
+        available_tools_str_list = [
+            f"{i}. {tool.tool_name}: {tool.description}" for i, tool in enumerate(available_tools, start=1)
+        ]
+        try:
+            return template.format(
+                current_date=datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
+                date_format="d-m-Y HH:MM:SS",
+                available_tools="\n".join(available_tools_str_list),
+            )
+        except KeyError as e:
+            raise KeyError(f"Missing placeholder in system prompt template: {e}") from e
 
     @classmethod
     def get_initial_user_request(cls, task: str) -> str:

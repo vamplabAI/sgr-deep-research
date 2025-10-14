@@ -67,7 +67,7 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
             tools -= {
                 WebSearchTool,
             }
-        return [pydantic_function_tool(tool, name=tool.tool_name, description=tool.description) for tool in tools]
+        return [pydantic_function_tool(tool, name=tool.tool_name) for tool in tools]
 
     async def _reasoning_phase(self) -> ReasoningTool:
         async with self.openai_client.chat.completions.stream(

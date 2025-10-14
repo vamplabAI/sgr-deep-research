@@ -84,6 +84,13 @@ class MCPConfig(BaseModel):
     transport_config: dict = Field(default_factory=dict, description="MCP servers configuration")
 
 
+class BenchmarkConfig(BaseModel):
+    """Benchmark configuration settings."""
+
+    save_logs_per_question: bool = Field(default=False, description="Save logs for each question to separate files")
+    logs_dir: str = Field(default="benchmark_logs", description="Directory for saving benchmark logs")
+
+
 class AppConfig(BaseModel):
     """Main application configuration."""
 
@@ -96,6 +103,7 @@ class AppConfig(BaseModel):
     prompts: PromptsConfig = Field(default_factory=PromptsConfig, description="Prompts settings")
     logging: LoggingConfig = Field(default_factory=LoggingConfig, description="Logging settings")
     mcp: MCPConfig = Field(default_factory=MCPConfig, description="MCP settings")
+    benchmark: BenchmarkConfig = Field(default_factory=BenchmarkConfig, description="Benchmark settings")
 
 
 class ServerConfig(BaseModel):

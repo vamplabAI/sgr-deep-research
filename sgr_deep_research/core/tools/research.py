@@ -88,19 +88,23 @@ class CreateReportTool(BaseTool):
 
 
 class WebSearchTool(BaseTool):
-    """Search the internet for public information, news, statistics, and
-    general knowledge.
-
+    """Search the web for real-time information about any topic.
+    Use this tool when you need up-to-date information that might not be available in your training data,
+    or when you need to verify current facts.
+    The search results will include relevant snippets and URLs from web pages.
+    This is particularly useful for questions about current events, technology updates,
+    or any topic that requires recent information.
     Use for: Public information, news, market trends, external APIs, general knowledge
     Returns: Page titles, URLs, and short snippets (100 characters)
     Best for: Quick overview, finding relevant pages
 
-    Tips:
-    - Use SPECIFIC terms and context in queries
-    - For acronyms, add context: "SGR Schema-Guided Reasoning"
-    - Use quotes for exact phrases: "Structured Output OpenAI"
-    - Search queries in SAME LANGUAGE as user request
-    - Use ExtractPageContentTool to get full content from found URLs
+    Usage:
+        - Use SPECIFIC terms and context in queries
+        - For acronyms, add context: "SGR Schema-Guided Reasoning"
+        - Use quotes for exact phrases: "Structured Output OpenAI"
+        - Search queries in SAME LANGUAGE as user request
+        -
+        - Use ExtractPageContentTool to get full content from found URLs
     """
 
     reasoning: str = Field(description="Why this search is needed and what to expect")
@@ -154,10 +158,9 @@ class WebSearchTool(BaseTool):
 
 class ExtractPageContentTool(BaseTool):
     """Extract full detailed content from specific web pages.
-
-    Use for: Getting complete page content from URLs found in web search
-    Returns: Full page content in readable format (via Tavily Extract API)
-    Best for: Deep analysis of specific pages, extracting structured data
+     Use for: Getting complete page content from URLs found in web search Returns:
+     Full page content in readable format (via Tavily Extract API)
+     Best for: Deep analysis of specific pages, extracting structured data
 
     Usage: Call after WebSearchTool to get detailed information from promising URLs
     """
@@ -199,7 +202,7 @@ class ExtractPageContentTool(BaseTool):
                     formatted_result += (
                         f"{str(source)}\n\n**Full Content:**\n"
                         f"{content_preview}\n\n"
-                        f"*[Content length: {source.char_count} characters]*\n\n"
+                        f"*[Content length: {len(content_preview)} characters]*\n\n"
                         "---\n\n"
                     )
                 else:

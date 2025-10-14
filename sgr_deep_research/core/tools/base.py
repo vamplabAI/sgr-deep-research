@@ -121,7 +121,10 @@ class AdaptPlanTool(BaseTool):
 
 class FinalAnswerTool(BaseTool):
     """Finalize research task and complete agent execution after all steps are
-    completed."""
+    completed.
+
+    Usage: Call after you complite  research task
+    """
 
     reasoning: str = Field(description="Why task is now complete")
     completed_steps: list[str] = Field(description="Summary of completed steps", min_length=1, max_length=5)
@@ -137,9 +140,11 @@ class FinalAnswerTool(BaseTool):
 
 
 class ReasoningTool(BaseTool):
-    """Agent Core - Determines next reasoning step with adaptive planning.
+    """Agent core logic, determines next reasoning step with adaptive planning
+    by schema-guided-reasoning capabilities Keep all text fields concise and
+    focused.
 
-    Keep all text fields concise and focused.
+    Usage: Requiared tool use this tool before execution tool, and after execution
     """
 
     # Reasoning chain - step-by-step thinking process (helps stabilize model)
