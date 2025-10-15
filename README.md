@@ -573,6 +573,7 @@ We conducted a comprehensive benchmark evaluation using the [SimpleQA](https://h
 ![SimpleQA Benchmark Comparison](assets/simpleqa_benchmark_comprasion.png)
 
 **Performance Metrics:**
+
 - **Accuracy:** 86.08%
 - **Correct:** 3,724 answers
 - **Incorrect:** 554 answers
@@ -580,24 +581,24 @@ We conducted a comprehensive benchmark evaluation using the [SimpleQA](https://h
 
 **Benchmark Configuration:**
 
-| Component | Parameter | Value |
-|-----------|-----------|-------|
-| **Search Engine** | Provider | Tavily Basic Search |
-| | Scraping Enabled | Yes |
-| | Max Pages | 5 |
-| | Content Limit | 33,000 characters |
-| **Agent** | Name | sgr_tool_calling_agent |
-| | Max Steps | 20 |
-| **LLM (Agent)** | Model | gpt-4o-mini |
-| | Max Tokens | 12,000 |
-| | Temperature | 0.2 |
-| **LLM (Judge)** | Model | gpt-4o |
-| | Max Tokens | Default |
-| | Temperature | Default |
+| Component         | Parameter        | Value                  |
+| ----------------- | ---------------- | ---------------------- |
+| **Search Engine** | Provider         | Tavily Basic Search    |
+|                   | Scraping Enabled | Yes                    |
+|                   | Max Pages        | 5                      |
+|                   | Content Limit    | 33,000 characters      |
+| **Agent**         | Name             | sgr_tool_calling_agent |
+|                   | Max Steps        | 20                     |
+| **LLM (Agent)**   | Model            | gpt-4o-mini            |
+|                   | Max Tokens       | 12,000                 |
+|                   | Temperature      | 0.2                    |
+| **LLM (Judge)**   | Model            | gpt-4o                 |
+|                   | Max Tokens       | Default                |
+|                   | Temperature      | Default                |
 
 Detailed benchmark results are available in [this spreadsheet](assets/simpleqa_result.xlsx).
 
----
+______________________________________________________________________
 
 The project includes benchmarking capabilities using the **SimpleQA** dataset from DeepMind/Kaggle. The benchmark automatically runs the SGR agent on each question and uses an LLM judge to grade the answers.
 
