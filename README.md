@@ -581,20 +581,20 @@ We conducted a comprehensive benchmark evaluation using the [SimpleQA](https://h
 
 **Benchmark Configuration:**
 
-| Component         | Parameter        | Value                   |
-| ----------------- | ---------------- | ----------------------- |
-| **Search Engine** | Provider         | Tavily Basic Search     |
-|                   | Scraping Enabled | Yes                     |
-|                   | Max Pages        | 5                       |
-|                   | Content Limit    | 33,000 characters       |
-| **Agent**         | Name             | sgr_tool_calling_agent  |
-|                   | Max Steps        | 20                      |
-| **LLM (Agent)**   | Model            | gpt-4.1-mini            |
-|                   | Max Tokens       | 12,000                  |
-|                   | Temperature      | 0.2                     |
-| **LLM (Judge)**   | Model            | gpt-4o                  |
-|                   | Max Tokens       | Default                 |
-|                   | Temperature      | Default                 |
+| Component         | Parameter        | Value                  |
+| ----------------- | ---------------- | ---------------------- |
+| **Search Engine** | Provider         | Tavily Basic Search    |
+|                   | Scraping Enabled | Yes                    |
+|                   | Max Pages        | 5                      |
+|                   | Content Limit    | 33,000 characters      |
+| **Agent**         | Name             | sgr_tool_calling_agent |
+|                   | Max Steps        | 20                     |
+| **LLM (Agent)**   | Model            | gpt-4.1-mini           |
+|                   | Max Tokens       | 12,000                 |
+|                   | Temperature      | 0.2                    |
+| **LLM (Judge)**   | Model            | gpt-4o                 |
+|                   | Max Tokens       | Default                |
+|                   | Temperature      | Default                |
 
 Detailed benchmark results are available in [this spreadsheet](assets/simpleqa_result.xlsx).
 
