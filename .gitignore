@@ -283,6 +283,7 @@ benchmark/.env
 benchmark/simpleqa_bench_results*.xlsx
 benchmark/~$*.xlsx
 *.xlsx
+!assets/*.xlsx
 benchmark_logs/
 
 # Временные скрипты
