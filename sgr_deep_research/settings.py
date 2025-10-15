@@ -135,4 +135,8 @@ def setup_logging() -> None:
     with open(logging_config_path, "r", encoding="utf-8") as f:
         logging_config = yaml.safe_load(f)
 
+    # Create logs directory if it doesn't exist
+    logs_dir = Path(get_config().execution.logs_dir)
+    logs_dir.mkdir(parents=True, exist_ok=True)
+
     logging.config.dictConfig(logging_config)
