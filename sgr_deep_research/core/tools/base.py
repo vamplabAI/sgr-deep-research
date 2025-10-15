@@ -124,11 +124,19 @@ class FinalAnswerTool(BaseTool):
     completed.
 
     Usage: Call after you complite  research task
+
+    CRITICAL FOR FACTUAL ACCURACY:
+        - For questions with dates/numbers/versions: provide EXACT values only
+        - Double-check day/month/year precision before finalizing
+        - If sources conflict on factual details, search again or indicate uncertainty
+        - Never approximate or round dates/numbers (October 21 ≠ October 22, 6.88b ≠ 6.88c)
     """
 
-    reasoning: str = Field(description="Why task is now complete")
-    completed_steps: list[str] = Field(description="Summary of completed steps", min_length=1, max_length=5)
-    answer: str = Field(description="Comprehensive final answer to the research task")
+    reasoning: str = Field(description="Why task is now complete and how answer was verified")
+    completed_steps: list[str] = Field(
+        description="Summary of completed steps including verification", min_length=1, max_length=5
+    )
+    answer: str = Field(description="Comprehensive final answer with EXACT factual details (dates, numbers, names)")
     status: Literal[AgentStatesEnum.COMPLETED, AgentStatesEnum.FAILED] = Field(description="Task completion status")
 
     async def __call__(self, context: ResearchContext) -> str:

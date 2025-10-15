@@ -103,8 +103,13 @@ class WebSearchTool(BaseTool):
         - For acronyms, add context: "SGR Schema-Guided Reasoning"
         - Use quotes for exact phrases: "Structured Output OpenAI"
         - Search queries in SAME LANGUAGE as user request
-        -
+        - For date/number questions, include specific year/context in query
         - Use ExtractPageContentTool to get full content from found URLs
+
+    IMPORTANT FOR FACTUAL QUESTIONS:
+        - Search snippets often contain direct answers - check them carefully
+        - For questions with specific dates/numbers, snippets may be more accurate than full pages
+        - If snippet directly answers the question, you may not need to extract full page
     """
 
     reasoning: str = Field(description="Why this search is needed and what to expect")
@@ -163,6 +168,13 @@ class ExtractPageContentTool(BaseTool):
      Best for: Deep analysis of specific pages, extracting structured data
 
     Usage: Call after WebSearchTool to get detailed information from promising URLs
+
+    CRITICAL WARNINGS:
+        - Extracted pages may show data from DIFFERENT years/time periods than asked
+        - ALWAYS verify that extracted content matches the question's temporal context
+        - Example: Question asks about 2022, but page shows 2024 data - REJECT this source
+        - If extracted content contradicts search snippet, prefer snippet for factual questions
+        - For date/number questions, cross-check extracted values with search snippets
     """
 
     reasoning: str = Field(description="Why extract these specific pages")
