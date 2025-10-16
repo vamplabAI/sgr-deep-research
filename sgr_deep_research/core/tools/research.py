@@ -229,19 +229,3 @@ research_agent_tools = [
     ExtractPageContentTool,
     CreateReportTool,
 ]
-
-# Import and add Confluence tools if enabled in config
-try:
-    if config.confluence is not None and config.confluence.enabled:
-        from sgr_deep_research.core.tools.confluence import confluence_agent_tools
-
-        research_agent_tools.extend(confluence_agent_tools)
-        logger.info("✅ Confluence tools enabled and loaded")
-    else:
-        logger.info("ℹ️ Confluence tools disabled in config")
-except ImportError as e:
-    # Confluence tools not available (missing dependencies)
-    logger.warning(f"⚠️ Confluence tools not available: {e}")
-except AttributeError:
-    # Config doesn't have confluence section
-    logger.info("ℹ️ Confluence not configured")

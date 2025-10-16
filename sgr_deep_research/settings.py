@@ -32,16 +32,6 @@ class TavilyConfig(BaseModel):
     api_base_url: str = Field(default="https://api.tavily.com", description="Tavily API base URL")
 
 
-class ConfluenceConfig(BaseModel):
-    """Confluence API settings."""
-
-    enabled: bool = Field(default=True, description="Enable/disable Confluence tools")
-    base_url: str = Field(description="Confluence base URL (e.g., https://conf.company.com)")
-    username: str = Field(description="Confluence username")
-    password: str = Field(description="Confluence password or API token")
-    timeout: float = Field(default=30.0, description="Request timeout in seconds")
-
-
 class SearchConfig(BaseModel):
     """Search settings."""
 
@@ -84,26 +74,17 @@ class MCPConfig(BaseModel):
     transport_config: dict = Field(default_factory=dict, description="MCP servers configuration")
 
 
-class BenchmarkConfig(BaseModel):
-    """Benchmark configuration settings."""
-
-    save_logs_per_question: bool = Field(default=False, description="Save logs for each question to separate files")
-    logs_dir: str = Field(default="benchmark_logs", description="Directory for saving benchmark logs")
-
-
 class AppConfig(BaseModel):
     """Main application configuration."""
 
     openai: OpenAIConfig = Field(description="OpenAI settings")
     tavily: TavilyConfig = Field(description="Tavily settings")
-    confluence: ConfluenceConfig | None = Field(default=None, description="Confluence settings (optional)")
     search: SearchConfig = Field(default_factory=SearchConfig, description="Search settings")
     scraping: ScrapingConfig = Field(default_factory=ScrapingConfig, description="Scraping settings")
     execution: ExecutionConfig = Field(default_factory=ExecutionConfig, description="Execution settings")
     prompts: PromptsConfig = Field(default_factory=PromptsConfig, description="Prompts settings")
     logging: LoggingConfig = Field(default_factory=LoggingConfig, description="Logging settings")
     mcp: MCPConfig = Field(default_factory=MCPConfig, description="MCP settings")
-    benchmark: BenchmarkConfig = Field(default_factory=BenchmarkConfig, description="Benchmark settings")
 
 
 class ServerConfig(BaseModel):
@@ -135,8 +116,10 @@ def setup_logging() -> None:
     with open(logging_config_path, "r", encoding="utf-8") as f:
         logging_config = yaml.safe_load(f)
 
-    # Create logs directory if it doesn't exist
     logs_dir = Path(get_config().execution.logs_dir)
     logs_dir.mkdir(parents=True, exist_ok=True)
+
+    reports_dir = Path(get_config().execution.reports_dir)
+    reports_dir.mkdir(parents=True, exist_ok=True)
 
     logging.config.dictConfig(logging_config)
