@@ -67,7 +67,28 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
             tools -= {
                 WebSearchTool,
             }
-        return [pydantic_function_tool(tool, name=tool.tool_name, description="") for tool in tools]
+        
+        # Создаем список инструментов, исключая async атрибуты
+        result = []
+        for tool in tools:
+            # Для MCP инструментов временно удаляем _client перед сериализацией
+            original_client = None
+            if hasattr(tool, '_client'):
+                original_client = getattr(tool, '_client', None)
+                try:
+                    delattr(tool, '_client')
+                except AttributeError:
+                    pass
+            
+            try:
+                tool_param = pydantic_function_tool(tool, name=tool.tool_name, description="")
+                result.append(tool_param)
+            finally:
+                # Восстанавливаем _client после сериализации
+                if original_client is not None:
+                    tool._client = original_client
+        
+        return result
 
     async def _reasoning_phase(self) -> ReasoningTool:
         async with self.openai_client.chat.completions.stream(
