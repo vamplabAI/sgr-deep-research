@@ -8,10 +8,11 @@ from typing import Annotated, Literal, Type, TypeVar
 
 from pydantic import BaseModel, Field, create_model
 
+from sgr_deep_research.core.base_tool import BaseTool
+from sgr_deep_research.core.tools.reasoning_tool import ReasoningTool
+
 # from sgr_deep_research.core.models import AgentStatesEnum
 from sgr_deep_research.settings import get_config
-from sgr_deep_research.core.tools.reasoning_tool import ReasoningTool
-from sgr_deep_research.core.base_tool import BaseTool
 
 config = get_config()
 logger = logging.getLogger(__name__)

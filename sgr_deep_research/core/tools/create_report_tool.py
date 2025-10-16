@@ -29,7 +29,7 @@ class CreateReportTool(BaseTool):
     )
     content: str = Field(
         description="Write comprehensive research report following the REPORT CREATION GUIDELINES from system prompt. "
-                    "Use the SAME LANGUAGE as user_request_language_reference."
+        "Use the SAME LANGUAGE as user_request_language_reference."
     )
     confidence: Literal["high", "medium", "low"] = Field(description="Confidence in findings")
 
@@ -52,13 +52,13 @@ class CreateReportTool(BaseTool):
             f.write(full_content)
 
         report = {
-            "title":         self.title,
-            "content":       self.content,
-            "confidence":    self.confidence,
+            "title": self.title,
+            "content": self.content,
+            "confidence": self.confidence,
             "sources_count": len(context.sources),
-            "word_count":    len(self.content.split()),
-            "filepath":      filepath,
-            "timestamp":     datetime.now().isoformat(),
+            "word_count": len(self.content.split()),
+            "filepath": filepath,
+            "timestamp": datetime.now().isoformat(),
         }
         logger.info(
             "📝 CREATE REPORT FULL DEBUG:\n"
