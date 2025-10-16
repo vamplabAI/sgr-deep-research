@@ -125,6 +125,7 @@ class BaseAgent:
         json.dump(agent_log, open(filepath, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
 
     async def _prepare_context(self) -> list[dict]:
+        """Prepare conversation context with system prompt."""
         return [
             {"role": "system", "content": PromptLoader.get_system_prompt(self.toolkit)},
             *self.conversation,
@@ -177,11 +178,8 @@ class BaseAgent:
                 reasoning = await self._reasoning_phase()
                 self._context.current_step_reasoning = reasoning
                 action_tool = await self._select_action_phase(reasoning)
-                action_result = await self._action_phase(action_tool)
+                await self._action_phase(action_tool)
 
-                self.logger.info(action_result)
-
-                # TODO: оставляем или убираем полностью?
                 if isinstance(action_tool, ClarificationTool):
                     self.logger.info("\n⏸️  Research paused - please answer questions")
                     self._context.state = AgentStatesEnum.WAITING_FOR_CLARIFICATION
