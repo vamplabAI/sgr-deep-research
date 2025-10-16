@@ -244,9 +244,8 @@ class NextStepToolsBuilder:
         )
 
 
-# TODO: оставляем или убираем?
 system_agent_tools = [
-    # ClarificationTool,
+    ClarificationTool,
     GeneratePlanTool,
     AdaptPlanTool,
     FinalAnswerTool,

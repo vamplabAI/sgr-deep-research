@@ -16,6 +16,7 @@ from sgr_deep_research.core.stream import OpenAIStreamingGenerator
 from sgr_deep_research.core.tools import (
     # Base
     BaseTool,
+    ClarificationTool,
     ReasoningTool,
     system_agent_tools,
 )
@@ -181,12 +182,12 @@ class BaseAgent:
                 self.logger.info(action_result)
 
                 # TODO: оставляем или убираем полностью?
-                # if isinstance(action_tool, ClarificationTool):
-                #     self.logger.info("\n⏸️  Research paused - please answer questions")
-                #     self._context.state = AgentStatesEnum.WAITING_FOR_CLARIFICATION
-                #     self._context.clarification_received.clear()
-                #     await self._context.clarification_received.wait()
-                #     continue
+                if isinstance(action_tool, ClarificationTool):
+                    self.logger.info("\n⏸️  Research paused - please answer questions")
+                    self._context.state = AgentStatesEnum.WAITING_FOR_CLARIFICATION
+                    self._context.clarification_received.clear()
+                    await self._context.clarification_received.wait()
+                    continue
 
         except Exception as e:
             self.logger.error(f"❌ Agent execution error: {str(e)}")

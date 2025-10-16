@@ -99,6 +99,8 @@ Pipfile.lock
 # poetry
 poetry.lock
 
+*.txt
+
 # pdm
 .pdm.toml
 

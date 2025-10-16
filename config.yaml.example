@@ -49,6 +49,11 @@ prompts:
 logging:
   config_file: "logging_config.yaml"  # Logging configuration file path
 
+# Benchmark Settings
+benchmark:
+  save_logs_per_question: false        # Save logs for each question to separate files
+  logs_dir: "benchmark_logs"           # Directory for saving benchmark logs
+
 mcp:
 
   # Limit on the result of MCP tool invocation.
