@@ -4,7 +4,7 @@
 
 [Project's Wiki](https://github.com/vamplabAI/sgr-deep-research/wiki) - Main documentation of project
 
-[Quick start](https://github.com/vamplabAI/sgr-deep-research/SGR-Quick-Start) - Data for quick start
+[Quick start](https://github.com/vamplabAI/sgr-deep-research/wiki/SGR-Quick-Start) - Data for quick start
 
 [Description API](https://github.com/vamplabAI/sgr-deep-research/wiki/SGR-Description-API) - Description API with examples using
 
