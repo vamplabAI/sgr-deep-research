@@ -23,7 +23,7 @@ If you have any questions - feel free to reach out to [Valerii Kovalskii](https:
 ### The SGR system excels at various research scenarios:
 
 - **Market Research**: "Analyze BMW X6 2025 pricing across European markets"
-- **Technology Trends**: "Research current developments in quantum computing"  
+- **Technology Trends**: "Research current developments in quantum computing"
 - **Competitive Analysis**: "Compare features of top 5 CRM systems in 2024"
 - **Industry Reports**: "Investigate renewable energy adoption in Germany"
 
@@ -40,11 +40,11 @@ If you have any questions - feel free to reach out to [Valerii Kovalskii](https:
 
 ### This project is built by the community with pure enthusiasm as an open-source initiative:
 
-* **SGR Concept Creator** // [@abdullin](https://t.me/llm_under_hood)
-* **Project Coordinator & Vision** // [@VaKovaLskii](https://t.me/neuraldeep) 
-* **Lead Core Developer** // [@virrius](https://t.me/virrius_tech) 
-* **API Development** // [Pavel Zloi](https://t.me/evilfreelancer)
-* **Hybrid FC Mode** // [@Shadekss](https://t.me/Shadekss)
-* **DevOps & Deployment** // [@mixaill76](https://t.me/mixaill76) 
+- **SGR Concept Creator** // [@abdullin](https://t.me/llm_under_hood)
+- **Project Coordinator & Vision** // [@VaKovaLskii](https://t.me/neuraldeep)
+- **Lead Core Developer** // [@virrius](https://t.me/virrius_tech)
+- **API Development** // [Pavel Zloi](https://t.me/evilfreelancer)
+- **Hybrid FC Mode** // [@Shadekss](https://t.me/Shadekss)
+- **DevOps & Deployment** // [@mixaill76](https://t.me/mixaill76)
 
 *All development is driven by pure enthusiasm and open-source community collaboration. We welcome contributors of all skill levels!*
