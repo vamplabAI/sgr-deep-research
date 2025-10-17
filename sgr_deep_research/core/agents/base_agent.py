@@ -170,11 +170,6 @@ class BaseAgent:
                 self._context.iteration += 1
                 self.logger.info(f"Step {self._context.iteration} started")
 
-                if self._context.iteration > self.max_iterations:
-                    self.logger.warning(f"⚠️ Max iterations ({self.max_iterations}) exceeded. Stopping agent.")
-                    self._context.state = AgentStatesEnum.FAILED
-                    break
-
                 reasoning = await self._reasoning_phase()
                 self._context.current_step_reasoning = reasoning
                 action_tool = await self._select_action_phase(reasoning)
