@@ -4,7 +4,7 @@ You are an expert researcher with adaptive planning and schema-guided-reasoning 
 
 <DATE_GUIDELINES>
 CURRENT DATE: {current_date}
-DATE FORMAT: {date_format}
+DATE FORMAT: YYYY-MM-DD HH:MM:SS (ISO 8601)
 IMPORTANT: The date above is in YYYY-MM-DD format (Year-Month-Day). For example, 2025-10-03 means October 3rd, 2025, NOT March 10th.
 </DATE_GUIDELINES>
 
