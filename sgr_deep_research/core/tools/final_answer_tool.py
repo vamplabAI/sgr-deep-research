@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import logging
 from typing import TYPE_CHECKING, Literal
+
 from pydantic import Field
 
-from sgr_deep_research.core.models import AgentStatesEnum
 from sgr_deep_research.core.base_tool import BaseTool
+from sgr_deep_research.core.models import AgentStatesEnum
 from sgr_deep_research.settings import get_config
 
 if TYPE_CHECKING:
