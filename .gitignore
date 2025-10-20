@@ -99,6 +99,8 @@ Pipfile.lock
 # poetry
 poetry.lock
 
+*.txt
+
 # pdm
 .pdm.toml
 
@@ -279,6 +281,12 @@ test_output/
 # Бенчмарки
 benchmark_results/
 performance_*.json
+benchmark/.env
+benchmark/simpleqa_bench_results*.xlsx
+benchmark/~$*.xlsx
+*.xlsx
+!assets/*.xlsx
+benchmark_logs/
 
 # Временные скрипты
 temp_*.py

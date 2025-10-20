@@ -47,6 +47,7 @@ class ResearchContext(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
     current_step_reasoning: Any = None
+    execution_result: str | None = None
 
     state: AgentStatesEnum = Field(default=AgentStatesEnum.INITED, description="Current research state")
     iteration: int = Field(default=0, description="Current iteration number")

@@ -564,6 +564,25 @@ See `docs/example_report.md` for a complete sample of SGR research output.
 
 ______________________________________________________________________
 
+## 📊 Benchmarking with SimpleQA
+
+We conducted a comprehensive benchmark evaluation using the [SimpleQA](https://huggingface.co/datasets/basicv8vc/SimpleQA) dataset - a factuality benchmark that measures the ability of language models to answer short, fact-seeking questions.
+
+### Our Benchmark Results
+
+![SimpleQA Benchmark Comparison](assets/simpleqa_benchmark_comparison.png)
+
+**Performance Metrics:**
+
+- **Accuracy:** 86.08%
+- **Correct:** 3,724 answers
+- **Incorrect:** 554 answers
+- **Not Attempted:** 48 answers
+
+**For detailed information** about benchmark configuration, how to run it, and technical details, see the **[Benchmark Documentation](benchmark/simpleqa_benchmark_results.md)**.
+
+______________________________________________________________________
+
 <details>
 <summary>🛠️ <strong>Advanced Integration Examples</strong> - Production-ready code for streaming, monitoring & state management</summary>
 

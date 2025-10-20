@@ -34,11 +34,12 @@ class BaseAgent:
         self,
         task: str,
         toolkit: list[Type[BaseTool]] | None = None,
-        max_iterations: int = 10,
+        max_iterations: int = 20,
         max_clarifications: int = 3,
     ):
         self.id = f"{self.name}_{uuid.uuid4()}"
         self.logger = logging.getLogger(f"sgr_deep_research.agents.{self.id}")
+        self.creation_time = datetime.now()
         self.task = task
         self.toolkit = [*system_agent_tools, *(toolkit or [])]
 
@@ -57,7 +58,7 @@ class BaseAgent:
 
     async def provide_clarification(self, clarifications: str):
         """Receive clarification from external source (e.g. user input)"""
-        self.conversation.append({"role": "user", "content": f"CLARIFICATIONS: {clarifications}"})
+        self.conversation.append({"role": "user", "content": PromptLoader.get_clarification_template(clarifications)})
         self._context.clarifications_used += 1
         self._context.clarification_received.set()
         self._context.state = AgentStatesEnum.RESEARCHING
@@ -67,18 +68,18 @@ class BaseAgent:
         next_step = result.remaining_steps[0] if result.remaining_steps else "Completing"
         self.logger.info(
             f"""
-###############################################
-🤖 LLM RESPONSE DEBUG:
-   🧠 Reasoning Steps: {result.reasoning_steps}
-   📊 Current Situation: '{result.current_situation[:400]}...'
-   📋 Plan Status: '{result.plan_status[:400]}...'
-   🔍 Searches Done: {self._context.searches_used}
-   🔍 Clarifications Done: {self._context.clarifications_used}
-   ✅ Enough Data: {result.enough_data}
-   📝 Remaining Steps: {result.remaining_steps}
-   🏁 Task Completed: {result.task_completed}
-   ➡️ Next Step: {next_step}
-###############################################"""
+    ###############################################
+    🤖 LLM RESPONSE DEBUG:
+       🧠 Reasoning Steps: {result.reasoning_steps}
+       📊 Current Situation: '{result.current_situation[:400]}...'
+       📋 Plan Status: '{result.plan_status[:400]}...'
+       🔍 Searches Done: {self._context.searches_used}
+       🔍 Clarifications Done: {self._context.clarifications_used}
+       ✅ Enough Data: {result.enough_data}
+       📝 Remaining Steps: {result.remaining_steps}
+       🏁 Task Completed: {result.task_completed}
+       ➡️ Next Step: {next_step}
+    ###############################################"""
         )
         self.log.append(
             {
@@ -126,11 +127,10 @@ class BaseAgent:
 
     async def _prepare_context(self) -> list[dict]:
         """Prepare conversation context with system prompt."""
-        system_prompt = PromptLoader.get_system_prompt(
-            sources=list(self._context.sources.values()),
-            available_tools=self.toolkit,
-        )
-        return [{"role": "system", "content": system_prompt}, *self.conversation]
+        return [
+            {"role": "system", "content": PromptLoader.get_system_prompt(self.toolkit)},
+            *self.conversation,
+        ]
 
     async def _prepare_tools(self) -> list[ChatCompletionFunctionToolParam]:
         """Prepare available tools for current agent state and progress."""
@@ -162,7 +162,7 @@ class BaseAgent:
             [
                 {
                     "role": "user",
-                    "content": f"\nORIGINAL USER REQUEST: '{self.task}'\n",
+                    "content": PromptLoader.get_initial_user_request(self.task),
                 }
             ]
         )
@@ -174,11 +174,10 @@ class BaseAgent:
                 reasoning = await self._reasoning_phase()
                 self._context.current_step_reasoning = reasoning
                 action_tool = await self._select_action_phase(reasoning)
-                action_result = await self._action_phase(action_tool)
+                await self._action_phase(action_tool)
 
                 if isinstance(action_tool, ClarificationTool):
                     self.logger.info("\n⏸️  Research paused - please answer questions")
-                    self.logger.info(action_result)
                     self._context.state = AgentStatesEnum.WAITING_FOR_CLARIFICATION
                     self._context.clarification_received.clear()
                     await self._context.clarification_received.wait()

@@ -48,7 +48,12 @@ async def get_agent_state(agent_id: str):
 @router.get("/agents", response_model=AgentListResponse)
 async def get_agents_list():
     agents_list = [
-        AgentListItem(agent_id=agent.id, task=agent.task, state=agent._context.state)
+        AgentListItem(
+            agent_id=agent.id,
+            task=agent.task,
+            state=agent._context.state,
+            creation_time=agent.creation_time,
+        )
         for agent in agents_storage.values()
     ]
 

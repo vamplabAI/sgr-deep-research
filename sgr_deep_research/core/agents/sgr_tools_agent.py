@@ -6,10 +6,10 @@ from openai.types.chat import ChatCompletionFunctionToolParam
 from sgr_deep_research.core.agents.sgr_agent import SGRResearchAgent
 from sgr_deep_research.core.models import AgentStatesEnum
 from sgr_deep_research.core.tools import (
-    AgentCompletionTool,
     BaseTool,
     ClarificationTool,
     CreateReportTool,
+    FinalAnswerTool,
     ReasoningTool,
     WebSearchTool,
     research_agent_tools,
@@ -57,7 +57,7 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
             tools = {
                 ReasoningTool,
                 CreateReportTool,
-                AgentCompletionTool,
+                FinalAnswerTool,
             }
         if self._context.clarifications_used >= self.max_clarifications:
             tools -= {
@@ -79,11 +79,10 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
             tool_choice={"type": "function", "function": {"name": ReasoningTool.tool_name}},
         ) as stream:
             async for event in stream:
-                # print(event)
                 if event.type == "chunk":
                     self.streaming_generator.add_chunk(event.chunk)
-            reasoning: ReasoningTool = (  # noqa
-                (await stream.get_final_completion()).choices[0].message.tool_calls[0].function.parsed_arguments  #
+            reasoning: ReasoningTool = (
+                (await stream.get_final_completion()).choices[0].message.tool_calls[0].function.parsed_arguments
             )
         self.conversation.append(
             {
@@ -120,18 +119,19 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
             async for event in stream:
                 if event.type == "chunk":
                     self.streaming_generator.add_chunk(event.chunk)
+
         completion = await stream.get_final_completion()
+
         try:
             tool = completion.choices[0].message.tool_calls[0].function.parsed_arguments
         except (IndexError, AttributeError, TypeError):
             # LLM returned a text response instead of a tool call - treat as completion
             final_content = completion.choices[0].message.content or "Task completed successfully"
-            tool = AgentCompletionTool(
+            tool = FinalAnswerTool(
                 reasoning="Agent decided to complete the task",
                 completed_steps=[final_content],
                 status=AgentStatesEnum.COMPLETED,
             )
-
         if not isinstance(tool, BaseTool):
             raise ValueError("Selected tool is not a valid BaseTool instance")
         self.conversation.append(

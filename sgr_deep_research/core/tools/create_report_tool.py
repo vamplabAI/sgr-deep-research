@@ -15,12 +15,17 @@ if TYPE_CHECKING:
     from sgr_deep_research.core.models import ResearchContext
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 config = get_config()
 
 
 class CreateReportTool(BaseTool):
     """Create comprehensive detailed report with citations as a final step of
-    research."""
+    research.
+
+    CRITICAL: Every factual claim in content MUST have inline citations [1], [2], [3].
+    Citations must be integrated directly into sentences, not just listed at the end.
+    """
 
     reasoning: str = Field(description="Why ready to create report now")
     title: str = Field(description="Report title")
@@ -29,7 +34,9 @@ class CreateReportTool(BaseTool):
     )
     content: str = Field(
         description="Write comprehensive research report following the REPORT CREATION GUIDELINES from system prompt. "
-        "Use the SAME LANGUAGE as user_request_language_reference."
+        "Use the SAME LANGUAGE as user_request_language_reference. "
+        "MANDATORY: Include inline citations [1], [2], [3] after EVERY factual claim. "
+        "Example: 'The system uses Vue.js [1] and Python [2].' NOT: 'The system uses Vue.js and Python.'"
     )
     confidence: Literal["high", "medium", "low"] = Field(description="Confidence in findings")
 
@@ -46,7 +53,12 @@ class CreateReportTool(BaseTool):
         full_content = f"# {self.title}\n\n"
         full_content += f"*Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*\n\n"
         full_content += self.content + "\n\n"
-        full_content += "\n".join(["- " + str(source) for source in context.sources.values()])
+
+        # Add sources reference section
+        if context.sources:
+            full_content += "---\n\n"
+            full_content += "## Источники / Sources\n\n"
+            full_content += "\n".join([str(source) for source in context.sources.values()])
 
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(full_content)

@@ -1,5 +1,6 @@
 """OpenAI-compatible models for API endpoints."""
 
+from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Literal
 
@@ -88,12 +89,14 @@ class AgentStateResponse(BaseModel):
     clarifications_used: int = Field(description="Number of clarifications requested")
     sources_count: int = Field(description="Number of sources found")
     current_step_reasoning: Dict[str, Any] | None = Field(default=None, description="Current agent step")
+    execution_result: str | None = Field(default=None, description="Execution result")
 
 
 class AgentListItem(BaseModel):
     agent_id: str = Field(description="Agent ID")
     task: str = Field(description="Agent task")
     state: str = Field(description="Current agent state")
+    creation_time: datetime = Field(description="Agent creation time")
 
 
 class AgentListResponse(BaseModel):

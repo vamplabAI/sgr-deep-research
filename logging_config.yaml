@@ -22,11 +22,20 @@ handlers:
     formatter: standard
     stream: ext://sys.stderr
 
+  file:
+    class: logging.handlers.RotatingFileHandler
+    level: DEBUG
+    formatter: standard
+    filename: logs/sgr_deep_research.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 5
+    encoding: utf8
+
 loggers:
   # Main application logger - all our modules inherit from it
   root:
     level: INFO
-    handlers: [ console, console_error ]
+    handlers: [ console, console_error, file ]
 
 
   sgr_deep_research:

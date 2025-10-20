@@ -37,7 +37,7 @@ class SGRSOToolCallingResearchAgent(SGRToolCallingResearchAgent):
                 if event.type == "chunk":
                     self.streaming_generator.add_chunk(event)
         reasoning: ReasoningTool = (await stream.get_final_completion()).choices[0].message.parsed
-        tool_call_result = reasoning(self._context)
+        tool_call_result = await reasoning(self._context)
         self.conversation.append(
             {
                 "role": "assistant",
