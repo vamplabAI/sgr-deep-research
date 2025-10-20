@@ -1,6 +1,6 @@
 # 📊 SGR Deep Research - SimpleQA Benchmark
 
-![SimpleQA Benchmark Comparison](../assets/simpleqa_benchmark_comprasion.png)
+![SimpleQA Benchmark Comparison](../assets/simpleqa_benchmark_comparison.png)
 
 Comprehensive benchmark evaluation using the SimpleQA dataset - a factuality benchmark that measures the ability of language models to answer short, fact-seeking questions.
 

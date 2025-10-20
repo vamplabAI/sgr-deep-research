@@ -570,7 +570,7 @@ We conducted a comprehensive benchmark evaluation using the [SimpleQA](https://h
 
 ### Our Benchmark Results
 
-![SimpleQA Benchmark Comparison](assets/simpleqa_benchmark_comprasion.png)
+![SimpleQA Benchmark Comparison](assets/simpleqa_benchmark_comparison.png)
 
 **Performance Metrics:**
 
