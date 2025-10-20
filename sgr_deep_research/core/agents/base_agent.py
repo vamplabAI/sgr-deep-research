@@ -39,6 +39,7 @@ class BaseAgent:
     ):
         self.id = f"{self.name}_{uuid.uuid4()}"
         self.logger = logging.getLogger(f"sgr_deep_research.agents.{self.id}")
+        self.creation_time = datetime.now()
         self.task = task
         self.toolkit = [*system_agent_tools, *(toolkit or [])]
 

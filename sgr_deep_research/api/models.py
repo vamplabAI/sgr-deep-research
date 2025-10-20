@@ -1,5 +1,6 @@
 """OpenAI-compatible models for API endpoints."""
 
+from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Literal
 
@@ -95,6 +96,7 @@ class AgentListItem(BaseModel):
     agent_id: str = Field(description="Agent ID")
     task: str = Field(description="Agent task")
     state: str = Field(description="Current agent state")
+    creation_time: datetime = Field(description="Agent creation time")
 
 
 class AgentListResponse(BaseModel):
