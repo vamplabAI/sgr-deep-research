@@ -19,24 +19,24 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-## Benchmarking with SimpleQA
+## Benchmarking
 
 ![SimpleQA Benchmark Comparison](docs/simpleqa_benchmark_comprasion.png)
 
-**Performance Metrics:**
+**Performance Metrics on gpt-4.1-mini:**
 
 - **Accuracy:** 86.08%
 - **Correct:** 3,724 answers
 - **Incorrect:** 554 answers
 - **Not Attempted:** 48 answers
 
-Detailed benchmark results are available [here](benchmark/simpleqa_benchmark_results.md).
+More detailed benchmark results are available [here](benchmark/simpleqa_benchmark_results.md).
 
 ______________________________________________________________________
 
-## 👥 Open-Source Development Team
+## Open-Source Development Team
 
-### This project is built by the community with pure enthusiasm as an open-source initiative:
+*All development is driven by pure enthusiasm and open-source community collaboration. We welcome contributors of all skill levels!*
 
 - **SGR Concept Creator** // [@abdullin](https://t.me/llm_under_hood)
 - **Project Coordinator & Vision** // [@VaKovaLskii](https://t.me/neuraldeep)
@@ -46,8 +46,6 @@ ______________________________________________________________________
 - **DevOps & Deployment** // [@mixaill76](https://t.me/mixaill76)
 
 If you have any questions - feel free to reach out to [Valerii Kovalskii](https://www.linkedin.com/in/vakovalskii/).
-
-*All development is driven by pure enthusiasm and open-source community collaboration. We welcome contributors of all skill levels!*
 
 ## Special Thanks To:
 
