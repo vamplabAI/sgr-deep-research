@@ -88,6 +88,7 @@ class AgentStateResponse(BaseModel):
     clarifications_used: int = Field(description="Number of clarifications requested")
     sources_count: int = Field(description="Number of sources found")
     current_step_reasoning: Dict[str, Any] | None = Field(default=None, description="Current agent step")
+    execution_result: str | None = Field(default=None, description="Execution result")
 
 
 class AgentListItem(BaseModel):
