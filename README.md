@@ -579,7 +579,7 @@ We conducted a comprehensive benchmark evaluation using the [SimpleQA](https://h
 - **Incorrect:** 554 answers
 - **Not Attempted:** 48 answers
 
-**For detailed information** about benchmark configuration, how to run it, and technical details, see the **[Benchmark Documentation](benchmark/README.md)**.
+**For detailed information** about benchmark configuration, how to run it, and technical details, see the **[Benchmark Documentation](benchmark/simpleqa_benchmark_results.md)**.
 
 ______________________________________________________________________
 

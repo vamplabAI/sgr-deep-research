@@ -17,7 +17,7 @@ The next step was the implementation of the testing logic. We isolated the `sgr_
 
 System configuration during the benchmark run:
 
-## ⚙️ Agent Configuration for Benchmark Run
+## Agent Configuration and Benchmark Run
 
 | Component         | Parameter        | Value                  |
 | ----------------- | ---------------- | ---------------------- |
@@ -36,13 +36,32 @@ System configuration during the benchmark run:
 
 Last version project exist on commit - 06a418bbb63728fe56bda27894ec263be4ceab81.
 
+### How to Run
+
+1. **Setup environment and dependencies:**
+
+   ```bash
+   cd benchmark
+   pip install -r requirements.txt
+   cp env.example .env # fill env
+   ```
+
+2. **Run benchmark:**
+
+   ```bash
+   python run_simpleqa_benchmark.py \
+       --path_to_simpleqa ./data/simpleqa_verified.csv \
+       --output_path ./simpleqa_bench_results.xlsx \
+       --batch_size 10
+   ```
+
 # Results
 
 ![alt text](../assets/simpleqa_benchmark_comparison.png)
 
 As a result, our agent achieved an Accuracy = 0.861
 
-## 📊 Benchmark Metrics
+## Benchmark Metrics
 
 | Metric            | Value       |
 | ----------------- | ----------- |
