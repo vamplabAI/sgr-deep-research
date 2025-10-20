@@ -34,6 +34,8 @@ System configuration during the benchmark run:
 |                   | Max Tokens       | Default                |
 |                   | Temperature      | Default                |
 
+Last version project exist on commit - 06a418bbb63728fe56bda27894ec263be4ceab81.
+
 # Results
 
 ![alt text](../assets/simpleqa_benchmark_comparison.png)
@@ -51,4 +53,4 @@ As a result, our agent achieved an Accuracy = 0.861
 
 # Conclusions
 
-Our result shows that even small LLMs, using the Schema-Guided Reasoning approach, can achieve quality comparable to LLMs on popular search tools.
+Our result shows that ***even small LLMs***, using the Schema-Guided Reasoning approach, can achieve quality comparable to LLMs on popular search tools.

@@ -101,14 +101,14 @@ Navigate to the benchmark directory and run:
 cd benchmark
 
 # Basic usage with default settings
-python run_benchmark.py \
+python run_simpleqa_benchmark.py \
     --path_to_simpleqa ./data/simpleqa_verified.csv \
     --output_path ./simpleqa_bench_results.xlsx \
     --n_samples 100 \
     --batch_size 3
 
 # Process entire dataset with larger batches
-python run_benchmark.py \
+python run_simpleqa_benchmark.py \
     --path_to_simpleqa ./data/simpleqa_verified.csv \
     --output_path ./simpleqa_bench_results.xlsx \
     --batch_size 10
@@ -179,7 +179,7 @@ ______________________________________________________________________
 
 ## 📁 Benchmark Files
 
-- `run_benchmark.py` - Main benchmark script
+- `run_simpleqa_benchmark.py` - Main benchmark script
 - `benchmark_agent.py` - BenchmarkAgent class
 - `prompts.py` - Grading prompt templates
 - `utils.py` - Utility functions
