@@ -36,15 +36,18 @@ System configuration during the benchmark run:
 
 # Results
 
-![alt text](../assets/simpleqa_benchmark_comprasion.png)
+![alt text](../assets/simpleqa_benchmark_comparison.png)
 
 As a result, our agent achieved an Accuracy = 0.861
 
-Numbers:
-232 million tokens
-8k requests to /search
-1200 requests to /extract
-The full test of this benchmark cost $170
+## 📊 Benchmark Metrics
+
+| Metric            | Value       |
+| ----------------- | ----------- |
+| Tokens            | 232 million |
+| /search requests  | 8k          |
+| /extract requests | 1,200       |
+| Total cost        | $170        |
 
 # Conclusions
 
