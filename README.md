@@ -9,13 +9,13 @@ The library includes extensible tools for search, reasoning, and clarification, 
 
 ______________________________________________________________________
 
-## Documents
+## Documentation
 
-[Project's Wiki](https://github.com/vamplabAI/sgr-deep-research/wiki) - Main documentation of project
+> **Get started quickly with our documentation:**
 
-[Quick start](https://github.com/vamplabAI/sgr-deep-research/wiki/SGR-Quick-Start) - for quick start
-
-[Description API](https://github.com/vamplabAI/sgr-deep-research/wiki/SGR-Description-API) - Description API with examples
+- **[Project Wiki](https://github.com/vamplabAI/sgr-deep-research/wiki)** - Complete project documentation
+- **[Quick Start Guide](https://github.com/vamplabAI/sgr-deep-research/wiki/SGR-Quick-Start)** - Get up and running in minutes
+- **[API Documentation](https://github.com/vamplabAI/sgr-deep-research/wiki/SGR-Description-API)** - REST API reference with examples
 
 ______________________________________________________________________
 
