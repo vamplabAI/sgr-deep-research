@@ -9,6 +9,7 @@ The dataset for this benchmark was taken from Hugging Face from here (https://hu
 For comparison with other search tools, the leaderboard from the ROMA repository was used (https://github.com/sentient-agi/ROMA).
 
 The next step was the implementation of the testing logic. We isolated the `sgr_tool_calling_agent` and limited it to the following tools:
+
 - ReasoningTool;
 - WebSearchTool;
 - ExtractPageContentTool;
