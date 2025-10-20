@@ -55,12 +55,27 @@ class MCPBaseTool(BaseTool):
 
 
 class ClarificationTool(BaseTool):
-    """Ask clarifying questions when facing ambiguous request."""
+    """Ask clarifying questions when facing ambiguous request.
 
-    reasoning: str = Field(description="Why clarification is needed")
-    unclear_terms: list[str] = Field(description="List of unclear terms or concepts", min_length=1, max_length=5)
-    assumptions: list[str] = Field(description="Possible interpretations to verify", min_length=2, max_length=4)
-    questions: list[str] = Field(description="3-5 specific clarifying questions", min_length=3, max_length=5)
+    Keep all fields concise - brief reasoning, short terms, and clear questions.
+    """
+
+    reasoning: str = Field(description="Why clarification is needed (1-2 sentences MAX)", max_length=200)
+    unclear_terms: list[str] = Field(
+        description="List of unclear terms (brief, 1-3 words each)",
+        min_length=1,
+        max_length=3,
+    )
+    assumptions: list[str] = Field(
+        description="Possible interpretations (short, 1 sentence each)",
+        min_length=2,
+        max_length=3,
+    )
+    questions: list[str] = Field(
+        description="3 specific clarifying questions (short and direct)",
+        min_length=3,
+        max_length=3,
+    )
 
     async def __call__(self, context: ResearchContext) -> str:
         return "\n".join(self.questions)
@@ -104,39 +119,63 @@ class AdaptPlanTool(BaseTool):
         )
 
 
-class AgentCompletionTool(BaseTool):
+class FinalAnswerTool(BaseTool):
     """Finalize research task and complete agent execution after all steps are
-    completed."""
+    completed.
 
-    reasoning: str = Field(description="Why task is now complete")
-    completed_steps: list[str] = Field(description="Summary of completed steps", min_length=1, max_length=5)
+    Usage: Call after you complete research task
+    """
+
+    reasoning: str = Field(description="Why task is now complete and how answer was verified")
+    completed_steps: list[str] = Field(
+        description="Summary of completed steps including verification", min_length=1, max_length=5
+    )
+    answer: str = Field(description="Comprehensive final answer with EXACT factual details (dates, numbers, names)")
     status: Literal[AgentStatesEnum.COMPLETED, AgentStatesEnum.FAILED] = Field(description="Task completion status")
 
     async def __call__(self, context: ResearchContext) -> str:
         context.state = self.status
+        context.execution_result = self.answer
         return self.model_dump_json(
             indent=2,
         )
 
 
 class ReasoningTool(BaseTool):
-    """Agent Core - Determines next reasoning step with adaptive planning"""
+    """Agent core logic, determines next reasoning step with adaptive planning
+    by schema-guided-reasoning capabilities Keep all text fields concise and
+    focused.
+
+    Usage: Requiared tool use this tool before execution tool, and after execution
+    """
 
     # Reasoning chain - step-by-step thinking process (helps stabilize model)
     reasoning_steps: list[str] = Field(
-        description="Step-by-step reasoning process leading to decision", min_length=2, max_length=4
+        description="Step-by-step reasoning (brief, 1 sentence each)",
+        min_length=2,
+        max_length=3,
     )
 
     # Reasoning and state assessment
-    current_situation: str = Field(description="Current research situation analysis")
-    plan_status: str = Field(description="Status of current plan execution")
+    current_situation: str = Field(
+        description="Current research situation (2-3 sentences MAX)",
+        max_length=300,
+    )
+    plan_status: str = Field(
+        description="Status of current plan (1 sentence)",
+        max_length=150,
+    )
     enough_data: bool = Field(
         default=False,
         description="Sufficient data collected for comprehensive report?",
     )
 
     # Next step planning
-    remaining_steps: list[str] = Field(description="1-3 remaining steps to complete task", min_length=1, max_length=3)
+    remaining_steps: list[str] = Field(
+        description="1-3 remaining steps (brief, action-oriented)",
+        min_length=1,
+        max_length=3,
+    )
     task_completed: bool = Field(description="Is the research task finished?")
 
     async def __call__(self, *args, **kwargs):
@@ -174,11 +213,11 @@ class NextStepToolsBuilder:
         """Create discriminant version of tool with tool_name as instance
         field."""
 
-        return create_model(
+        return create_model(  # noqa
             f"D_{tool_class.__name__}",
             __base__=(tool_class, DiscriminantToolMixin),  # the order matters here
             tool_name_discriminator=(Literal[tool_class.tool_name], Field(..., description="Tool name discriminator")),
-        )  # noqa
+        )
 
     @classmethod
     def _create_tool_types_union(cls, tools_list: list[Type[T]]) -> Type:
@@ -203,6 +242,6 @@ system_agent_tools = [
     ClarificationTool,
     GeneratePlanTool,
     AdaptPlanTool,
-    AgentCompletionTool,
+    FinalAnswerTool,
     ReasoningTool,
 ]

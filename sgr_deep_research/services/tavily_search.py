@@ -51,6 +51,40 @@ class TavilySearchService:
         sources = self._convert_to_source_data(response)
         return sources
 
+    async def extract(self, urls: list[str]) -> list[SourceData]:
+        """Extract full content from specific URLs using Tavily Extract API.
+
+        Args:
+            urls: List of URLs to extract content from
+
+        Returns:
+            List of SourceData with extracted content
+        """
+        logger.info(f"📄 Tavily extract: {len(urls)} URLs")
+
+        response = await self._client.extract(urls=urls)
+
+        sources = []
+        for i, result in enumerate(response.get("results", [])):
+            if not result.get("url"):
+                continue
+
+            source = SourceData(
+                number=i,
+                title=result.get("url", "").split("/")[-1] or "Extracted Content",
+                url=result.get("url", ""),
+                snippet="",
+                full_content=result.get("raw_content", ""),
+                char_count=len(result.get("raw_content", "")),
+            )
+            sources.append(source)
+
+        failed_urls = response.get("failed_results", [])
+        if failed_urls:
+            logger.warning(f"⚠️ Failed to extract {len(failed_urls)} URLs: {failed_urls}")
+
+        return sources
+
     def _convert_to_source_data(self, response: dict) -> list[SourceData]:
         """Convert Tavily response to SourceData list."""
         sources = []
