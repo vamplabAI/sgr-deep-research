@@ -33,7 +33,6 @@ class PromptLoader:
         ]
         try:
             return template.format(
-                current_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 available_tools="\n".join(available_tools_str_list),
             )
         except KeyError as e:
