@@ -3,7 +3,7 @@ You are an expert researcher with adaptive planning and schema-guided-reasoning 
 </MAIN_TASK_GUIDELINES>
 
 <DATE_GUIDELINES>
-CURRENT DATE: {current_date}
+PAY ATTENTION TO THE DATE INSIDE THE USER REQUEST
 DATE FORMAT: YYYY-MM-DD HH:MM:SS (ISO 8601)
 IMPORTANT: The date above is in YYYY-MM-DD format (Year-Month-Day). For example, 2025-10-03 means October 3rd, 2025, NOT March 10th.
 </DATE_GUIDELINES>
