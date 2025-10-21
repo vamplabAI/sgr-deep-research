@@ -6,7 +6,7 @@ We believe that the best discussions arise around working code, not abstract ide
 
 ## Now let's break it down point by point...
 
-![Alt text](docs/img1.png "Optional Title")
+![Alt text](docs/dev_workflow.png "Optional Title")
 
 ### **Have an idea and want to implement something?**
 
@@ -23,7 +23,7 @@ Your path will look like this:
 
 ______________________________________________________________________
 
-![Alt text](docs/image2.png "Optional Title")
+![Alt text](docs/idea_workflow.png "Optional Title")
 
 ### **Have an idea you just want to share?**
 
@@ -36,7 +36,7 @@ Your path will look like this:
 
 ______________________________________________________________________
 
-![Alt text](docs/image3.png "Optional Title")
+![Alt text](docs/works_workflow.png "Optional Title")
 
 ### **Or just want to build something manually...**
 

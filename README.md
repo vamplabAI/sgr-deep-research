@@ -2,8 +2,8 @@
 
 ## Description
 
-![SGR Concept Architecture](assets/sgr_concept.png)
-Open-source SDK for building intelligent research agents using Schema-Guided Reasoning. The project provides a core library with a extendable BaseAgent interface implementing a two-phase architecture and multiple ready-to-use research agent implementations built on top of it.
+![SGR Concept Architecture](docs/sgr_concept.png)
+Open-source framework for building intelligent research agents using Schema-Guided Reasoning. The project provides a core library with a extendable BaseAgent interface implementing a two-phase architecture and multiple ready-to-use research agent implementations built on top of it.
 
 The library includes extensible tools for search, reasoning, and clarification, real-time streaming responses, OpenAI-compatible REST API. Works with any OpenAI-compatible LLM, including local models for fully private research.
 
