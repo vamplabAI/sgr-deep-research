@@ -1,4 +1,5 @@
 import json
+
 from openai import OpenAI
 
 client = OpenAI(base_url="http://localhost:8010/v1", api_key="dummy")
@@ -35,7 +36,7 @@ for chunk in response:
 
 # Step 2: Handle clarification if needed
 if clarification_questions and agent_id:
-    print(f"\n\nClarification needed:")
+    print("\n\nClarification needed:")
     for i, question in enumerate(clarification_questions, 1):
         print(f"{i}. {question}")
 
