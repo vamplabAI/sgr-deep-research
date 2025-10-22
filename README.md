@@ -21,7 +21,7 @@ ______________________________________________________________________
 
 ## Benchmarking
 
-![SimpleQA Benchmark Comparison](docs/simpleqa_benchmark_comprasion.png)
+![SimpleQA Benchmark Comparison](docs/simpleqa_benchmark_comparison.png)
 
 **Performance Metrics on gpt-4.1-mini:**
 
