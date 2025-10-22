@@ -57,7 +57,7 @@ Last version project exist on commit - 06a418bbb63728fe56bda27894ec263be4ceab81.
 
 # Results
 
-![alt text](../assets/simpleqa_benchmark_comparison.png)
+![bench image](../docs/simpleqa_benchmark_comparison.png)
 
 As a result, our agent achieved an Accuracy = 0.861
 
