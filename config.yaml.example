@@ -5,7 +5,7 @@
 # OpenAI API Configuration
 openai:
   api_key: "your-openai-api-key-here"  # Required: Your OpenAI API key
-  base_url: ""                         # Optional: Alternative URL (e.g., for proxy LiteLLM/vLLM)
+  base_url: "https://api.openai.com/v1"  # Optional: Alternative URL (e.g., for proxy LiteLLM/vLLM)
   model: "gpt-4o-mini"                 # Model to use
   max_tokens: 8000                     # Maximum number of tokens
   temperature: 0.4                     # Generation temperature (0.0-1.0)
