@@ -29,17 +29,18 @@ scraping:
 # Execution Settings
 execution:
   max_steps: 6                         # Maximum number of execution steps
-  reports_dir: "reports"               # Directory for saving reports
-  logs_dir: "logs"                     # Directory for saving reports
 
 # Prompts Settings
 prompts:
-  prompts_dir: "prompts"               # Directory with prompts
-  system_prompt_file: "system_prompt.txt"  # System prompt file
+  system_prompt_file: "prompts/system_prompt.txt"  # Path to system prompt file
+  initial_user_request_file: "prompts/initial_user_request.txt"  # Path to initial user request file
+  clarification_response_file: "prompts/clarification_response.txt"  # Path to clarification response file
 
 # Logging Settings
 logging:
   config_file: "logging_config.yaml"  # Logging configuration file path
+  logs_dir: "logs"                     # Directory for saving logs
+  reports_dir: "reports"               # Directory for saving reports
 
 mcp:
 
@@ -56,3 +57,27 @@ mcp:
 
       context7:
         url: "https://mcp.context7.com/mcp"
+
+      example:
+        url: "https:/auth.example.com/mcp"
+        headers:
+          Authorization: "Bearer your-token-here"
+
+# Custom Agents Configuration
+agents:
+  # Option 1: Load agents from separate file
+  # config_file: "agents_config.yaml"
+
+  # Option 2: Define agents inline (empty by default)
+  agents: []
+
+  # Example inline agent definition:
+  # agents:
+  #   - name: "my_custom_agent"
+  #     display_name: "My Custom Agent"
+  #     description: "Custom agent for specific tasks"
+  #     base_class: "SGRResearchAgent"
+  #     tools:
+  #       - "WebSearchTool"
+  #       - "CreateReportTool"
+  #       - "FinalAnswerTool"

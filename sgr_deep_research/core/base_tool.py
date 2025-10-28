@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, ClassVar
 from fastmcp import Client
 from pydantic import BaseModel
 
-# from sgr_deep_research.core.models import AgentStatesEnum
+from sgr_deep_research.core.registry import ToolRegistry
 from sgr_deep_research.settings import get_config
 
 if TYPE_CHECKING:
@@ -17,7 +17,14 @@ config = get_config()
 logger = logging.getLogger(__name__)
 
 
-class BaseTool(BaseModel):
+class ToolRegistryMixin:
+    def __init_subclass__(cls, **kwargs) -> None:
+        super().__init_subclass__(**kwargs)
+        if cls.__name__ not in ("BaseTool", "MCPBaseTool"):
+            ToolRegistry.register(cls, name=cls.tool_name)
+
+
+class BaseTool(BaseModel, ToolRegistryMixin):
     """Class to provide tool handling capabilities."""
 
     tool_name: ClassVar[str] = None
@@ -27,10 +34,10 @@ class BaseTool(BaseModel):
         """Result should be a string or dumped json."""
         raise NotImplementedError("Execute method must be implemented by subclass")
 
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
+    def __init_subclass__(cls, **kwargs) -> None:
         cls.tool_name = cls.tool_name or cls.__name__.lower()
         cls.description = cls.description or cls.__doc__ or ""
+        super().__init_subclass__(**kwargs)
 
 
 class MCPBaseTool(BaseTool):
