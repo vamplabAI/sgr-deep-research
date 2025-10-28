@@ -1,6 +1,6 @@
 from typing import Type
 
-from sgr_deep_research.core.agents.base_agent import BaseAgent
+from sgr_deep_research.core.base_agent import BaseAgent
 from sgr_deep_research.core.tools import (
     BaseTool,
     ClarificationTool,
@@ -8,15 +8,10 @@ from sgr_deep_research.core.tools import (
     FinalAnswerTool,
     NextStepToolsBuilder,
     NextStepToolStub,
-    ReasoningTool,
     WebSearchTool,
-    research_agent_tools,
-    system_agent_tools,
 )
 from sgr_deep_research.services import MCP2ToolConverter
-from sgr_deep_research.settings import get_config
-
-config = get_config()
+from sgr_deep_research.settings import OpenAIConfig, PromptsConfig
 
 
 class SGRResearchAgent(BaseAgent):
@@ -27,6 +22,8 @@ class SGRResearchAgent(BaseAgent):
     def __init__(
         self,
         task: str,
+        openai_config: OpenAIConfig,
+        prompts_config: PromptsConfig,
         toolkit: list[Type[BaseTool]] | None = None,
         max_clarifications: int = 3,
         max_iterations: int = 10,
@@ -34,18 +31,12 @@ class SGRResearchAgent(BaseAgent):
     ):
         super().__init__(
             task=task,
+            openai_config=openai_config,
+            prompts_config=prompts_config,
             toolkit=toolkit,
             max_clarifications=max_clarifications,
             max_iterations=max_iterations,
         )
-
-        self.toolkit = [
-            *system_agent_tools,
-            *research_agent_tools,
-            *MCP2ToolConverter().toolkit,
-            *(toolkit or []),
-        ]
-        self.toolkit.remove(ReasoningTool)  # we use our own reasoning scheme
         self.max_searches = max_searches
 
     async def _prepare_tools(self) -> Type[NextStepToolStub]:
@@ -68,11 +59,11 @@ class SGRResearchAgent(BaseAgent):
 
     async def _reasoning_phase(self) -> NextStepToolStub:
         async with self.openai_client.chat.completions.stream(
-            model=config.openai.model,
+            model=self.openai_config.model,
             response_format=await self._prepare_tools(),
             messages=await self._prepare_context(),
-            max_tokens=config.openai.max_tokens,
-            temperature=config.openai.temperature,
+            max_tokens=self.openai_config.max_tokens,
+            temperature=self.openai_config.temperature,
         ) as stream:
             async for event in stream:
                 if event.type == "chunk":

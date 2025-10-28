@@ -12,13 +12,8 @@ from sgr_deep_research.core.tools import (
     FinalAnswerTool,
     ReasoningTool,
     WebSearchTool,
-    research_agent_tools,
-    system_agent_tools,
 )
-from sgr_deep_research.services import MCP2ToolConverter
-from sgr_deep_research.settings import get_config
-
-config = get_config()
+from sgr_deep_research.settings import OpenAIConfig, PromptsConfig
 
 
 class SGRToolCallingResearchAgent(SGRResearchAgent):
@@ -30,6 +25,8 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
     def __init__(
         self,
         task: str,
+        openai_config: OpenAIConfig,
+        prompts_config: PromptsConfig,
         toolkit: list[Type[BaseTool]] | None = None,
         max_clarifications: int = 3,
         max_searches: int = 4,
@@ -37,17 +34,14 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
     ):
         super().__init__(
             task=task,
+            openai_config=openai_config,
+            prompts_config=prompts_config,
             toolkit=toolkit,
             max_clarifications=max_clarifications,
             max_iterations=max_iterations,
             max_searches=max_searches,
         )
-        self.toolkit = [
-            *system_agent_tools,
-            *research_agent_tools,
-            *MCP2ToolConverter().toolkit,
-            *(toolkit if toolkit else []),
-        ]
+        self.toolkit.append(ReasoningTool)
         self.tool_choice: Literal["required"] = "required"
 
     async def _prepare_tools(self) -> list[ChatCompletionFunctionToolParam]:
@@ -71,10 +65,10 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
 
     async def _reasoning_phase(self) -> ReasoningTool:
         async with self.openai_client.chat.completions.stream(
-            model=config.openai.model,
+            model=self.openai_config.model,
             messages=await self._prepare_context(),
-            max_tokens=config.openai.max_tokens,
-            temperature=config.openai.temperature,
+            max_tokens=self.openai_config.max_tokens,
+            temperature=self.openai_config.temperature,
             tools=await self._prepare_tools(),
             tool_choice={"type": "function", "function": {"name": ReasoningTool.tool_name}},
         ) as stream:
@@ -109,10 +103,10 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
 
     async def _select_action_phase(self, reasoning: ReasoningTool) -> BaseTool:
         async with self.openai_client.chat.completions.stream(
-            model=config.openai.model,
+            model=self.openai_config.model,
             messages=await self._prepare_context(),
-            max_tokens=config.openai.max_tokens,
-            temperature=config.openai.temperature,
+            max_tokens=self.openai_config.max_tokens,
+            temperature=self.openai_config.temperature,
             tools=await self._prepare_tools(),
             tool_choice=self.tool_choice,
         ) as stream:

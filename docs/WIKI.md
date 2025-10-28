@@ -511,9 +511,9 @@ execution:
 
 # Prompts Settings
 prompts:
-  prompts_dir: "prompts"               # Directory with prompts
-  tool_function_prompt_file: "tool_function_prompt.txt"  # Tool function prompt file
-  system_prompt_file: "system_prompt.txt"  # System prompt file
+  system_prompt_file: "prompts/system_prompt.txt"  # Path to system prompt file
+  initial_user_request_file: "prompts/initial_user_request.txt"  # Path to initial user request file
+  clarification_response_file: "prompts/clarification_response.txt"  # Path to clarification response file
 ```
 
 ### Server Configuration

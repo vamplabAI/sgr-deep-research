@@ -42,7 +42,7 @@ class CreateReportTool(BaseTool):
 
     async def __call__(self, context: ResearchContext) -> str:
         # Save report
-        reports_dir = config.execution.reports_dir
+        reports_dir = config.logging.reports_dir
         os.makedirs(reports_dir, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         safe_title = "".join(c for c in self.title if c.isalnum() or c in (" ", "-", "_"))[:50]

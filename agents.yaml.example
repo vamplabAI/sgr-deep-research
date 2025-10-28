@@ -1,0 +1,100 @@
+# Example Custom Agents Configuration
+# =====================================
+# This file demonstrates how to define custom agents for SGR Deep Research
+
+agents:
+  # Example 1: Simple custom research agent
+  - name: "custom_research_agent"
+    display_name: "Custom Research Agent"
+    description: "Specialized agent for custom research tasks with extended search capabilities"
+    base_class: "SGRResearchAgent"
+
+    # Optional: Override OpenAI settings for this agent
+    openai:
+      model: "gpt-4o"
+      temperature: 0.3
+      # api_key: "your-custom-api-key"  # Optional: use different API key
+      # base_url: "https://api.openai.com/v1"  # Optional: use different endpoint
+
+    # Optional: Custom prompts for this agent
+    prompts:
+      system_prompt_file: "prompts/custom_system_prompt.txt"
+      initial_user_request_file: "prompts/custom_initial_request.txt"
+      clarification_response_file: "prompts/custom_clarification.txt"
+
+    # Optional: Execution context configuration
+    context:
+      max_iterations: 15
+      max_clarifications: 5
+      max_searches: 6
+
+    # Tools this agent can use (must be registered in tool registry)
+    tools:
+      - "WebSearchTool"
+      - "ExtractPageContentTool"
+      - "CreateReportTool"
+      - "ClarificationTool"
+      - "GeneratePlanTool"
+      - "AdaptPlanTool"
+      - "FinalAnswerTool"
+
+  # Example 2: Minimal agent with defaults
+  - name: "simple_agent"
+    display_name: "Simple Agent"
+    description: "Basic agent using default settings"
+    base_class: "BaseAgent"
+    tools:
+      - "WebSearchTool"
+      - "FinalAnswerTool"
+
+  # Example 3: Tool-calling agent with custom model
+  - name: "fast_research_agent"
+    display_name: "Fast Research Agent"
+    description: "Quick research agent optimized for speed"
+    base_class: "SGRToolCallingResearchAgent"
+
+    openai:
+      model: "gpt-4o-mini"
+      temperature: 0.1
+
+    context:
+      max_iterations: 8
+      max_clarifications: 2
+      max_searches: 3
+
+    tools:
+      - "WebSearchTool"
+      - "CreateReportTool"
+      - "FinalAnswerTool"
+      - "ReasoningTool"
+
+  # Example 4: Specialized agent with custom prompts
+  - name: "technical_analyst"
+    display_name: "Technical Analyst Agent"
+    description: "Agent specialized in technical analysis and documentation"
+    base_class: "SGRResearchAgent"
+
+    prompts:
+      system_prompt_file: "prompts/technical_analyst_prompt.txt"
+
+    context:
+      max_iterations: 20
+      max_clarifications: 3
+      max_searches: 8
+
+    tools:
+      - "WebSearchTool"
+      - "ExtractPageContentTool"
+      - "CreateReportTool"
+      - "ClarificationTool"
+      - "FinalAnswerTool"
+
+# Notes:
+# ------
+# 1. Agent names must be unique
+# 2. base_class options: BaseAgent, SGRResearchAgent, SGRToolCallingResearchAgent,
+#    SGRAutoToolCallingResearchAgent, ToolCallingResearchAgent, SGRSOToolCallingResearchAgent
+# 3. All tools must be registered in the tool registry
+# 4. OpenAI settings are optional and will inherit from global config if not specified
+# 5. Prompts are optional and will use defaults if not specified
+# 6. Context settings are optional and will use defaults if not specified

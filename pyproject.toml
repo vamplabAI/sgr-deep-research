@@ -46,7 +46,6 @@ dependencies = [
     "youtube-transcript-api>=0.6.0",
     # Configuration and utilities - конфигурация и утилиты
     "PyYAML>=6.0",
-    "envyaml>=1.10.0",
     "python-dateutil>=2.8.0",
     "pydantic-settings>=2.10.1",
     "fastapi>=0.116.1",
