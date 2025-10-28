@@ -54,3 +54,8 @@ This project is developed by the **neuraldeep** community. It is inspired by the
 Recent benchmarks and validation experiments were conducted in collaboration with the AI R&D team at red_mad_robot. The lab operates at the intersection of fundamental science and real-world business challenges, running applied experiments and building scalable AI solutions with measurable value.
 
 Learn more about the company: [redmadrobot.ai](https://redmadrobot.ai/) ↗️
+
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=vakovalskii/sgr-deep-research&type=Date)](https://star-history.com/#vamplabai/sgr-deep-research&Date)
