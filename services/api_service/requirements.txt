@@ -183,8 +183,6 @@ python-multipart==0.0.20
     # via mcp
 pytz==2025.2
     # via dateparser
-pywin32==311
-    # via mcp
 pyyaml==6.0.3
     # via
     #   sgr-deep-research (pyproject.toml)
