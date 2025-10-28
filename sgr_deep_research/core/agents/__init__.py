@@ -1,5 +1,7 @@
 """Agents module for SGR Agent Core."""
 
+
+from sgr_deep_research.core.agents.definitions import DEFAULT_AGENTS
 from sgr_deep_research.core.agents.sgr_agent import SGRAgent
 from sgr_deep_research.core.agents.sgr_auto_tool_calling_agent import SGRAutoToolCallingAgent
 from sgr_deep_research.core.agents.sgr_so_tool_calling_agent import SGRSOToolCallingAgent
@@ -14,4 +16,5 @@ __all__ = [
     "SGRSOToolCallingAgent",
     "SGRToolCallingAgent",
     "ToolCallingAgent",
+    "DEFAULT_AGENTS",
 ]
