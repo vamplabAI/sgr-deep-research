@@ -58,4 +58,4 @@ Learn more about the company: [redmadrobot.ai](https://redmadrobot.ai/) ↗️
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=vamplabai/sgr-deep-research&type=Date)](https://star-history.com/#vamplabai/sgr-deep-research&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=vamplabAI/sgr-deep-research&type=Date)](https://star-history.com/#vamplabAI/sgr-deep-research&Date)
