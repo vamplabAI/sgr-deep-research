@@ -218,7 +218,7 @@ class ConfluencePageRetrievalTool(BaseTool):
     page_id: str = Field(
         description="Confluence page ID - MUST be numeric string like '4266429013'. "
         "Get it from search results 'Page ID' field or URL 'pageId' parameter. "
-        "NOT space key (like 'GPP') or page path (like 'GPP/Zaman')."
+        "NOT space key (like 'GPP')."
     )
 
     def __init__(self, **data):
@@ -237,7 +237,7 @@ class ConfluencePageRetrievalTool(BaseTool):
                 f"1. Use ConfluenceSearchTool or ConfluenceSpaceSearchTool first\n"
                 f"2. Look for 'Page ID' field in results\n"
                 f"3. Use that numeric ID with this tool\n\n"
-                f"Example: If search shows 'Page ID: 4266429013', use '4266429013' not 'GPP/Zaman'."
+                f"Example: If search shows 'Page ID: 4266429013', use '4266429013' not 'GPP/Zmn'."
             )
             logger.error(error_msg)
             return error_msg
