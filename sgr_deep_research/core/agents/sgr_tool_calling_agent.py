@@ -3,7 +3,7 @@ from typing import Literal, Type
 from openai import pydantic_function_tool
 from openai.types.chat import ChatCompletionFunctionToolParam
 
-from sgr_deep_research.core.agents.sgr_agent import SGRResearchAgent
+from sgr_deep_research.core.agents.sgr_agent import SGRAgent
 from sgr_deep_research.core.models import AgentStatesEnum
 from sgr_deep_research.core.tools import (
     BaseTool,
@@ -21,7 +21,7 @@ from sgr_deep_research.settings import get_config
 config = get_config()
 
 
-class SGRToolCallingResearchAgent(SGRResearchAgent):
+class SGRToolCallingAgent(SGRAgent):
     """Agent that uses OpenAI native function calling to select and execute
     tools based on SGR like reasoning scheme."""
 

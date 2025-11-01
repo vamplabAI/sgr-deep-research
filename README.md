@@ -55,7 +55,6 @@ Recent benchmarks and validation experiments were conducted in collaboration wit
 
 Learn more about the company: [redmadrobot.ai](https://redmadrobot.ai/) ↗️
 
-
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=vamplabAI/sgr-deep-research&type=Date)](https://star-history.com/#vamplabAI/sgr-deep-research&Date)
