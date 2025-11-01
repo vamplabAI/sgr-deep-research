@@ -1,6 +1,6 @@
 from typing import Type
 
-from sgr_deep_research.core.agents.base_agent import BaseAgent
+from sgr_deep_research.core.base_agent import BaseAgent
 from sgr_deep_research.core.tools import (
     BaseTool,
     ClarificationTool,
