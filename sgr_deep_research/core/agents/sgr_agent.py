@@ -19,7 +19,7 @@ from sgr_deep_research.settings import get_config
 config = get_config()
 
 
-class SGRResearchAgent(BaseAgent):
+class SGRAgent(BaseAgent):
     """Agent for deep research tasks using SGR framework."""
 
     name: str = "sgr_agent"
@@ -123,7 +123,7 @@ if __name__ == "__main__":
 
     async def main():
         await MCP2ToolConverter().build_tools_from_mcp()
-        agent = SGRResearchAgent(
+        agent = SGRAgent(
             task="найди информацию о репозитории на гитхаб sgr-deep-research и ответь на вопрос, "
             "какая основная концепция этого репозитория?",
             max_iterations=5,
