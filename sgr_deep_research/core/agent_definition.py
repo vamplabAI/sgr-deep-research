@@ -44,8 +44,6 @@ class AgentDefinition(BaseModel):
     """
 
     name: str = Field(description="Unique agent name/ID")
-    display_name: str | None = Field(default=None, description="Human-readable agent name")
-    description: str | None = Field(default=None, description="Agent description")
     base_class: type[BaseAgent] | str = Field(description="Agent class name")
     openai: OpenAIConfig | None = Field(
         default=None, description="Agent-specific OpenAI config overrides (same keys as OpenAIConfig)"
