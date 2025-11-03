@@ -1,7 +1,8 @@
 from typing import Type
 
+from openai import AsyncOpenAI
+
 from sgr_deep_research.core.base_agent import BaseAgent
-from sgr_deep_research.core.services import MCP2ToolConverter
 from sgr_deep_research.core.tools import (
     BaseTool,
     ClarificationTool,
@@ -11,7 +12,7 @@ from sgr_deep_research.core.tools import (
     NextStepToolStub,
     WebSearchTool,
 )
-from sgr_deep_research.settings import OpenAIConfig, PromptsConfig
+from sgr_deep_research.settings import LLMConfig, PromptsConfig
 
 
 class SGRResearchAgent(BaseAgent):
@@ -22,7 +23,8 @@ class SGRResearchAgent(BaseAgent):
     def __init__(
         self,
         task: str,
-        openai_config: OpenAIConfig,
+        openai_client: AsyncOpenAI,
+        llm_config: LLMConfig,
         prompts_config: PromptsConfig,
         toolkit: list[Type[BaseTool]] | None = None,
         max_clarifications: int = 3,
@@ -31,7 +33,8 @@ class SGRResearchAgent(BaseAgent):
     ):
         super().__init__(
             task=task,
-            openai_config=openai_config,
+            openai_client=openai_client,
+            llm_config=llm_config,
             prompts_config=prompts_config,
             toolkit=toolkit,
             max_clarifications=max_clarifications,
@@ -59,11 +62,11 @@ class SGRResearchAgent(BaseAgent):
 
     async def _reasoning_phase(self) -> NextStepToolStub:
         async with self.openai_client.chat.completions.stream(
-            model=self.openai_config.model,
+            model=self.llm_config.model,
             response_format=await self._prepare_tools(),
             messages=await self._prepare_context(),
-            max_tokens=self.openai_config.max_tokens,
-            temperature=self.openai_config.temperature,
+            max_tokens=self.llm_config.max_tokens,
+            temperature=self.llm_config.temperature,
         ) as stream:
             async for event in stream:
                 if event.type == "chunk":
@@ -107,20 +110,3 @@ class SGRResearchAgent(BaseAgent):
         self.streaming_generator.add_chunk_from_str(f"{result}\n")
         self._log_tool_execution(tool, result)
         return result
-
-
-if __name__ == "__main__":
-    import asyncio
-
-    async def main():
-        await MCP2ToolConverter().build_tools_from_mcp()
-        agent = SGRResearchAgent(
-            task="найди информацию о репозитории на гитхаб sgr-deep-research и ответь на вопрос, "
-            "какая основная концепция этого репозитория?",
-            max_iterations=5,
-            max_clarifications=2,
-            max_searches=3,
-        )
-        await agent.execute()
-
-    asyncio.run(main())

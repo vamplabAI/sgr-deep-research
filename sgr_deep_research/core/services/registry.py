@@ -66,9 +66,6 @@ class Registry(Generic[T]):
         # Used as decorator without arguments: @Registry.register
         if item_class is not None:
             return _register(item_class)
-
-        # Used as decorator with arguments: @Registry.register(name="custom")
-        # Or will be called later with the class
         return _register
 
     @classmethod

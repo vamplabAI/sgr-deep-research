@@ -1,9 +1,11 @@
 from typing import Literal, Type
 from warnings import warn
 
+from openai import AsyncOpenAI
+
 from sgr_deep_research.core.agents.sgr_tools_agent import SGRToolCallingResearchAgent
 from sgr_deep_research.core.tools import BaseTool
-from sgr_deep_research.settings import OpenAIConfig, PromptsConfig
+from sgr_deep_research.settings import LLMConfig, PromptsConfig
 
 
 class SGRAutoToolCallingResearchAgent(SGRToolCallingResearchAgent):
@@ -15,14 +17,17 @@ class SGRAutoToolCallingResearchAgent(SGRToolCallingResearchAgent):
     def __init__(
         self,
         task: str,
-        openai_config: OpenAIConfig,
+        openai_client: AsyncOpenAI,
+        llm_config: LLMConfig,
         prompts_config: PromptsConfig,
         toolkit: list[Type[BaseTool]] | None = None,
         max_clarifications: int = 3,
         max_searches: int = 4,
         max_iterations: int = 10,
     ):
-        super().__init__(task, openai_config, prompts_config, toolkit, max_clarifications, max_searches, max_iterations)
+        super().__init__(
+            task, openai_client, llm_config, prompts_config, toolkit, max_clarifications, max_searches, max_iterations
+        )
         self.tool_choice: Literal["auto"] = "auto"
         warn(
             "SGRAutoToolCallingResearchAgent is deprecated and will be removed in the future. "

@@ -1,10 +1,12 @@
 from typing import Type
 from warnings import warn
 
+from openai import AsyncOpenAI
+
 from sgr_deep_research.core.agents.sgr_tools_agent import SGRToolCallingResearchAgent
 from sgr_deep_research.core.base_tool import BaseTool
 from sgr_deep_research.core.tools import ReasoningTool
-from sgr_deep_research.settings import OpenAIConfig, PromptsConfig
+from sgr_deep_research.settings import LLMConfig, PromptsConfig
 
 
 class SGRSOToolCallingResearchAgent(SGRToolCallingResearchAgent):
@@ -16,14 +18,17 @@ class SGRSOToolCallingResearchAgent(SGRToolCallingResearchAgent):
     def __init__(
         self,
         task: str,
-        openai_config: OpenAIConfig,
+        openai_client: AsyncOpenAI,
+        llm_config: LLMConfig,
         prompts_config: PromptsConfig,
         toolkit: list[Type[BaseTool]] | None = None,
         max_clarifications: int = 3,
         max_searches: int = 4,
         max_iterations: int = 10,
     ):
-        super().__init__(task, openai_config, prompts_config, toolkit, max_clarifications, max_searches, max_iterations)
+        super().__init__(
+            task, openai_client, llm_config, prompts_config, toolkit, max_clarifications, max_searches, max_iterations
+        )
         warn(
             "SGRSOToolCallingResearchAgent is deprecated and will be removed in the future. "
             "This agent shows lower efficiency and stability based on our benchmarks.",
@@ -32,10 +37,10 @@ class SGRSOToolCallingResearchAgent(SGRToolCallingResearchAgent):
 
     async def _reasoning_phase(self) -> ReasoningTool:
         async with self.openai_client.chat.completions.stream(
-            model=self.openai_config.model,
+            model=self.llm_config.model,
             messages=await self._prepare_context(),
-            max_tokens=self.openai_config.max_tokens,
-            temperature=self.openai_config.temperature,
+            max_tokens=self.llm_config.max_tokens,
+            temperature=self.llm_config.temperature,
             tools=await self._prepare_tools(),
             tool_choice={"type": "function", "function": {"name": ReasoningTool.tool_name}},
         ) as stream:
@@ -46,11 +51,11 @@ class SGRSOToolCallingResearchAgent(SGRToolCallingResearchAgent):
                 (await stream.get_final_completion()).choices[0].message.tool_calls[0].function.parsed_arguments  #
             )
         async with self.openai_client.chat.completions.stream(
-            model=self.openai_config.model,
+            model=self.llm_config.model,
             response_format=ReasoningTool,
             messages=await self._prepare_context(),
-            max_tokens=self.openai_config.max_tokens,
-            temperature=self.openai_config.temperature,
+            max_tokens=self.llm_config.max_tokens,
+            temperature=self.llm_config.temperature,
         ) as stream:
             async for event in stream:
                 if event.type == "chunk":

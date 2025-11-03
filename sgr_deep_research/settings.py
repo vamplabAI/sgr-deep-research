@@ -17,7 +17,7 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class OpenAIConfig(BaseSettings):
+class LLMConfig(BaseSettings):
     api_key: str = Field(description="API key")
     base_url: str = Field(default="https://api.openai.com/v1", description="Base URL")
     model: str = Field(default="gpt-4o-mini", description="Model to use")
@@ -73,7 +73,7 @@ class AppConfig(BaseSettings):
         env_nested_delimiter="__",
     )
 
-    openai: OpenAIConfig = Field(default_factory=OpenAIConfig, description="OpenAI settings")
+    openai: LLMConfig = Field(default_factory=LLMConfig, description="LLM settings")
     tavily: TavilyConfig = Field(default_factory=TavilyConfig, description="Tavily settings")
     search: SearchConfig = Field(default_factory=SearchConfig, description="Search settings")
     scraping: ScrapingConfig = Field(default_factory=ScrapingConfig, description="Scraping settings")

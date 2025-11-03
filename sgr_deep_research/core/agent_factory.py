@@ -3,6 +3,9 @@
 import logging
 from typing import Type, TypeVar
 
+import httpx
+from openai import AsyncOpenAI
+
 from sgr_deep_research.core.agent_definition import AgentDefinition, get_agents_config
 from sgr_deep_research.core.agents.definitions import DEFAULT_AGENTS
 from sgr_deep_research.core.base_agent import BaseAgent
@@ -19,6 +22,22 @@ class AgentFactory:
     Uses AgentRegistry and ToolRegistry to look up agent classes by name
     and creates instances with the appropriate configuration.
     """
+
+    @classmethod
+    def _create_client(cls, llm_config) -> AsyncOpenAI:
+        """Create OpenAI client from configuration.
+
+        Args:
+            llm_config: LLM configuration
+
+        Returns:
+            Configured AsyncOpenAI client
+        """
+        client_kwargs = {"base_url": llm_config.base_url, "api_key": llm_config.api_key}
+        if llm_config.proxy.strip():
+            client_kwargs["http_client"] = httpx.AsyncClient(proxy=llm_config.proxy)
+
+        return AsyncOpenAI(**client_kwargs)
 
     @classmethod
     async def create(cls, agent_def: AgentDefinition, task: str) -> BaseAgent:
@@ -75,7 +94,8 @@ class AgentFactory:
             agent = BaseClass(
                 task=task,
                 toolkit=tools,
-                openai_config=agent_def.openai,
+                openai_client=cls._create_client(agent_def.openai),
+                llm_config=agent_def.openai,
                 prompts_config=agent_def.prompts,
                 **agent_def.config.model_dump(),
             )
