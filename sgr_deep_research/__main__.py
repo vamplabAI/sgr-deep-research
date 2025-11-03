@@ -10,9 +10,7 @@ from fastapi import FastAPI
 
 from sgr_deep_research import __version__
 from sgr_deep_research.api.endpoints import router
-from sgr_deep_research.core import AgentRegistry
-from sgr_deep_research.core.registry import ToolRegistry
-from sgr_deep_research.services import MCP2ToolConverter
+from sgr_deep_research.core import AgentRegistry, ToolRegistry
 from sgr_deep_research.settings import setup_logging
 
 setup_logging()
@@ -21,7 +19,6 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await MCP2ToolConverter().build_tools_from_mcp()
     for tool in ToolRegistry.list_items():
         logger.info(f"Tool registered: {tool.__name__}")
     for agent in AgentRegistry.list_items():

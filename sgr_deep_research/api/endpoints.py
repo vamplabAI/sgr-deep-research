@@ -142,7 +142,7 @@ async def create_chat_completion(request: ChatCompletionRequest):
                 detail=f"Invalid model '{request.model}'. "
                 f"Available models: {[ad.name for ad in AgentFactory.get_definitions()]}",
             )
-        agent = AgentFactory.create(agent_def, task)
+        agent = await AgentFactory.create(agent_def, task)
         logger.info(f"Created agent '{request.model}' for task: {task[:100]}...")
 
         agents_storage[agent.id] = agent
