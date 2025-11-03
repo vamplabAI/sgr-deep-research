@@ -102,7 +102,7 @@ class AgentFactory:
             logger.info(
                 f"Created agent '{agent_def.name}' "
                 f"using base class '{BaseClass.__name__}' "
-                f"with {len(tools)} tools"
+                f"with {len(agent.toolkit)} tools"
             )
             return agent
         except Exception as e:
