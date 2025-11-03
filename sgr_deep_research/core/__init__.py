@@ -1,5 +1,6 @@
 """Core modules for SGR Agent Core."""
 
+from sgr_deep_research.core.agent_definition import AgentDefinition
 from sgr_deep_research.core.agent_factory import AgentFactory
 from sgr_deep_research.core.agents import (  # noqa: F403
     BaseAgent,
@@ -21,11 +22,7 @@ from sgr_deep_research.core.tools import *  # noqa: F403
 __all__ = [
     # Agents
     "BaseAgent",
-    "SGRAgent",
-    "SGRAutoToolCallingAgent",
-    "SGRSOToolCallingAgent",
-    "SGRToolCallingAgent",
-    "ToolCallingAgent",
+    "AgentDefinition",
     "BaseTool",
     "MCPBaseTool",
     "SGRAgent",
