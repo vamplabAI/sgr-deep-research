@@ -40,7 +40,7 @@ class AgentFactory:
         return AsyncOpenAI(**client_kwargs)
 
     @classmethod
-    async def create(cls, agent_def: AgentDefinition, task: str) -> BaseAgent:
+    async def create(cls, agent_def: AgentDefinition, task: str) -> Agent:
         """Create an agent instance from a definition.
 
         Args:
