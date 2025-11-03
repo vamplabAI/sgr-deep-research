@@ -1,8 +1,8 @@
 from typing import Type
 from warnings import warn
 
-from sgr_deep_research.core import BaseTool
 from sgr_deep_research.core.agents.sgr_tools_agent import SGRToolCallingResearchAgent
+from sgr_deep_research.core.base_tool import BaseTool
 from sgr_deep_research.core.tools import ReasoningTool
 from sgr_deep_research.settings import OpenAIConfig, PromptsConfig
 

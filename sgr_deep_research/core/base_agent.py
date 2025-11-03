@@ -12,7 +12,7 @@ from openai.types.chat import ChatCompletionFunctionToolParam
 
 from sgr_deep_research.core.models import AgentStatesEnum, ResearchContext
 from sgr_deep_research.core.prompts import PromptLoader
-from sgr_deep_research.core.registry import AgentRegistry
+from sgr_deep_research.core.services.registry import AgentRegistry
 from sgr_deep_research.core.stream import OpenAIStreamingGenerator
 from sgr_deep_research.core.tools import (
     # Base

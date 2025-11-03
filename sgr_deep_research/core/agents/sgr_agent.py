@@ -1,6 +1,7 @@
 from typing import Type
 
 from sgr_deep_research.core.base_agent import BaseAgent
+from sgr_deep_research.core.services import MCP2ToolConverter
 from sgr_deep_research.core.tools import (
     BaseTool,
     ClarificationTool,
@@ -10,7 +11,6 @@ from sgr_deep_research.core.tools import (
     NextStepToolStub,
     WebSearchTool,
 )
-from sgr_deep_research.services import MCP2ToolConverter
 from sgr_deep_research.settings import OpenAIConfig, PromptsConfig
 
 

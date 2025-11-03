@@ -1,8 +1,9 @@
 import logging
-from typing import TYPE_CHECKING, Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, Tuple, TypeVar
 
 if TYPE_CHECKING:
-    pass
+    from sgr_deep_research.core.base_agent import BaseAgent  # noqa: F401
+    from sgr_deep_research.core.base_tool import BaseTool  # noqa: F401
 
 
 logger = logging.getLogger(__name__)
@@ -27,19 +28,48 @@ class Registry(Generic[T]):
         raise TypeError(f"{self.__class__.__name__} is a static class and cannot be instantiated")
 
     @classmethod
-    def register(cls, item_class: type[T], name: str | None = None) -> None:
+    def register(cls, item_class: type[T] | None = None, name: str | None = None) -> type[T]:
         """Register an item class.
 
-        Args:
-            item_class: Class to register
-            name: Optional name to register the class under
-        """
-        if item_class.__name__ in cls._items:
-            return
+        Can be used as a decorator or called directly:
 
-        cls._items[item_class.__name__.lower()] = item_class
-        if name is not None:
-            cls._items[name.lower()] = item_class
+        As decorator:
+            @Registry.register
+            class MyClass:
+                pass
+
+        As decorator with name:
+            @Registry.register(name="custom_name")
+            class MyClass:
+                pass
+
+        Direct call:
+            Registry.register(MyClass)
+            Registry.register(MyClass, name="custom_name")
+
+        Args:
+            item_class: Class to register (None when used as decorator)
+            name: Optional name to register the class under
+
+        Returns:
+            The class itself (for decorator usage) or decorator function
+        """
+
+        def _register(cls_to_register: type[T]) -> type[T]:
+            """Internal registration function."""
+            if cls_to_register.__name__ not in cls._items:
+                cls._items[cls_to_register.__name__.lower()] = cls_to_register
+                if name is not None:
+                    cls._items[name.lower()] = cls_to_register
+            return cls_to_register
+
+        # Used as decorator without arguments: @Registry.register
+        if item_class is not None:
+            return _register(item_class)
+
+        # Used as decorator with arguments: @Registry.register(name="custom")
+        # Or will be called later with the class
+        return _register
 
     @classmethod
     def get(cls, name: str) -> type[T] | None:
@@ -63,7 +93,7 @@ class Registry(Generic[T]):
         return list(set(cls._items.values()))
 
     @classmethod
-    def resolve(cls, names: list[str]) -> list[type[T]]:
+    def resolve(cls, names: list[str]) -> Tuple[list[type[T]], list[str]]:
         """Resolve names to classes.
 
         Args:
@@ -73,13 +103,15 @@ class Registry(Generic[T]):
             List of classes
         """
         items = []
+        missing = []
         for name in names:
             if item_class := cls._items.get(name.lower()):
                 items.append(item_class)
             else:
                 logger.warning(f"Item {name} not found in {cls.__name__}")
+                missing.append(name)
                 continue
-        return items
+        return items, missing
 
     @classmethod
     def clear(cls) -> None:

@@ -12,7 +12,7 @@ from sgr_deep_research.core.base_agent import BaseAgent
 from sgr_deep_research.core.base_tool import BaseTool, MCPBaseTool
 from sgr_deep_research.core.models import AgentStatesEnum, ResearchContext, SearchResult, SourceData
 from sgr_deep_research.core.prompts import PromptLoader
-from sgr_deep_research.core.registry import AgentRegistry, ToolRegistry
+from sgr_deep_research.core.services import AgentRegistry, ToolRegistry
 from sgr_deep_research.core.stream import OpenAIStreamingGenerator
 from sgr_deep_research.core.tools import *  # noqa: F403
 
@@ -28,6 +28,7 @@ __all__ = [
     "SGRSOToolCallingResearchAgent",
     # Factories
     "AgentFactory",
+    # Services
     "AgentRegistry",
     "ToolRegistry",
     # Models

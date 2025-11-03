@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, ClassVar
 from fastmcp import Client
 from pydantic import BaseModel
 
-from sgr_deep_research.core.registry import ToolRegistry
+from sgr_deep_research.core.services.registry import ToolRegistry
 from sgr_deep_research.settings import get_config
 
 if TYPE_CHECKING:
