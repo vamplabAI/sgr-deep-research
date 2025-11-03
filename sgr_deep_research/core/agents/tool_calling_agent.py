@@ -1,6 +1,6 @@
 from typing import Literal, Type
 
-from openai import pydantic_function_tool
+from openai import AsyncOpenAI, pydantic_function_tool
 from openai.types.chat import ChatCompletionFunctionToolParam
 
 from sgr_deep_research.core.base_agent import BaseAgent
@@ -11,7 +11,7 @@ from sgr_deep_research.core.tools import (
     FinalAnswerTool,
     WebSearchTool,
 )
-from sgr_deep_research.settings import OpenAIConfig, PromptsConfig
+from sgr_deep_research.settings import LLMConfig, PromptsConfig
 
 
 class ToolCallingAgent(BaseAgent):
@@ -23,7 +23,8 @@ class ToolCallingAgent(BaseAgent):
     def __init__(
         self,
         task: str,
-        openai_config: OpenAIConfig,
+        openai_client: AsyncOpenAI,
+        llm_config: LLMConfig,
         prompts_config: PromptsConfig,
         toolkit: list[Type[BaseTool]] | None = None,
         max_clarifications: int = 3,
@@ -32,7 +33,8 @@ class ToolCallingAgent(BaseAgent):
     ):
         super().__init__(
             task=task,
-            openai_config=openai_config,
+            openai_client=openai_client,
+            llm_config=llm_config,
             prompts_config=prompts_config,
             toolkit=toolkit,
             max_clarifications=max_clarifications,
@@ -65,10 +67,10 @@ class ToolCallingAgent(BaseAgent):
 
     async def _select_action_phase(self, reasoning=None) -> BaseTool:
         async with self.openai_client.chat.completions.stream(
-            model=self.openai_config.model,
+            model=self.llm_config.model,
             messages=await self._prepare_context(),
-            max_tokens=self.openai_config.max_tokens,
-            temperature=self.openai_config.temperature,
+            max_tokens=self.llm_config.max_tokens,
+            temperature=self.llm_config.temperature,
             tools=await self._prepare_tools(),
             tool_choice=self.tool_choice,
         ) as stream:

@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from sgr_deep_research.core.base_agent import BaseAgent
 from sgr_deep_research.core.base_tool import BaseTool
-from sgr_deep_research.settings import OpenAIConfig, PromptsConfig, get_config
+from sgr_deep_research.settings import LLMConfig, PromptsConfig, get_config
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class AgentDefinition(BaseModel):
     """Definition of a custom agent.
 
     Agents can override global settings by providing:
-    - openai: dict with keys matching OpenAIConfig (api_key, base_url, model, etc.)
+    - openai: dict with keys matching LLMConfig (api_key, base_url, model, etc.)
     - prompts: dict with keys matching PromptsConfig (system_prompt_file, etc.)
     - context: AgentContextConfig with execution limits
     - tools: list of tool names to include
@@ -45,8 +45,8 @@ class AgentDefinition(BaseModel):
 
     name: str = Field(description="Unique agent name/ID")
     base_class: type[BaseAgent] | str = Field(description="Agent class name")
-    openai: OpenAIConfig | None = Field(
-        default=None, description="Agent-specific OpenAI config overrides (same keys as OpenAIConfig)"
+    openai: LLMConfig | None = Field(
+        default=None, description="Agent-specific LLM config overrides (same keys as LLMConfig)"
     )
     prompts: PromptsConfig | None = Field(
         default=None, description="Agent-specific prompts config overrides (same keys as PromptsConfig)"

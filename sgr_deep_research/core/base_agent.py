@@ -6,7 +6,6 @@ import uuid
 from datetime import datetime
 from typing import Type
 
-import httpx
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionFunctionToolParam
 
@@ -20,7 +19,7 @@ from sgr_deep_research.core.tools import (
     ClarificationTool,
     ReasoningTool,
 )
-from sgr_deep_research.settings import OpenAIConfig, PromptsConfig
+from sgr_deep_research.settings import LLMConfig, PromptsConfig
 
 
 class AgentRegistryMixin:
@@ -38,7 +37,8 @@ class BaseAgent(AgentRegistryMixin):
     def __init__(
         self,
         task: str,
-        openai_config: OpenAIConfig,
+        openai_client: AsyncOpenAI,
+        llm_config: LLMConfig,
         prompts_config: PromptsConfig,
         toolkit: list[Type[BaseTool]] | None = None,
         max_iterations: int = 20,
@@ -57,14 +57,10 @@ class BaseAgent(AgentRegistryMixin):
         self.max_iterations = max_iterations
         self.max_clarifications = max_clarifications
 
-        self.openai_config = openai_config
+        self.openai_client = openai_client
+        self.llm_config = llm_config
         self.prompts_config = prompts_config
 
-        client_kwargs = {"base_url": self.openai_config.base_url, "api_key": self.openai_config.api_key}
-        if self.openai_config.proxy.strip():
-            client_kwargs["http_client"] = httpx.AsyncClient(proxy=self.openai_config.proxy)
-
-        self.openai_client = AsyncOpenAI(**client_kwargs)
         self.streaming_generator = OpenAIStreamingGenerator(model=self.id)
 
     async def provide_clarification(self, clarifications: str):
@@ -132,7 +128,7 @@ class BaseAgent(AgentRegistryMixin):
         filepath = os.path.join(logs_dir, f"{datetime.now().strftime('%Y%m%d-%H%M%S')}-{self.id}-log.json")
         agent_log = {
             "id": self.id,
-            "model_config": self.openai_config.model_dump(exclude={"api_key", "proxy"}),
+            "model_config": self.llm_config.model_dump(exclude={"api_key", "proxy"}),
             "task": self.task,
             "toolkit": [tool.tool_name for tool in self.toolkit],
             "log": self.log,
