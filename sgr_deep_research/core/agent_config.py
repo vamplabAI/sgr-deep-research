@@ -34,21 +34,18 @@ class GlobalConfig(BaseSettings, AgentConfig, Definitions):
         yaml_path = Path(yaml_path)
         if not yaml_path.exists():
             raise FileNotFoundError(f"Configuration file not found: {yaml_path}")
-
-        with open(yaml_path, encoding="utf-8") as f:
-            if cls._instance is None:
-                cls._instance = cls(**yaml.safe_load(f))
-            else:
-                cls._initialized = False
-                cls._instance = cls(**yaml.safe_load(f), agents=cls._instance.agents)
-            return cls._instance
+        config_data = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
+        if cls._instance is None:
+            cls._instance = cls(**config_data)
+        else:
+            cls._initialized = False
+            cls._instance = cls(**config_data, agents=cls._instance.agents)
+        return cls._instance
 
     @classmethod
     def definitions_from_yaml(cls, agents_yaml_path: str) -> Self:
-        yaml_path = Path(agents_yaml_path)
-        if not yaml_path.exists():
-            raise FileNotFoundError(f"Configuration file not found: {yaml_path}")
-
-        with open(yaml_path, encoding="utf-8") as f:
-            cls._instance.agents = Definitions(**yaml.safe_load(f)).agents
-            return cls._instance
+        agents_yaml_path = Path(agents_yaml_path)
+        if not agents_yaml_path.exists():
+            raise FileNotFoundError(f"Agents definitions file not found: {agents_yaml_path}")
+        cls._instance.agents = Definitions(**yaml.safe_load(agents_yaml_path.read_text(encoding="utf-8"))).agents
+        return cls._instance

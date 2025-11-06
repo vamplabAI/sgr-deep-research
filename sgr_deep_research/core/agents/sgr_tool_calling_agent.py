@@ -18,7 +18,7 @@ from sgr_deep_research.core.tools import (
 
 class SGRToolCallingAgent(SGRAgent):
     """Agent that uses OpenAI native function calling to select and execute
-    tools based on SGR like reasoning scheme."""
+    tools based on SGR like a reasoning scheme."""
 
     name: str = "sgr_tool_calling_agent"
 
