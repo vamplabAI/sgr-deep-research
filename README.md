@@ -11,43 +11,43 @@ ______________________________________________________________________
 
 ## ⚡ Quick Start - SGRFileAgent
 
-Быстрый запуск file search агента для поиска файлов на вашем компьютере:
+Fast launch of file search agent to find files on your computer:
 
 ```bash
-# 1. Клонируйте репозиторий
+# 1. Clone the repository
 git clone https://github.com/vamplabAI/sgr-deep-research.git
 cd sgr-deep-research
 
-# 2. Создайте конфигурацию
+# 2. Create configuration file
 cp config.yaml.example config.yaml
-# Отредактируйте config.yaml - добавьте OpenAI API ключ
 
-# 3. Запустите API сервер
+# 3. Edit config.yaml and add your API credentials:
+#    api_key: "your-openai-api-key"
+#    base_url: "https://api.openai.com/v1"  # or your custom endpoint
+#    model: "gpt-4o-mini"  # or your preferred model
+
+# 4. Start API server (in first terminal)
 uv run python sgr_deep_research
 
-# 4. В другом терминале - используйте агента
+# 5. Use the agent (in second terminal)
 curl -X POST "http://0.0.0.0:8010/v1/chat/completions" \
   -H "Content-Type: application/json" \
-  -d '{
-    "model": "sgr_file_agent",
-    "messages": [{"role": "user", "content": "Найди PDF файлы на моем ноутбуке за прошлую неделю"}],
-    "stream": true
-  }'
+  -d '{"model":"sgr_file_agent","messages":[{"role":"user","content":"Find all Python files larger than 1MB"}]}'
 ```
 
-**Доступные модели агентов:**
-- `sgr_file_agent` - поиск и анализ файлов (новый!)
-- `sgr_agent` - исследовательский агент с веб-поиском
-- `sgr_tool_calling_agent` - агент с расширенными инструментами
-- `sgr_auto_tools_agent` - агент с автоматическим выбором инструментов
+**Available agent models:**
+- `sgr_file_agent` - file search and analysis (NEW!)
+- `sgr_agent` - research agent with web search
+- `sgr_tool_calling_agent` - agent with extended tools
+- `sgr_auto_tools_agent` - agent with automatic tool selection
 
-**Примеры запросов для file agent:**
-- "Найди все Python файлы размером больше 1MB"
-- "Покажи все конфигурационные файлы в проекте"
-- "Найди файлы измененные за последние 3 дня"
-- "Где находятся все .md файлы в проекте?"
+**Example queries for file agent:**
+- "Find all Python files larger than 1MB"
+- "Show all configuration files in the project"
+- "Find files modified in the last 3 days"
+- "Where are all .md files in the project?"
 
-> **💡 Примечание для MacBook:** Используйте `0.0.0.0` вместо `localhost` в curl запросах
+> **💡 Note for MacBook users:** Use `0.0.0.0` instead of `localhost` in curl requests
 
 ______________________________________________________________________
 
