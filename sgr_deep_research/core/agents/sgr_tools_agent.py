@@ -3,6 +3,7 @@ from typing import Literal, Type
 from openai import AsyncOpenAI, pydantic_function_tool
 from openai.types.chat import ChatCompletionFunctionToolParam
 
+from sgr_deep_research.core.agent_definition import ExecutionConfig, LLMConfig, PromptsConfig
 from sgr_deep_research.core.agents.sgr_agent import SGRResearchAgent
 from sgr_deep_research.core.models import AgentStatesEnum
 from sgr_deep_research.core.tools import (
@@ -13,7 +14,6 @@ from sgr_deep_research.core.tools import (
     ReasoningTool,
     WebSearchTool,
 )
-from sgr_deep_research.settings import LLMConfig, PromptsConfig
 
 
 class SGRToolCallingResearchAgent(SGRResearchAgent):
@@ -28,20 +28,16 @@ class SGRToolCallingResearchAgent(SGRResearchAgent):
         openai_client: AsyncOpenAI,
         llm_config: LLMConfig,
         prompts_config: PromptsConfig,
+        execution_config: ExecutionConfig,
         toolkit: list[Type[BaseTool]] | None = None,
-        max_clarifications: int = 3,
-        max_searches: int = 4,
-        max_iterations: int = 10,
     ):
         super().__init__(
             task=task,
             openai_client=openai_client,
             llm_config=llm_config,
             prompts_config=prompts_config,
+            execution_config=execution_config,
             toolkit=toolkit,
-            max_clarifications=max_clarifications,
-            max_iterations=max_iterations,
-            max_searches=max_searches,
         )
         self.toolkit.append(ReasoningTool)
         self.tool_choice: Literal["required"] = "required"

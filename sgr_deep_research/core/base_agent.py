@@ -9,17 +9,16 @@ from typing import Type
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionFunctionToolParam
 
+from sgr_deep_research.core.agent_definition import ExecutionConfig, LLMConfig, PromptsConfig
 from sgr_deep_research.core.models import AgentStatesEnum, ResearchContext
 from sgr_deep_research.core.prompts import PromptLoader
 from sgr_deep_research.core.services.registry import AgentRegistry
 from sgr_deep_research.core.stream import OpenAIStreamingGenerator
 from sgr_deep_research.core.tools import (
-    # Base
     BaseTool,
     ClarificationTool,
     ReasoningTool,
 )
-from sgr_deep_research.settings import LLMConfig, PromptsConfig
 
 
 class AgentRegistryMixin:
@@ -40,9 +39,8 @@ class BaseAgent(AgentRegistryMixin):
         openai_client: AsyncOpenAI,
         llm_config: LLMConfig,
         prompts_config: PromptsConfig,
+        execution_config: ExecutionConfig,
         toolkit: list[Type[BaseTool]] | None = None,
-        max_iterations: int = 20,
-        max_clarifications: int = 3,
         **kwargs: dict,
     ):
         self.id = f"{self.name}_{uuid.uuid4()}"
@@ -54,8 +52,8 @@ class BaseAgent(AgentRegistryMixin):
         self._context = ResearchContext()
         self.conversation = []
         self.log = []
-        self.max_iterations = max_iterations
-        self.max_clarifications = max_clarifications
+        self.max_iterations = execution_config.max_iterations
+        self.max_clarifications = execution_config.max_clarifications
 
         self.openai_client = openai_client
         self.llm_config = llm_config
@@ -121,9 +119,9 @@ class BaseAgent(AgentRegistryMixin):
         )
 
     def _save_agent_log(self):
-        from sgr_deep_research.settings import get_config
+        from sgr_deep_research.core.agent_config import GlobalConfig
 
-        logs_dir = get_config().logging.logs_dir
+        logs_dir = GlobalConfig().execution.logs_dir
         os.makedirs(logs_dir, exist_ok=True)
         filepath = os.path.join(logs_dir, f"{datetime.now().strftime('%Y%m%d-%H%M%S')}-{self.id}-log.json")
         agent_log = {

@@ -14,7 +14,7 @@ from benchmark.utils import (
     grading_answer,
     save_result,
 )
-from sgr_deep_research.settings import get_config
+from sgr_deep_research.core.agent_config import GlobalConfig
 
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 config_path = os.path.join(project_root, "config.yaml")
@@ -29,8 +29,8 @@ logger.info(f"Using config file: {config_path}")
 
 
 async def benchmark_agent(question, answer, model_config) -> Dict[str, Any]:
-    system_conf = get_config()
-    agent = BenchmarkAgent(task=question, max_iterations=system_conf.execution.max_steps)
+    system_conf = GlobalConfig()
+    agent = BenchmarkAgent(task=question, max_iterations=system_conf.execution.max_iterations)
 
     try:
         await agent.execute()

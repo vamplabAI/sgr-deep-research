@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING, ClassVar
 from fastmcp import Client
 from pydantic import BaseModel
 
+from sgr_deep_research.core.agent_config import GlobalConfig
 from sgr_deep_research.core.services.registry import ToolRegistry
-from sgr_deep_research.settings import get_config
 
 if TYPE_CHECKING:
     from sgr_deep_research.core.models import ResearchContext
 
-config = get_config()
+
 logger = logging.getLogger(__name__)
 
 
@@ -46,12 +46,13 @@ class MCPBaseTool(BaseTool):
     _client: ClassVar[Client | None] = None
 
     async def __call__(self, _context) -> str:
+        config = GlobalConfig()
         payload = self.model_dump()
         try:
             async with self._client:
                 result = await self._client.call_tool(self.tool_name, payload)
                 return json.dumps([m.model_dump_json() for m in result.content], ensure_ascii=False)[
-                    : config.mcp.context_limit
+                    : config.execution.mcp_context_limit
                 ]
         except Exception as e:
             logger.error(f"Error processing MCP tool {self.tool_name}: {e}")

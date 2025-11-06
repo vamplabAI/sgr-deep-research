@@ -6,17 +6,16 @@ from typing import TYPE_CHECKING
 
 from pydantic import Field
 
+from sgr_deep_research.core.agent_config import GlobalConfig
 from sgr_deep_research.core.base_tool import BaseTool
 from sgr_deep_research.core.models import SearchResult
 from sgr_deep_research.core.services.tavily_search import TavilySearchService
-from sgr_deep_research.settings import get_config
 
 if TYPE_CHECKING:
     from sgr_deep_research.core.models import ResearchContext
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-config = get_config()
 
 
 class WebSearchTool(BaseTool):
@@ -47,7 +46,7 @@ class WebSearchTool(BaseTool):
     reasoning: str = Field(description="Why this search is needed and what to expect")
     query: str = Field(description="Search query in same language as user request")
     max_results: int = Field(
-        default_factory=lambda: min(config.search.max_results, 10),
+        default_factory=lambda: min(GlobalConfig().search.max_results, 10),
         description="Maximum results",
         ge=1,
         le=10,

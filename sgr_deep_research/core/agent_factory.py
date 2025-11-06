@@ -6,8 +6,9 @@ from typing import Type, TypeVar
 import httpx
 from openai import AsyncOpenAI
 
-from sgr_deep_research.core.agent_definition import AgentDefinition, get_agents_config
-from sgr_deep_research.core.agents.definitions import DEFAULT_AGENTS
+from sgr_deep_research.core.agent_config import GlobalConfig
+from sgr_deep_research.core.agent_definition import AgentDefinition, LLMConfig
+from sgr_deep_research.core.agents.definitions import get_default_agents_definitions
 from sgr_deep_research.core.base_agent import BaseAgent
 from sgr_deep_research.core.services import AgentRegistry, MCP2ToolConverter, ToolRegistry
 
@@ -19,12 +20,12 @@ Agent = TypeVar("Agent", bound=BaseAgent)
 class AgentFactory:
     """Factory for creating agent instances from definitions.
 
-    Uses AgentRegistry and ToolRegistry to look up agent classes by name
-    and creates instances with the appropriate configuration.
+    Use AgentRegistry and ToolRegistry to look up agent classes by name
+    and create instances with the appropriate configuration.
     """
 
     @classmethod
-    def _create_client(cls, llm_config) -> AsyncOpenAI:
+    def _create_client(cls, llm_config: LLMConfig) -> AsyncOpenAI:
         """Create OpenAI client from configuration.
 
         Args:
@@ -34,7 +35,7 @@ class AgentFactory:
             Configured AsyncOpenAI client
         """
         client_kwargs = {"base_url": llm_config.base_url, "api_key": llm_config.api_key}
-        if llm_config.proxy.strip():
+        if llm_config.proxy:
             client_kwargs["http_client"] = httpx.AsyncClient(proxy=llm_config.proxy)
 
         return AsyncOpenAI(**client_kwargs)
@@ -67,8 +68,8 @@ class AgentFactory:
             )
             logger.error(error_msg)
             raise ValueError(error_msg)
-        if agent_def.mcp_servers:
-            await MCP2ToolConverter.build_tools_from_mcp(agent_def.mcp_servers)
+        if agent_def.mcp:
+            await MCP2ToolConverter.build_tools_from_mcp(agent_def.mcp)
 
         tools = []
         if agent_def.tools:
@@ -94,10 +95,10 @@ class AgentFactory:
             agent = BaseClass(
                 task=task,
                 toolkit=tools,
-                openai_client=cls._create_client(agent_def.openai),
-                llm_config=agent_def.openai,
+                openai_client=cls._create_client(agent_def.llm),
+                llm_config=agent_def.llm,
+                execution_config=agent_def.execution,
                 prompts_config=agent_def.prompts,
-                **agent_def.config.model_dump(),
             )
             logger.info(
                 f"Created agent '{agent_def.name}' "
@@ -110,17 +111,16 @@ class AgentFactory:
             raise ValueError(f"Failed to create agent: {e}") from e
 
     @classmethod
-    def get_definitions(cls) -> list[AgentDefinition]:
+    def get_definitions_list(cls) -> list[AgentDefinition]:
         """Get all agent definitions (default + custom from config).
 
         Returns:
             List of agent definitions (default agents + custom agents from config)
         """
-        config = get_agents_config()
-        custom_agents = config.agents
+        config = GlobalConfig()
 
-        # Merge default and custom agents (custom can override default by name)
-        all_agents = {agent.name: agent for agent in DEFAULT_AGENTS}
-        all_agents.update({agent.name: agent for agent in custom_agents})
-
+        all_agents = {agent.name: agent for agent in get_default_agents_definitions()}
+        if will_be_rewritten := set(all_agents.keys()).intersection({agent.name for agent in config.agents}):
+            logger.warning(f"Custom agents with names {', '.join(will_be_rewritten)} will override default agents.")
+        all_agents.update({agent.name: agent for agent in config.agents})
         return list(all_agents.values())

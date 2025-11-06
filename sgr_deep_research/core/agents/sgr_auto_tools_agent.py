@@ -3,9 +3,9 @@ from warnings import warn
 
 from openai import AsyncOpenAI
 
+from sgr_deep_research.core.agent_definition import ExecutionConfig, LLMConfig, PromptsConfig
 from sgr_deep_research.core.agents.sgr_tools_agent import SGRToolCallingResearchAgent
 from sgr_deep_research.core.tools import BaseTool
-from sgr_deep_research.settings import LLMConfig, PromptsConfig
 
 
 class SGRAutoToolCallingResearchAgent(SGRToolCallingResearchAgent):
@@ -20,13 +20,16 @@ class SGRAutoToolCallingResearchAgent(SGRToolCallingResearchAgent):
         openai_client: AsyncOpenAI,
         llm_config: LLMConfig,
         prompts_config: PromptsConfig,
+        execution_config: ExecutionConfig,
         toolkit: list[Type[BaseTool]] | None = None,
-        max_clarifications: int = 3,
-        max_searches: int = 4,
-        max_iterations: int = 10,
     ):
         super().__init__(
-            task, openai_client, llm_config, prompts_config, toolkit, max_clarifications, max_searches, max_iterations
+            task=task,
+            openai_client=openai_client,
+            llm_config=llm_config,
+            prompts_config=prompts_config,
+            execution_config=execution_config,
+            toolkit=toolkit,
         )
         self.tool_choice: Literal["auto"] = "auto"
         warn(

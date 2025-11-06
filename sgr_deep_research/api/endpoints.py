@@ -69,7 +69,7 @@ async def get_available_models():
             "created": 1234567890,
             "owned_by": "sgr-deep-research",
         }
-        for agent_def in AgentFactory.get_definitions()
+        for agent_def in AgentFactory.get_definitions_list()
     ]
 
     return {"data": models_data, "object": "list"}
@@ -135,12 +135,12 @@ async def create_chat_completion(request: ChatCompletionRequest):
         task = extract_user_content_from_messages(request.messages)
 
         # Try to create agent from custom definition first
-        agent_def = next((ad for ad in AgentFactory.get_definitions() if ad.name == request.model), None)
+        agent_def = next((ad for ad in AgentFactory.get_definitions_list() if ad.name == request.model), None)
         if not agent_def:
             raise HTTPException(
                 status_code=400,
                 detail=f"Invalid model '{request.model}'. "
-                f"Available models: {[ad.name for ad in AgentFactory.get_definitions()]}",
+                f"Available models: {[ad.name for ad in AgentFactory.get_definitions_list()]}",
             )
         agent = await AgentFactory.create(agent_def, task)
         logger.info(f"Created agent '{request.model}' for task: {task[:100]}...")
