@@ -13,6 +13,7 @@ from sgr_deep_research.core.agents import (
     SGRToolCallingResearchAgent,
     ToolCallingResearchAgent,
 )
+from sgr_deep_research.core.agents.extensions import SGRToolCallingResearchAgentDeepseek
 
 
 class AgentModel(str, Enum):
@@ -23,6 +24,9 @@ class AgentModel(str, Enum):
     SGR_AUTO_TOOLS_AGENT = SGRAutoToolCallingResearchAgent.name
     SGR_SO_TOOLS_AGENT = SGRSOToolCallingResearchAgent.name
     TOOLS_AGENT = ToolCallingResearchAgent.name
+    # extension
+    SGR_TOOLS_AGENT_DEEPSEEK = SGRToolCallingResearchAgentDeepseek.name
+
 
 
 # Mapping of agent types to their classes
@@ -32,6 +36,8 @@ AGENT_MODEL_MAPPING = {
     AgentModel.SGR_AUTO_TOOLS_AGENT: SGRAutoToolCallingResearchAgent,
     AgentModel.SGR_SO_TOOLS_AGENT: SGRSOToolCallingResearchAgent,
     AgentModel.TOOLS_AGENT: ToolCallingResearchAgent,
+    # extension
+    AgentModel.SGR_TOOLS_AGENT_DEEPSEEK: SGRToolCallingResearchAgentDeepseek,
 }
 
 

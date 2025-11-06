@@ -96,7 +96,7 @@ class ServerConfig(BaseModel):
 
 @cache
 def get_config() -> AppConfig:
-    app_config_env: str = os.environ.get("APP_CONFIG", "config.yaml")
+    app_config_env: str = os.environ.get("APP_CONFIG", "../config.yaml")
 
     # If path has no directory part, assume it's in current working directory
     if os.path.basename(app_config_env) == app_config_env:
