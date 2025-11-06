@@ -17,7 +17,7 @@ T = TypeVar("T", bound=BaseTool)
 
 
 class NextStepToolStub(ReasoningTool, ABC):
-    """SGR Core - Determines next reasoning step with adaptive planning, choosing appropriate tool
+    """SGR Core - Determines the next reasoning step with adaptive planning, choosing appropriate tool
     (!) Stub class for correct autocomplete. Use NextStepToolsBuilder"""
 
     function: T = Field(description="Select the appropriate tool for the next step")
@@ -34,12 +34,12 @@ class DiscriminantToolMixin(BaseModel):
 
 
 class NextStepToolsBuilder:
-    """SGR Core - Builder for NextStepTool with dynamic union tool function type on
+    """SGR Core - Builder for NextStepTool with a dynamic union tool function type on
     pydantic models level."""
 
     @classmethod
     def _create_discriminant_tool(cls, tool_class: Type[T]) -> Type[BaseModel]:
-        """Create discriminant version of tool with tool_name as instance
+        """Create a discriminant version of tool with tool_name as an instance
         field."""
 
         return create_model(  # noqa
@@ -53,7 +53,7 @@ class NextStepToolsBuilder:
         """Create discriminated union of tools."""
         if len(tools_list) == 1:
             return cls._create_discriminant_tool(tools_list[0])
-        # SGR inference struggles with choosing right schema otherwise
+        # SGR inference struggles with choosing the right schema otherwise
         discriminant_tools = [cls._create_discriminant_tool(tool) for tool in tools_list]
         union = reduce(operator.or_, discriminant_tools)
         return Annotated[union, Field()]

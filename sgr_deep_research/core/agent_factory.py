@@ -54,7 +54,7 @@ class AgentFactory:
         Raises:
             ValueError: If agent creation fails
         """
-        BaseClass: Type[Agent] = (
+        BaseClass: Type[Agent] | None = (
             AgentRegistry.get(agent_def.base_class) if isinstance(agent_def.base_class, str) else agent_def.base_class
         )
         if BaseClass is None:
@@ -68,28 +68,24 @@ class AgentFactory:
             )
             logger.error(error_msg)
             raise ValueError(error_msg)
-        if agent_def.mcp:
-            await MCP2ToolConverter.build_tools_from_mcp(agent_def.mcp)
+        mcp_tools = await MCP2ToolConverter.build_tools_from_mcp(agent_def.mcp)
 
-        tools = []
-        if agent_def.tools:
-            for tool in agent_def.tools:
-                if isinstance(tool, str):
-                    tool_class = ToolRegistry.get(tool)
-                    if tool_class is None:
-                        error_msg = (
-                            f"Tool '{tool}' not found in registry.\nAvailable tools: "
-                            f"{', '.join([c.__name__ for c in ToolRegistry.list_items()])}\n"
-                            f"  - Ensure the custom tool classes are imported before creating agents "
-                            f"(otherwise they won't be registered)"
-                        )
-                        logger.error(error_msg)
-                        raise ValueError(error_msg)
-                else:
-                    tool_class = tool
-                tools.append(tool_class)
-        else:
-            logger.warning("No tools specified for agent!")
+        tools = [*mcp_tools]
+        for tool in agent_def.tools:
+            if isinstance(tool, str):
+                tool_class = ToolRegistry.get(tool)
+                if tool_class is None:
+                    error_msg = (
+                        f"Tool '{tool}' not found in registry.\nAvailable tools: "
+                        f"{', '.join([c.__name__ for c in ToolRegistry.list_items()])}\n"
+                        f"  - Ensure the custom tool classes are imported before creating agents "
+                        f"(otherwise they won't be registered)"
+                    )
+                    logger.error(error_msg)
+                    raise ValueError(error_msg)
+            else:
+                tool_class = tool
+            tools.append(tool_class)
 
         try:
             agent = BaseClass(

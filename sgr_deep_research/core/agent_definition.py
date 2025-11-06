@@ -1,11 +1,12 @@
 import logging
 import os
+from functools import cached_property
 from pathlib import Path
 from typing import Any, Self
 
 import yaml
 from fastmcp.mcp_config import MCPConfig
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, FilePath, computed_field, model_validator
 
 logger = logging.getLogger(__name__)
 
@@ -31,46 +32,56 @@ class SearchConfig(BaseModel):
 
 
 class PromptsConfig(BaseModel):
-    system_prompt_file: str | None = Field(
-        default="prompts/system_prompt.txt", description="Path to system prompt file"
+    system_prompt_file: FilePath | None = Field(
+        default=os.path.join(os.path.dirname(__file__), "prompts/system_prompt.txt"),
+        description="Path to system prompt file",
     )
-    initial_user_request_file: str | None = Field(
-        default="prompts/initial_user_request.txt", description="Path to initial user request file"
+    initial_user_request_file: FilePath | None = Field(
+        default=os.path.join(os.path.dirname(__file__), "prompts/initial_user_request.txt"),
+        description="Path to initial user request file",
     )
-    clarification_response_file: str | None = Field(
-        default="prompts/clarification_response.txt",
+    clarification_response_file: FilePath | None = Field(
+        default=os.path.join(os.path.dirname(__file__), "prompts/clarification_response.txt"),
         description="Path to clarification response file",
     )
-    system_prompt: str | None = None
-    initial_user_request: str | None = None
-    clarification_response: str | None = None
+    system_prompt_str: str | None = None
+    initial_user_request_str: str | None = None
+    clarification_response_str: str | None = None
+
+    @computed_field
+    @cached_property
+    def system_prompt(self) -> str:
+        return self.system_prompt_str or self._load_prompt_file(self.system_prompt_file)
+
+    @computed_field
+    @cached_property
+    def initial_user_request(self) -> str:
+        return self.initial_user_request_str or self._load_prompt_file(self.initial_user_request_file)
+
+    @computed_field
+    @cached_property
+    def clarification_response(self) -> str:
+        return self.clarification_response_str or self._load_prompt_file(self.clarification_response_file)
 
     @staticmethod
     def _load_prompt_file(file_path: str | None) -> str | None:
         """Load prompt content from a file."""
-        lib_file_path = Path(os.path.join(os.path.dirname(__file__), file_path))
-        file_path = Path(file_path)
-        if file_path.exists():
-            return file_path.read_text(encoding="utf-8")
-        else:
-            logger.warning(f"Prompt file '{file_path}' not found, using default prompt")
-            return lib_file_path.read_text(encoding="utf-8")
+        return Path(file_path).read_text(encoding="utf-8")
 
     @model_validator(mode="after")
     def defaults_validator(self):
         for attr, file_attr in zip(
-            ["system_prompt", "initial_user_request", "clarification_response"],
+            ["system_prompt_str", "initial_user_request_str", "clarification_response_str"],
             ["system_prompt_file", "initial_user_request_file", "clarification_response_file"],
         ):
             field = getattr(self, attr)
-            file_field = getattr(self, file_attr)
+            file_field: FilePath = getattr(self, file_attr)
             if not field and not file_field:
                 raise ValueError(f"{attr} or {file_attr} must be provided")
-            if field and file_field:
-                # logger.warning(f"{attr} and {file_attr} provided together, using {attr}")
-                pass  # ToDo: some weird behavior with calling this validator multiple times
-            if not field and file_field:
-                setattr(self, attr, self._load_prompt_file(file_field))
+            if file_field:
+                project_path = Path(file_field)
+                if not project_path.exists():
+                    raise FileNotFoundError(f"Prompt file '{project_path.absolute()}' not found")
         return self
 
     def __repr__(self) -> str:
@@ -134,21 +145,23 @@ class AgentDefinition(AgentConfig):
         return data
 
     @model_validator(mode="after")
-    def api_keys_validator(self) -> Self:
+    def necessary_fields_validator(self) -> Self:
         if self.llm.api_key is None:
             raise ValueError(f"LLM API key is not provided for agent '{self.name}'")
         if self.search and self.search.tavily_api_key is None:
             raise ValueError(f"Search API key is not provided for agent '{self.name}'")
+        if not self.tools:
+            raise ValueError(f"Tools are not provided for agent '{self.name}'")
         return self
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         base_class_name = self.base_class.__name__ if isinstance(self.base_class, type) else self.base_class
         tool_names = [t.__name__ if isinstance(t, type) else t for t in self.tools]
         return (
             f"AgentDefinition(name='{self.name}', "
             f"base_class={base_class_name}, "
-            f"tools={len(tool_names)}, "
-            f"execution={self.execution})"
+            f"tools={tool_names}, "
+            f"execution={self.execution}), "
         )
 
     @classmethod

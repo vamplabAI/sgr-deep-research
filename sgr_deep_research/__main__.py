@@ -23,7 +23,7 @@ async def lifespan(app: FastAPI):
     for agent in AgentRegistry.list_items():
         logger.info(f"Agent registered: {agent.__name__}")
     for defn in AgentFactory.get_definitions_list():
-        logger.info(f"Agent definition loaded: {defn.name}")
+        logger.info(f"Agent definition loaded: {defn}")
     yield
 
 

@@ -159,4 +159,5 @@ async def create_chat_completion(request: ChatCompletionRequest):
         )
 
     except ValueError as e:
+        logger.error(f"Error completion: {e}", exc_info=True)
         raise HTTPException(status_code=400, detail=str(e))
