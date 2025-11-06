@@ -134,8 +134,7 @@ async def create_chat_completion(request: ChatCompletionRequest):
     try:
         task = extract_user_content_from_messages(request.messages)
 
-        # Try to create agent from custom definition first
-        agent_def = next((ad for ad in AgentFactory.get_definitions_list() if ad.name == request.model), None)
+        agent_def = next(filter(lambda ad: ad.name == request.model, AgentFactory.get_definitions_list()), None)
         if not agent_def:
             raise HTTPException(
                 status_code=400,
