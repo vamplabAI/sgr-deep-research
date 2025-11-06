@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 from sgr_deep_research.core.agents import (
     SGRAutoToolCallingResearchAgent,
+    SGRFileAgent,
     SGRResearchAgent,
     SGRSOToolCallingResearchAgent,
     SGRToolCallingResearchAgent,
@@ -22,6 +23,7 @@ class AgentModel(str, Enum):
     SGR_TOOLS_AGENT = SGRToolCallingResearchAgent.name
     SGR_AUTO_TOOLS_AGENT = SGRAutoToolCallingResearchAgent.name
     SGR_SO_TOOLS_AGENT = SGRSOToolCallingResearchAgent.name
+    SGR_FILE_AGENT = SGRFileAgent.name
     TOOLS_AGENT = ToolCallingResearchAgent.name
 
 
@@ -31,6 +33,7 @@ AGENT_MODEL_MAPPING = {
     AgentModel.SGR_TOOLS_AGENT: SGRToolCallingResearchAgent,
     AgentModel.SGR_AUTO_TOOLS_AGENT: SGRAutoToolCallingResearchAgent,
     AgentModel.SGR_SO_TOOLS_AGENT: SGRSOToolCallingResearchAgent,
+    AgentModel.SGR_FILE_AGENT: SGRFileAgent,
     AgentModel.TOOLS_AGENT: ToolCallingResearchAgent,
 }
 

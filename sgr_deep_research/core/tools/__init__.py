@@ -11,8 +11,18 @@ from sgr_deep_research.core.tools.clarification_tool import ClarificationTool
 from sgr_deep_research.core.tools.create_report_tool import CreateReportTool
 from sgr_deep_research.core.tools.extract_page_content_tool import ExtractPageContentTool
 from sgr_deep_research.core.tools.final_answer_tool import FinalAnswerTool
+from sgr_deep_research.core.tools.find_by_date_tool import FindByDateTool
+from sgr_deep_research.core.tools.find_by_extension_tool import FindByExtensionTool
+from sgr_deep_research.core.tools.find_by_size_tool import FindBySizeTool
+from sgr_deep_research.core.tools.find_files_fast_tool import FindFilesFastTool
 from sgr_deep_research.core.tools.generate_plan_tool import GeneratePlanTool
+from sgr_deep_research.core.tools.get_current_directory_tool import GetCurrentDirectoryTool
+from sgr_deep_research.core.tools.get_system_paths_tool import GetSystemPathsTool
+from sgr_deep_research.core.tools.list_directory_tool import ListDirectoryTool
+from sgr_deep_research.core.tools.read_file_tool import ReadFileTool
 from sgr_deep_research.core.tools.reasoning_tool import ReasoningTool
+from sgr_deep_research.core.tools.search_files_tool import SearchFilesTool
+from sgr_deep_research.core.tools.search_in_files_tool import SearchInFilesTool
 from sgr_deep_research.core.tools.web_search_tool import WebSearchTool
 
 # Tool lists for backward compatibility
@@ -30,6 +40,19 @@ research_agent_tools = [
     CreateReportTool,
 ]
 
+file_system_tools = [
+    GetCurrentDirectoryTool,
+    GetSystemPathsTool,
+    ReadFileTool,
+    ListDirectoryTool,
+    SearchFilesTool,
+    SearchInFilesTool,
+    FindByExtensionTool,
+    FindBySizeTool,
+    FindByDateTool,
+    FindFilesFastTool,
+]
+
 __all__ = [
     # Base classes
     "BaseTool",
@@ -45,10 +68,18 @@ __all__ = [
     "CreateReportTool",
     "FinalAnswerTool",
     "ReasoningTool",
-    # Tool lists
-    "NextStepToolStub",
-    "NextStepToolsBuilder",
+    "GetCurrentDirectoryTool",
+    "GetSystemPathsTool",
+    "ReadFileTool",
+    "ListDirectoryTool",
+    "SearchFilesTool",
+    "SearchInFilesTool",
+    "FindByExtensionTool",
+    "FindBySizeTool",
+    "FindByDateTool",
+    "FindFilesFastTool",
     # Tool Collections
     "system_agent_tools",
     "research_agent_tools",
+    "file_system_tools",
 ]
