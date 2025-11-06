@@ -19,6 +19,9 @@ class MCP2ToolConverter:
         from sgr_deep_research.core import BaseTool, MCPBaseTool
 
         tools = []
+        if not config.mcpServers:
+            return tools
+
         client: Client = Client(config)
         async with client:
             mcp_tools = await client.list_tools()

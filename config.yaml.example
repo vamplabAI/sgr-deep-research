@@ -1,7 +1,6 @@
 # SGR Deep Research Agent - Configuration Template
 # Copy this file to config.yaml and fill in your data
 
-
 # LLM Configuration
 llm:
   api_key: "your-openai-api-key-here"  # Your OpenAI API key
@@ -9,12 +8,12 @@ llm:
   model: "gpt-4o-mini"  # Model name
   max_tokens: 8000  # Max output tokens
   temperature: 0.4  # Temperature (0.0-1.0)
-  # proxy: "socks5://127.0.0.1:1081"  # Optional proxy
+  # proxy: "socks5://127.0.0.1:1081"  # Optional proxy (socks5:// or http://)
 
 # Search Configuration (Tavily)
 search:
-  api_key: "your-tavily-api-key-here"  # Tavily API key (get at tavily.com)
-  api_base_url: "https://api.tavily.com"  # Tavily API URL
+  tavily_api_key: "your-tavily-api-key-here"  # Tavily API key (get at tavily.com)
+  tavily_api_base_url: "https://api.tavily.com"  # Tavily API URL
   max_results: 10  # Max search results
   max_pages: 5  # Max pages to scrape
   content_limit: 1500  # Content char limit per source
@@ -25,26 +24,32 @@ execution:
   max_clarifications: 3  # Max clarification requests
   max_iterations: 10  # Max iterations per step
   max_searches: 4  # Max search operations
-  mcp_context_limit: 15000  # Max context received from MCP server
+  mcp_context_limit: 15000  # Max context length from MCP server response
+  logs_dir: "logs"  # Directory for saving agent execution logs
+  reports_dir: "reports"  # Directory for saving agent reports
 
-  logs_dir: "logs"  # Logs directory for agents execution
-  reports_dir: "reports"  # Agent reports files directory
-
-# Prompts
+# Prompts Configuration
 prompts:
-  system_prompt_file: "prompts/system_prompt.txt"  # System prompt file path
-  initial_user_request_file: "prompts/initial_user_request.txt"  # Initial request template
-  clarification_response_file: "prompts/clarification_response.txt"  # Clarification template
+  # Option 1: Use file paths (absolute or relative to project root)
+  system_prompt_file: "sgr_deep_research/core/prompts/system_prompt.txt"
+  initial_user_request_file: "sgr_deep_research/core/prompts/initial_user_request.txt"
+  clarification_response_file: "sgr_deep_research/core/prompts/clarification_response.txt"
 
-# MCP (Model Context Protocol)
+  # Option 2: Provide prompts directly as strings (uncomment to use)
+  # system_prompt_str: "Your custom system prompt here..."
+  # initial_user_request_str: "Your custom initial request template..."
+  # clarification_response_str: "Your custom clarification template..."
+
+  # Note: If both file and string are provided, string takes precedence
+
+# MCP (Model Context Protocol) Configuration
 mcp:
-  transport_config:
-    mcpServers:
-      deepwiki:
-        url: "https://mcp.deepwiki.com/mcp"
-        
-      # Add more MCP servers here:
-      # your_server:
-      #   url: "https://your-mcp-server.com/mcp"
-      #   headers:
-      #     Authorization: "Bearer your-token"
+  mcpServers:
+    deepwiki:
+      url: "https://mcp.deepwiki.com/mcp"
+
+    # Add more MCP servers here:
+    # your_server:
+    #   url: "https://your-mcp-server.com/mcp"
+    #   headers:
+    #     Authorization: "Bearer your-token"
