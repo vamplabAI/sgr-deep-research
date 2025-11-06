@@ -133,15 +133,16 @@ class AgentDefinition(AgentConfig):
 
     @model_validator(mode="before")
     def default_config_override_validator(cls, data):
+        print(data)
         from sgr_deep_research.core.agent_config import GlobalConfig
 
-        data["llm"] = GlobalConfig().llm.model_copy(update=data.get("llm", {}))
+        data["llm"] = GlobalConfig().llm.model_copy(update=data.get("llm", {})).model_dump()
         data["search"] = (
-            GlobalConfig().search.model_copy(update=data.get("search", {})) if GlobalConfig().search else None
+            GlobalConfig().search.model_copy(update=data.get("search", {})).model_dump()
+            if GlobalConfig().search
+            else None
         )
-        data["prompts"] = GlobalConfig().prompts.model_copy(update=data.get("prompts", {}))
-        data["execution"] = GlobalConfig().execution.model_copy(update=data.get("execution", {}))
-        data["mcp"] = GlobalConfig().mcp.model_copy(update=data.get("mcp", {}))
+        data["execution"] = GlobalConfig().execution.model_copy(update=data.get("execution", {})).model_dump()
         return data
 
     @model_validator(mode="after")
