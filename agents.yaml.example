@@ -2,11 +2,17 @@
 # =====================================
 # This file demonstrates how to define custom agents for SGR Deep Research
 
+# Notes:
+# ------
+# 1. Agent names must be unique or will be overridden
+# 2. All tools must be registered in the tool registry
+# 3. LLM, Search, Prompts, Execution settings are optional and will inherit from global config if not specified
+
+
+
 agents:
   # Example 1: Simple custom research agent
   - name: "custom_research_agent"
-    display_name: "Custom Research Agent"
-    description: "Specialized agent for custom research tasks with extended search capabilities"
     base_class: "SGRResearchAgent"
 
     # Optional: Override OpenAI settings for this agent
@@ -88,13 +94,3 @@ agents:
       - "CreateReportTool"
       - "ClarificationTool"
       - "FinalAnswerTool"
-
-# Notes:
-# ------
-# 1. Agent names must be unique
-# 2. base_class options: BaseAgent, SGRResearchAgent, SGRToolCallingResearchAgent,
-#    SGRAutoToolCallingResearchAgent, ToolCallingResearchAgent, SGRSOToolCallingResearchAgent
-# 3. All tools must be registered in the tool registry
-# 4. OpenAI settings are optional and will inherit from global config if not specified
-# 5. Prompts are optional and will use defaults if not specified
-# 6. Context settings are optional and will use defaults if not specified

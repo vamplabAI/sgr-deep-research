@@ -1,42 +1,17 @@
 import logging
 import os
 from pathlib import Path
-from typing import Any, Literal, Self
+from typing import Any, Self
 
 import yaml
 from fastmcp.mcp_config import MCPConfig
-from pydantic import BaseModel, Field, GetCoreSchemaHandler, model_validator
-from pydantic_core import core_schema
-
-logger = logging.getLogger(__name__)
-
-
-class NotGiven:
-    def __bool__(self) -> Literal[False]:
-        return False
-
-    def __repr__(self) -> str:
-        return "NOT_GIVEN"
-
-    @classmethod
-    def __get_pydantic_core_schema__(cls, source_type: Any, handler: GetCoreSchemaHandler) -> core_schema.CoreSchema:
-        """Provide Pydantic core schema for NotGiven type."""
-        return core_schema.no_info_plain_validator_function(
-            lambda v: v if isinstance(v, cls) else cls(),
-            serialization=core_schema.plain_serializer_function_ser_schema(
-                lambda v: None,
-                return_schema=core_schema.none_schema(),
-            ),
-        )
-
-
-NOT_GIVEN = NotGiven()
+from pydantic import BaseModel, Field, model_validator
 
 logger = logging.getLogger(__name__)
 
 
 class LLMConfig(BaseModel):
-    api_key: str | NotGiven = Field(default=NOT_GIVEN, description="API key")
+    api_key: str | None = Field(default=None, description="API key")
     base_url: str = Field(default="https://api.openai.com/v1", description="Base URL")
     model: str = Field(default="gpt-4o-mini", description="Model to use")
     max_tokens: int = Field(default=8000, description="Maximum number of output tokens")
@@ -47,7 +22,7 @@ class LLMConfig(BaseModel):
 
 
 class SearchConfig(BaseModel):
-    tavily_api_key: str | NotGiven = Field(default=NOT_GIVEN, description="Tavily API key")
+    tavily_api_key: str | None = Field(default=None, description="Tavily API key")
     tavily_api_base_url: str = Field(default="https://api.tavily.com", description="Tavily API base URL")
 
     max_results: int = Field(default=10, ge=1, description="Maximum number of search results")
@@ -57,13 +32,13 @@ class SearchConfig(BaseModel):
 
 class PromptsConfig(BaseModel):
     system_prompt_file: str | None = Field(
-        default="sgr_deep_research/prompts/system_prompt.txt", description="Path to system prompt file"
+        default="prompts/system_prompt.txt", description="Path to system prompt file"
     )
     initial_user_request_file: str | None = Field(
-        default="sgr_deep_research/prompts/initial_user_request.txt", description="Path to initial user request file"
+        default="prompts/initial_user_request.txt", description="Path to initial user request file"
     )
     clarification_response_file: str | None = Field(
-        default="sgr_deep_research/prompts/clarification_response.txt",
+        default="prompts/clarification_response.txt",
         description="Path to clarification response file",
     )
     system_prompt: str | None = None
@@ -72,16 +47,14 @@ class PromptsConfig(BaseModel):
 
     @staticmethod
     def _load_prompt_file(file_path: str | None) -> str | None:
-        """Load prompt content from file."""
-        lib_file_path = Path(os.path.join(os.path.dirname(__file__), "..", file_path))
+        """Load prompt content from a file."""
+        lib_file_path = Path(os.path.join(os.path.dirname(__file__), file_path))
         file_path = Path(file_path)
-        for fp in [file_path, lib_file_path]:
-            if fp.exists():
-                try:
-                    with open(fp, encoding="utf-8") as f:
-                        return f.read().strip()
-                except IOError as e:
-                    raise IOError(f"Error reading prompt file {fp}: {e}") from e
+        if file_path.exists():
+            return file_path.read_text(encoding="utf-8")
+        else:
+            logger.warning(f"Prompt file '{file_path}' not found, using default prompt")
+            return lib_file_path.read_text(encoding="utf-8")
 
     @model_validator(mode="after")
     def defaults_validator(self):
@@ -140,7 +113,6 @@ class AgentDefinition(AgentConfig):
     - prompts: dict with keys matching PromptsConfig (system_prompt_file, etc.)
     - ExecutionConfig: execution parameters and limits
     - tools: list of tool names to include
-    #
     """
 
     name: str = Field(description="Unique agent name/ID")
@@ -163,9 +135,9 @@ class AgentDefinition(AgentConfig):
 
     @model_validator(mode="after")
     def api_keys_validator(self) -> Self:
-        if isinstance(self.llm.api_key, NotGiven):
+        if self.llm.api_key is None:
             raise ValueError(f"LLM API key is not provided for agent '{self.name}'")
-        if self.search and isinstance(self.search.tavily_api_key, NotGiven):
+        if self.search and self.search.tavily_api_key is None:
             raise ValueError(f"Search API key is not provided for agent '{self.name}'")
         return self
 
@@ -181,21 +153,11 @@ class AgentDefinition(AgentConfig):
 
     @classmethod
     def from_yaml(cls, yaml_path: str) -> Self:
-        if not Path(yaml_path).exists():
-            return cls()
-
-        with open(yaml_path, encoding="utf-8") as f:
-            return cls(**yaml.safe_load(f))
+        try:
+            return cls(**yaml.safe_load(Path(yaml_path).read_text(encoding="utf-8")))
+        except FileNotFoundError as e:
+            raise FileNotFoundError(f"Agent definition file not found: {yaml_path}") from e
 
 
 class Definitions(BaseModel):
     agents: list[AgentDefinition] = Field(default_factory=list, description="List of agent definitions")
-
-    @classmethod
-    def from_yaml(cls, agents_yaml_path: str) -> Self:
-        yaml_path = Path(agents_yaml_path)
-        if not yaml_path.exists():
-            raise FileNotFoundError(f"Agents configuration file not found: {yaml_path}")
-
-        with open(agents_yaml_path, encoding="utf-8") as f:
-            return cls(**yaml.safe_load(f))
