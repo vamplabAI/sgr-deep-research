@@ -1,17 +1,16 @@
 """Основная точка входа для SGR Agent Core API сервера."""
 
-import argparse
 import logging
-import os
 from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
 
-from sgr_deep_research import __version__
+from sgr_deep_research import AgentFactory, __version__
 from sgr_deep_research.api.endpoints import router
 from sgr_deep_research.core import AgentRegistry, ToolRegistry
-from sgr_deep_research.settings import setup_logging
+from sgr_deep_research.core.agent_config import GlobalConfig
+from sgr_deep_research.settings import ServerConfig, setup_logging
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -23,25 +22,18 @@ async def lifespan(app: FastAPI):
         logger.info(f"Tool registered: {tool.__name__}")
     for agent in AgentRegistry.list_items():
         logger.info(f"Agent registered: {agent.__name__}")
+    for defn in AgentFactory.get_definitions_list():
+        logger.info(f"Agent definition loaded: {defn.name}")
     yield
-
-
-app = FastAPI(title="SGR Agent Core API", version=__version__, lifespan=lifespan)
-app.include_router(router)
 
 
 def main():
     """Запуск FastAPI сервера."""
-
-    parser = argparse.ArgumentParser(description="SGR Agent Core Server")
-    parser.add_argument(
-        "--host", type=str, dest="host", default=os.environ.get("HOST", "0.0.0.0"), help="Хост для прослушивания"
-    )
-    parser.add_argument(
-        "--port", type=int, dest="port", default=int(os.environ.get("PORT", 8010)), help="Порт для прослушивания"
-    )
-    args = parser.parse_args()
-
+    args = ServerConfig()
+    GlobalConfig.from_yaml(args.config_file)
+    GlobalConfig.definitions_from_yaml(args.agents_file)
+    app = FastAPI(title="SGR Deep Research API", version=__version__, lifespan=lifespan)
+    app.include_router(router)
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
 
 

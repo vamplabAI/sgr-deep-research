@@ -1,84 +1,201 @@
 import logging
-from functools import cache
+import os
 from pathlib import Path
-from typing import Self
+from typing import Any, Literal, Self
 
 import yaml
-from fastmcp.client.transports import MCPConfigTransport
 from fastmcp.mcp_config import MCPConfig
-from pydantic import BaseModel, ConfigDict, Field, model_validator
-
-from sgr_deep_research.core.base_agent import BaseAgent
-from sgr_deep_research.core.base_tool import BaseTool
-from sgr_deep_research.settings import LLMConfig, PromptsConfig, get_config
+from pydantic import BaseModel, Field, GetCoreSchemaHandler, model_validator
+from pydantic_core import core_schema
 
 logger = logging.getLogger(__name__)
 
 
-class AgentConfig(BaseModel, extra="allow"):
-    """Agent execution context configuration."""
+class NotGiven:
+    def __bool__(self) -> Literal[False]:
+        return False
 
-    max_iterations: int = Field(default=20, gt=0, description="Maximum number of iterations")
+    def __repr__(self) -> str:
+        return "NOT_GIVEN"
+
+    @classmethod
+    def __get_pydantic_core_schema__(cls, source_type: Any, handler: GetCoreSchemaHandler) -> core_schema.CoreSchema:
+        """Provide Pydantic core schema for NotGiven type."""
+        return core_schema.no_info_plain_validator_function(
+            lambda v: v if isinstance(v, cls) else cls(),
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                lambda v: None,
+                return_schema=core_schema.none_schema(),
+            ),
+        )
+
+
+NOT_GIVEN = NotGiven()
+
+logger = logging.getLogger(__name__)
+
+
+class LLMConfig(BaseModel):
+    api_key: str | NotGiven = Field(default=NOT_GIVEN, description="API key")
+    base_url: str = Field(default="https://api.openai.com/v1", description="Base URL")
+    model: str = Field(default="gpt-4o-mini", description="Model to use")
+    max_tokens: int = Field(default=8000, description="Maximum number of output tokens")
+    temperature: float = Field(default=0.4, ge=0.0, le=1.0, description="Generation temperature")
+    proxy: str | None = Field(
+        default=None, description="Proxy URL (e.g., socks5://127.0.0.1:1081 or http://127.0.0.1:8080)"
+    )
+
+
+class SearchConfig(BaseModel):
+    tavily_api_key: str | NotGiven = Field(default=NOT_GIVEN, description="Tavily API key")
+    tavily_api_base_url: str = Field(default="https://api.tavily.com", description="Tavily API base URL")
+
+    max_results: int = Field(default=10, ge=1, description="Maximum number of search results")
+    max_pages: int = Field(default=5, gt=0, description="Maximum pages to scrape")
+    content_limit: int = Field(default=1500, gt=0, description="Content character limit per source")
+
+
+class PromptsConfig(BaseModel):
+    system_prompt_file: str | None = Field(
+        default="sgr_deep_research/prompts/system_prompt.txt", description="Path to system prompt file"
+    )
+    initial_user_request_file: str | None = Field(
+        default="sgr_deep_research/prompts/initial_user_request.txt", description="Path to initial user request file"
+    )
+    clarification_response_file: str | None = Field(
+        default="sgr_deep_research/prompts/clarification_response.txt",
+        description="Path to clarification response file",
+    )
+    system_prompt: str | None = None
+    initial_user_request: str | None = None
+    clarification_response: str | None = None
+
+    @staticmethod
+    def _load_prompt_file(file_path: str | None) -> str | None:
+        """Load prompt content from file."""
+        lib_file_path = Path(os.path.join(os.path.dirname(__file__), "..", file_path))
+        file_path = Path(file_path)
+        for fp in [file_path, lib_file_path]:
+            if fp.exists():
+                try:
+                    with open(fp, encoding="utf-8") as f:
+                        return f.read().strip()
+                except IOError as e:
+                    raise IOError(f"Error reading prompt file {fp}: {e}") from e
+
+    @model_validator(mode="after")
+    def defaults_validator(self):
+        for attr, file_attr in zip(
+            ["system_prompt", "initial_user_request", "clarification_response"],
+            ["system_prompt_file", "initial_user_request_file", "clarification_response_file"],
+        ):
+            field = getattr(self, attr)
+            file_field = getattr(self, file_attr)
+            if not field and not file_field:
+                raise ValueError(f"{attr} or {file_attr} must be provided")
+            if field and file_field:
+                # logger.warning(f"{attr} and {file_attr} provided together, using {attr}")
+                pass  # ToDo: some weird behavior with calling this validator multiple times
+            if not field and file_field:
+                setattr(self, attr, self._load_prompt_file(file_field))
+        return self
+
+    def __repr__(self) -> str:
+        return (
+            f"PromptsConfig(system_prompt='{self.system_prompt[:100]}...', "
+            f"initial_user_request='{self.initial_user_request[:100]}...', "
+            f"clarification_response='{self.clarification_response[:100]}...')"
+        )
+
+
+class ExecutionConfig(BaseModel, extra="allow"):
+    """Execution parameters and limits for agents.
+
+    You can add any additional fields as needed.
+    """
+
+    max_steps: int = Field(default=6, gt=0, description="Maximum number of execution steps")
     max_clarifications: int = Field(default=3, ge=0, description="Maximum number of clarifications")
+    max_iterations: int = Field(default=10, gt=0, description="Maximum number of iterations")
     max_searches: int = Field(default=4, ge=0, description="Maximum number of searches")
+    mcp_context_limit: int = Field(default=15000, gt=0, description="Maximum context length from MCP server response")
+
+    logs_dir: str = Field(default="logs", description="Directory for saving bot logs")
+    reports_dir: str = Field(default="reports", description="Directory for saving reports")
 
 
-class MCPServerConfig(BaseModel):
-    """Configuration for MCP server connection."""
-
-    name: str = Field(description="MCP server name/ID")
-    url: str = Field(description="MCP server URL")
-    transport: MCPConfigTransport
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+class AgentConfig(BaseModel):
+    llm: LLMConfig = Field(default_factory=LLMConfig, description="LLM settings")
+    search: SearchConfig | None = Field(default=None, description="Search settings")
+    execution: ExecutionConfig = Field(default_factory=ExecutionConfig, description="Execution settings")
+    prompts: PromptsConfig = Field(default_factory=PromptsConfig, description="Prompts settings")
+    mcp: MCPConfig = Field(default_factory=MCPConfig, description="MCP settings")
 
 
-class AgentDefinition(BaseModel):
+class AgentDefinition(AgentConfig):
     """Definition of a custom agent.
 
     Agents can override global settings by providing:
-    - openai: dict with keys matching LLMConfig (api_key, base_url, model, etc.)
+    - llm: dict with keys matching LLMConfig (api_key, base_url, model, etc.)
     - prompts: dict with keys matching PromptsConfig (system_prompt_file, etc.)
-    - context: AgentContextConfig with execution limits
+    - ExecutionConfig: execution parameters and limits
     - tools: list of tool names to include
+    #
     """
 
     name: str = Field(description="Unique agent name/ID")
-    base_class: type[BaseAgent] | str = Field(description="Agent class name")
-    openai: LLMConfig | None = Field(
-        default=None, description="Agent-specific LLM config overrides (same keys as LLMConfig)"
-    )
-    prompts: PromptsConfig | None = Field(
-        default=None, description="Agent-specific prompts config overrides (same keys as PromptsConfig)"
-    )
-    config: AgentConfig = Field(default=AgentConfig(), description="Agent execution context configuration")
-    tools: list[type[BaseTool] | str] = Field(default_factory=list, description="List of tool names to include")
-    mcp_servers: MCPConfig = Field(
-        default=MCPConfig,
-        description="List of MCP server configurations. Read more about protocol here "
-        "https://gofastmcp.com/clients/transports#mcp-json-configuration-transport",
-    )
+    # ToDo: not sure how to type this properly and avoid circular imports
+    base_class: type[Any] | str = Field(description="Agent class name")
+    tools: list[type[Any] | str] = Field(default_factory=list, description="List of tool names to include")
 
     @model_validator(mode="before")
-    def defaults_validator(cls, data):
-        data["openai"] = get_config().openai.model_copy(update=data.get("openai", {}))
-        data["prompts"] = get_config().prompts.model_copy(update=data.get("prompts", {}))
-        data["mcp_servers"] = data.get("mcp_servers", {}) or get_config().mcp.transport_config
+    def default_config_override_validator(cls, data):
+        from sgr_deep_research.core.agent_config import GlobalConfig
+
+        data["llm"] = GlobalConfig().llm.model_copy(update=data.get("llm", {}))
+        data["search"] = (
+            GlobalConfig().search.model_copy(update=data.get("search", {})) if GlobalConfig().search else None
+        )
+        data["prompts"] = GlobalConfig().prompts.model_copy(update=data.get("prompts", {}))
+        data["execution"] = GlobalConfig().execution.model_copy(update=data.get("execution", {}))
+        data["mcp"] = GlobalConfig().mcp.model_copy(update=data.get("mcp", {}))
         return data
 
+    @model_validator(mode="after")
+    def api_keys_validator(self) -> Self:
+        if isinstance(self.llm.api_key, NotGiven):
+            raise ValueError(f"LLM API key is not provided for agent '{self.name}'")
+        if self.search and isinstance(self.search.tavily_api_key, NotGiven):
+            raise ValueError(f"Search API key is not provided for agent '{self.name}'")
+        return self
 
-class AgentsConfig(BaseModel):
-    agents: list[AgentDefinition] = Field(default_factory=list, description="List of agent definitions")
+    def __repr__(self) -> str:
+        base_class_name = self.base_class.__name__ if isinstance(self.base_class, type) else self.base_class
+        tool_names = [t.__name__ if isinstance(t, type) else t for t in self.tools]
+        return (
+            f"AgentDefinition(name='{self.name}', "
+            f"base_class={base_class_name}, "
+            f"tools={len(tool_names)}, "
+            f"execution={self.execution})"
+        )
 
     @classmethod
-    def from_yaml(cls, yaml_path: Path) -> Self:
-        if not yaml_path.exists():
+    def from_yaml(cls, yaml_path: str) -> Self:
+        if not Path(yaml_path).exists():
             return cls()
 
-        with open(yaml_path, "r", encoding="utf-8") as f:
+        with open(yaml_path, encoding="utf-8") as f:
             return cls(**yaml.safe_load(f))
 
 
-@cache
-def get_agents_config() -> AgentsConfig:
-    return AgentsConfig.from_yaml(Path(get_config().agents_config_path))
+class Definitions(BaseModel):
+    agents: list[AgentDefinition] = Field(default_factory=list, description="List of agent definitions")
+
+    @classmethod
+    def from_yaml(cls, agents_yaml_path: str) -> Self:
+        yaml_path = Path(agents_yaml_path)
+        if not yaml_path.exists():
+            raise FileNotFoundError(f"Agents configuration file not found: {yaml_path}")
+
+        with open(agents_yaml_path, encoding="utf-8") as f:
+            return cls(**yaml.safe_load(f))

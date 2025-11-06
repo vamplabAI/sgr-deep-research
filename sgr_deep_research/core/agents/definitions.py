@@ -16,30 +16,40 @@ DEFAULT_TOOLKIT = [
     tools.CreateReportTool,
 ]
 
-DEFAULT_AGENTS = [
-    AgentDefinition(
-        name="sgr_agent",
-        base_class=SGRAgent,
-        tools=DEFAULT_TOOLKIT,
-    ),
-    AgentDefinition(
-        name="tool_calling_agent",
-        base_class=ToolCallingAgent,
-        tools=DEFAULT_TOOLKIT,
-    ),
-    AgentDefinition(
-        name="sgr_tool_calling_agent",
-        base_class=SGRToolCallingAgent,
-        tools=DEFAULT_TOOLKIT,
-    ),
-    AgentDefinition(
-        name="sgr_auto_tool_calling_agent",
-        base_class=SGRAutoToolCallingAgent,
-        tools=DEFAULT_TOOLKIT,
-    ),
-    AgentDefinition(
-        name="sgr_so_tool_calling_agent",
-        base_class=SGRSOToolCallingAgent,
-        tools=DEFAULT_TOOLKIT,
-    ),
-]
+
+def get_default_agents_definitions() -> list[AgentDefinition]:
+    """Get default agent definitions.
+
+    This function creates agent definitions lazily to avoid issues with
+    configuration initialization order.
+
+    Returns:
+        List of default agent definitions
+    """
+    return [
+        AgentDefinition(
+            name="sgr_agent",
+            base_class=SGRAgent,
+            tools=DEFAULT_TOOLKIT,
+        ),
+        AgentDefinition(
+            name="tool_calling_agent",
+            base_class=ToolCallingAgent,
+            tools=DEFAULT_TOOLKIT,
+        ),
+        AgentDefinition(
+            name="sgr_tool_calling_agent",
+            base_class=SGRToolCallingAgent,
+            tools=DEFAULT_TOOLKIT,
+        ),
+        AgentDefinition(
+            name="sgr_auto_tool_calling_agent",
+            base_class=SGRAutoToolCallingAgent,
+            tools=DEFAULT_TOOLKIT,
+        ),
+        AgentDefinition(
+            name="sgr_so_tool_calling_agent",
+            base_class=SGRSOToolCallingAgent,
+            tools=DEFAULT_TOOLKIT,
+        ),
+    ]

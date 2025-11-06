@@ -3,6 +3,7 @@ from typing import Literal, Type
 from openai import AsyncOpenAI, pydantic_function_tool
 from openai.types.chat import ChatCompletionFunctionToolParam
 
+from sgr_deep_research.core.agent_definition import ExecutionConfig, LLMConfig, PromptsConfig
 from sgr_deep_research.core.base_agent import BaseAgent
 from sgr_deep_research.core.tools import (
     BaseTool,
@@ -11,7 +12,6 @@ from sgr_deep_research.core.tools import (
     FinalAnswerTool,
     WebSearchTool,
 )
-from sgr_deep_research.settings import LLMConfig, PromptsConfig
 
 
 class ToolCallingAgent(BaseAgent):
@@ -26,21 +26,18 @@ class ToolCallingAgent(BaseAgent):
         openai_client: AsyncOpenAI,
         llm_config: LLMConfig,
         prompts_config: PromptsConfig,
+        execution_config: ExecutionConfig,
         toolkit: list[Type[BaseTool]] | None = None,
-        max_clarifications: int = 3,
-        max_searches: int = 4,
-        max_iterations: int = 10,
     ):
         super().__init__(
             task=task,
             openai_client=openai_client,
             llm_config=llm_config,
             prompts_config=prompts_config,
+            execution_config=execution_config,
             toolkit=toolkit,
-            max_clarifications=max_clarifications,
-            max_iterations=max_iterations,
         )
-        self.max_searches = max_searches
+        self.max_searches = execution_config.max_searches
         self.tool_choice: Literal["required"] = "required"
 
     async def _prepare_tools(self) -> list[ChatCompletionFunctionToolParam]:

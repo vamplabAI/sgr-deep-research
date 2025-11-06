@@ -8,15 +8,14 @@ from typing import TYPE_CHECKING, Literal
 
 from pydantic import Field
 
+from sgr_deep_research.core.agent_config import GlobalConfig
 from sgr_deep_research.core.base_tool import BaseTool
-from sgr_deep_research.settings import get_config
 
 if TYPE_CHECKING:
     from sgr_deep_research.core.models import ResearchContext
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-config = get_config()
 
 
 class CreateReportTool(BaseTool):
@@ -42,7 +41,7 @@ class CreateReportTool(BaseTool):
 
     async def __call__(self, context: ResearchContext) -> str:
         # Save report
-        reports_dir = config.logging.reports_dir
+        reports_dir = GlobalConfig().execution.reports_dir
         os.makedirs(reports_dir, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         safe_title = "".join(c for c in self.title if c.isalnum() or c in (" ", "-", "_"))[:50]
