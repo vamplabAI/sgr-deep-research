@@ -21,16 +21,12 @@ class SGRToolCallingResearchAgentDeepseek(SGRToolCallingResearchAgent):
         last_message = msgs[-1]
         if not isinstance(last_message.get("content"), str):
             last_message["content"] = last_message.get("content") or ""
-        last_message["content"] += (
-            "\n\n[REASONING_REQUIRED] Produce ReasoningTool arguments strictly per schema: "
-            "reasoning_steps (2-3 short bullets), "
-            "current_situation (<=300 chars), "
-            "plan_status (<=150 chars), "
-            "enough_data (boolean), "
-            "remaining_steps (1-3 short action steps), "
-            "task_completed (boolean). "
-            "Be concise, factual, and use the user's language."
+        # Build concise instruction from the tool's schema (with enums, constraints)
+        instruction = ReasoningTool.schema_to_instruction(
+            prefix="[REASONING_REQUIRED] Produce ReasoningTool arguments strictly per schema:",
+            suffix="Be concise, factual, and use the user's language.",
         )
+        last_message["content"] += "\n\n" + instruction
         async with self.openai_client.chat.completions.stream(
             model=config.openai.model,
             messages=msgs,

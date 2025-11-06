@@ -10,7 +10,6 @@ client = OpenAI(
 response = client.chat.completions.create(
     model="sgr_tool_calling_agent_deepseek",
     messages=[{"role": "user", "content": "Research BMW X6 2025 prices in Russia"}],
-#    messages=[{"role": "user", "content": "Дай отчет о ходе строительстве моста через реку Лена по состоянию на ноябрь 2025 года"}],
     stream=True,
     temperature=0.4,
 )
