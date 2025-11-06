@@ -24,16 +24,16 @@ class SGRFileAgent(SGRResearchAgent):
     
     Focus: File search and analysis (read-only operations)
     
-    Available file system tools:
-    - GetCurrentDirectoryTool: Get current working directory info
-    - GetSystemPathsTool: Get standard system paths (home, documents, downloads, etc.)
+    Available file system tools (6 essential tools):
+    - GetCurrentDirectoryTool: Get current working directory and context
+    - GetSystemPathsTool: Get standard system paths (home, documents, downloads, desktop, etc.)
     - ReadFileTool: Read file contents with optional line range
-    - ListDirectoryTool: List directory contents (recursive option)
-    - SearchFilesTool: Find files by name pattern (*.py, config.*)
-    - SearchInFilesTool: Search text/code within files (grep-like)
-    - FindByExtensionTool: Find files by extension (.py, .js, .md)
-    - FindBySizeTool: Find files by size criteria (min/max bytes)
-    - FindByDateTool: Find files by modification date (recent/old)
+    - ListDirectoryTool: List directory contents with recursive option
+    - SearchInFilesTool: Search text/code within files (grep-like functionality)
+    - FindFilesFastTool: Universal file search using native find command (supports patterns, size, date filters)
+    
+    All tools use native OS commands for optimal performance.
+    Automatic filtering excludes cache dirs, node_modules, .git, etc.
     
     Usage:
         agent = SGRFileAgent(
