@@ -1,4 +1,4 @@
-# SGR Deep Research - Open-Source Schema-Guided Reasoning System
+# SGR Agent Core — the first SGR open-source agentic framework for Schema-Guided Reasoning
 
 ## Description
 
