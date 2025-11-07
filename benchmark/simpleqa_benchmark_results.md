@@ -1,6 +1,6 @@
 # Problem Statement
 
-The objective of this research was to test the SGR Deep Research system and compare it with analogues.
+The objective of this research was to test the SGR Agent Core system and compare it with analogues.
 
 # Methodology
 
