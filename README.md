@@ -1,4 +1,4 @@
-#SGR Agent Core — the first Russian open-source agentic framework for Schema-Guided Reasoning
+##SGR Agent Core — the first Russian open-source agentic framework for Schema-Guided Reasoning
 
 ## Description
 
