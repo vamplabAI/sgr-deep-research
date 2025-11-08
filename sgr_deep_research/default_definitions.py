@@ -17,16 +17,16 @@ DEFAULT_TOOLKIT = [
 ]
 
 
-def get_default_agents_definitions() -> list[AgentDefinition]:
+def get_default_agents_definitions() -> dict[str, AgentDefinition]:
     """Get default agent definitions.
 
     This function creates agent definitions lazily to avoid issues with
     configuration initialization order.
 
     Returns:
-        List of default agent definitions
+        Dictionary of default agent definitions keyed by agent name
     """
-    return [
+    agents = [
         AgentDefinition(
             name="sgr_agent",
             base_class=SGRAgent,
@@ -53,3 +53,4 @@ def get_default_agents_definitions() -> list[AgentDefinition]:
             tools=DEFAULT_TOOLKIT,
         ),
     ]
+    return {agent.name: agent for agent in agents}

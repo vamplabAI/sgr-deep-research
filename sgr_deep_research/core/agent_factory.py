@@ -8,7 +8,6 @@ from openai import AsyncOpenAI
 
 from sgr_deep_research.core.agent_config import GlobalConfig
 from sgr_deep_research.core.agent_definition import AgentDefinition, LLMConfig
-from sgr_deep_research.core.agents.definitions import get_default_agents_definitions
 from sgr_deep_research.core.base_agent import BaseAgent
 from sgr_deep_research.core.services import AgentRegistry, MCP2ToolConverter, ToolRegistry
 
@@ -108,15 +107,10 @@ class AgentFactory:
 
     @classmethod
     def get_definitions_list(cls) -> list[AgentDefinition]:
-        """Get all agent definitions (default + custom from config).
+        """Get all agent definitions from config.
 
         Returns:
-            List of agent definitions (default agents + custom agents from config)
+            List of agent definitions from config
         """
         config = GlobalConfig()
-
-        all_agents = {agent.name: agent for agent in get_default_agents_definitions()}
-        if will_be_rewritten := set(all_agents.keys()).intersection({agent.name for agent in config.agents}):
-            logger.warning(f"Custom agents with names {', '.join(will_be_rewritten)} will override default agents.")
-        all_agents.update({agent.name: agent for agent in config.agents})
-        return list(all_agents.values())
+        return list(config.agents.values())

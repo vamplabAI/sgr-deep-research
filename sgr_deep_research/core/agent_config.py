@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import ClassVar, Self
 
@@ -5,6 +6,8 @@ import yaml
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from sgr_deep_research.core.agent_definition import AgentConfig, Definitions
+
+logger = logging.getLogger(__name__)
 
 
 class GlobalConfig(BaseSettings, AgentConfig, Definitions):
@@ -44,8 +47,39 @@ class GlobalConfig(BaseSettings, AgentConfig, Definitions):
 
     @classmethod
     def definitions_from_yaml(cls, agents_yaml_path: str) -> Self:
+        """Load agent definitions from YAML file and merge with existing
+        agents.
+
+        Args:
+            agents_yaml_path: Path to YAML file with agent definitions
+
+        Returns:
+            GlobalConfig instance with merged agents
+
+        Raises:
+            FileNotFoundError: If YAML file not found
+            ValueError: If YAML file doesn't contain 'agents' key
+        """
         agents_yaml_path = Path(agents_yaml_path)
         if not agents_yaml_path.exists():
             raise FileNotFoundError(f"Agents definitions file not found: {agents_yaml_path}")
-        cls._instance.agents = Definitions(**yaml.safe_load(agents_yaml_path.read_text(encoding="utf-8"))).agents
+
+        yaml_data = yaml.safe_load(agents_yaml_path.read_text(encoding="utf-8"))
+        if not yaml_data.get("agents"):
+            raise ValueError(f"Agents definitions file must contain 'agents' key: {agents_yaml_path}")
+
+        for agent_name, agent_config in yaml_data.get("agents").items():
+            agent_config["name"] = agent_name
+
+        custom_agents = Definitions(**yaml_data).agents
+
+        # Check for agents that will be overridden
+        overridden = set(cls._instance.agents.keys()) & set(custom_agents.keys())
+        if overridden:
+            logger.warning(
+                f"Custom agents from {agents_yaml_path.name} will override existing agents: "
+                f"{', '.join(sorted(overridden))}"
+            )
+
+        cls._instance.agents.update(custom_agents)
         return cls._instance
