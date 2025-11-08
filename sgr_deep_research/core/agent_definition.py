@@ -142,7 +142,9 @@ class AgentDefinition(AgentConfig):
             if GlobalConfig().search
             else None
         )
+        data["prompts"] = GlobalConfig().prompts.model_copy(update=data.get("prompts", {})).model_dump()
         data["execution"] = GlobalConfig().execution.model_copy(update=data.get("execution", {})).model_dump()
+        data["mcp"] = GlobalConfig().mcp.model_copy(update=data.get("mcp", {})).model_dump(warnings=False)
         return data
 
     @model_validator(mode="after")
