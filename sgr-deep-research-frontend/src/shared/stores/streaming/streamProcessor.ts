@@ -206,9 +206,8 @@ export class StreamProcessor {
         this.finalizeToolCalls(lastMessage)
       }
 
-      // Only trigger stream finish on "stop" finish reason, not on "tool_calls"
-      // This allows backend to send complete tool call data after finish_reason: "tool_calls"
-      const shouldTriggerFinish = finishReason === 'stop'
+      // Trigger stream finish on both "stop" and "tool_calls" to update agent state
+      const shouldTriggerFinish = finishReason === 'stop' || finishReason === 'tool_calls'
       console.log(`🏁 Finish reason: ${finishReason}, shouldTriggerFinish: ${shouldTriggerFinish}`)
       return { shouldFinish: shouldTriggerFinish, finishReason }
     }
