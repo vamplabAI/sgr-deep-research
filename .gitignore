@@ -25,6 +25,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+!sgr-deep-research-frontend/src/shared/lib/
 lib64/
 parts/
 sdist/
