@@ -53,3 +53,10 @@ mcp:
     #   url: "https://your-mcp-server.com/mcp"
     #   headers:
     #     Authorization: "Bearer your-token"
+
+
+# Note: The 'agents' field is optional and can be loaded from either:
+# - This config.yaml file
+# - Any separate file by GlobalConfig.definitions_from_yaml method
+# See examples in agents.yaml.example for agent configuration options
+agents:
