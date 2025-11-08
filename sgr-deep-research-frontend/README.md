@@ -5,27 +5,32 @@ Vue 3 + TypeScript + Vite frontend for SGR Deep Research.
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - Node.js 20.19+ or 22.12+
 
 ### Setup
 
 1. **Install Node.js 22** (macOS):
+
 ```sh
 brew install node@22
 export PATH="/opt/homebrew/opt/node@22/bin:$PATH"
 ```
 
 2. **Install dependencies**:
+
 ```sh
 npm install
 ```
 
 3. **Configure environment**:
+
 ```sh
 cp .env.example .env.local
 ```
 
 Edit `.env.local` and set:
+
 - `VITE_API_BASE_URL` - your backend URL (default: `http://localhost:8010`)
 - `VITE_TRANSCRIPTION_API_URL` - transcription service URL
 - `VITE_TRANSCRIPTION_API_TOKEN` - your transcription API token
@@ -33,17 +38,21 @@ Edit `.env.local` and set:
 ### Run
 
 **Development:**
+
 ```sh
 npm run dev
 ```
+
 Open http://localhost:5173
 
 **Production build:**
+
 ```sh
 npm run build
 ```
 
 **Docker (Full Stack - Backend + Frontend):**
+
 ```sh
 # Перейти в папку services
 cd ../services

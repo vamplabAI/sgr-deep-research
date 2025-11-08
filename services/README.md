@@ -5,6 +5,7 @@
 ## Быстрый старт
 
 1. **Скопируйте `.env.example` в `.env`:**
+
    ```bash
    cp .env.example .env
    ```
@@ -12,11 +13,13 @@
 2. **Отредактируйте `.env` при необходимости** (опционально)
 
 3. **Запустите все сервисы:**
+
    ```bash
    docker-compose up -d --build
    ```
 
 4. **Откройте в браузере:**
+
    - Frontend: http://localhost:5174
    - Backend API: http://localhost:8010
    - API Docs: http://localhost:8010/docs
@@ -24,6 +27,7 @@
 ## Управление
 
 ### Запуск
+
 ```bash
 # Запуск всех сервисов
 docker-compose up -d
@@ -39,6 +43,7 @@ docker-compose up -d sgr-frontend
 ```
 
 ### Остановка
+
 ```bash
 # Остановить все сервисы
 docker-compose down
@@ -48,6 +53,7 @@ docker-compose down -v
 ```
 
 ### Логи
+
 ```bash
 # Все логи
 docker-compose logs -f
@@ -60,6 +66,7 @@ docker-compose logs -f sgr-frontend
 ```
 
 ### Перезапуск
+
 ```bash
 # Перезапустить все
 docker-compose restart
@@ -89,10 +96,12 @@ VITE_TRANSCRIPTION_API_TOKEN=your_token_here
 ### Структура сервисов
 
 - **sgr-backend**: FastAPI backend на порту 8010
+
   - Healthcheck: проверяет `/health` каждые 30 секунд
   - Volumes: код, конфиги, логи, отчеты
-  
+
 - **sgr-frontend**: Nginx + Vue.js frontend на порту 5174
+
   - Зависит от backend (запускается после healthcheck)
   - Статические файлы собираются при сборке образа
 
@@ -109,6 +118,7 @@ VITE_TRANSCRIPTION_API_TOKEN=your_token_here
 ### Backend не стартует
 
 Проверьте логи:
+
 ```bash
 docker-compose logs sgr-backend
 ```
@@ -118,14 +128,15 @@ docker-compose logs sgr-backend
 ### Порты заняты
 
 Измените порты в `.env`:
+
 ```bash
 BACKEND_PORT=8011
 FRONTEND_PORT=5175
 ```
 
 Затем перезапустите:
+
 ```bash
 docker-compose down
 docker-compose up -d
 ```
-

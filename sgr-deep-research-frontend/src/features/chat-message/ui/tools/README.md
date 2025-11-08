@@ -39,6 +39,7 @@ The `ChatMessageStep.vue` acts as a **router component** that delegates renderin
 4. Add conditional rendering in template
 
 Example:
+
 ```vue
 <!-- In ChatMessageStep.vue -->
 <MyNewToolDisplay
@@ -50,4 +51,3 @@ Example:
 ## Migration
 
 The old monolithic `ChatMessageStep.vue` has been backed up as `ChatMessageStep.vue.old` (1094 lines).
-
