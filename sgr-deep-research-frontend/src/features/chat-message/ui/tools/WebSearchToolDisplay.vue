@@ -42,11 +42,11 @@
               class="search-result-item"
             >
               <div class="search-result-title">
-                [{{ index + 1 }}] 
-                <a 
-                  v-if="result.link" 
-                  :href="result.link" 
-                  target="_blank" 
+                [{{ index + 1 }}]
+                <a
+                  v-if="result.link"
+                  :href="result.link"
+                  target="_blank"
                   rel="noopener noreferrer"
                 >
                   {{ result.title }}
@@ -92,5 +92,3 @@ const toggleCollapsed = () => {
   isCollapsed.value = !isCollapsed.value
 }
 </script>
-
-

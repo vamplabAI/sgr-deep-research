@@ -46,4 +46,3 @@ export interface ParsedContent {
   data: any
   isComplete: boolean
 }
-

@@ -55,11 +55,11 @@ export function getContentType(content: string, hasToolName: boolean): ContentTy
   if (!content || content.trim().length === 0) {
     return 'empty'
   }
-  
+
   if (hasToolName) {
     return isValidJson(content) ? 'json' : 'tool_call'
   }
-  
+
   return 'text'
 }
 
@@ -72,7 +72,7 @@ export function parseContent(
   isFinishing: boolean
 ): ParsedContent {
   const contentType = getContentType(content, !!toolName)
-  
+
   switch (contentType) {
     case 'json':
       return {
@@ -81,7 +81,7 @@ export function parseContent(
         data: parseJsonWithTool(content, toolName),
         isComplete: true,
       }
-    
+
     case 'tool_call':
       return {
         type: 'tool_call',
@@ -89,14 +89,14 @@ export function parseContent(
         data: content,
         isComplete: isFinishing,
       }
-    
+
     case 'text':
       return {
         type: 'text',
         data: content,
         isComplete: false,
       }
-    
+
     case 'empty':
     default:
       return {
@@ -106,4 +106,3 @@ export function parseContent(
       }
   }
 }
-

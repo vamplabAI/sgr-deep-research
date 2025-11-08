@@ -3,16 +3,16 @@
     <div v-if="isLoading" class="select-agent__loading">
       Loading...
     </div>
-    <select 
+    <select
       v-else
-      v-model="selectedModel" 
+      v-model="selectedModel"
       class="select-agent__dropdown"
       @change="handleModelChange"
     >
       <option v-if="availableModels.length === 0" disabled value="">No models available</option>
-      <option 
-        v-for="model in availableModels" 
-        :key="model.id" 
+      <option
+        v-for="model in availableModels"
+        :key="model.id"
         :value="model.id"
       >
         {{ model.name }}

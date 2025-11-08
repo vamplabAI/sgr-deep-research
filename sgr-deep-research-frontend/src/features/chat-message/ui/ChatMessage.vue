@@ -109,7 +109,7 @@ defineEmits<{
 // Extract final answer from message content
 const finalAnswer = computed(() => {
   if (!props.message.content || props.message.isStreaming) return null
-  
+
   // Find finalanswertool in content
   for (const step of props.message.content) {
     if (typeof step === 'object' && step !== null) {
@@ -125,7 +125,7 @@ const finalAnswer = computed(() => {
 // Extract clarification questions from message content
 const clarificationQuestions = computed(() => {
   if (!props.message.content || props.message.isStreaming) return null
-  
+
   // Find clarificationtool in content
   for (const step of props.message.content) {
     if (typeof step === 'object' && step !== null) {

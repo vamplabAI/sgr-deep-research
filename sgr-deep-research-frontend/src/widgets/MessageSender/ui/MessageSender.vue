@@ -322,7 +322,7 @@ defineExpose({
   opacity: 0.6;
   pointer-events: none;
   background-color: #f9fafb;
-  
+
   &:hover {
     background-color: #f9fafb;
   }

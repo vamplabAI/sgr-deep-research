@@ -143,7 +143,7 @@ export const useChatStore = defineStore('chat', () => {
    */
   const finishStreaming = async () => {
     console.log('🏁 finishStreaming called')
-    
+
     if (streamingState.value.isStreaming && streamingState.value.currentMessageId) {
       updateMessage(streamingState.value.currentMessageId, {
         isStreaming: false,
@@ -669,4 +669,3 @@ export const useChatStore = defineStore('chat', () => {
     createNewSession,
   }
 })
-

@@ -84,5 +84,3 @@ const formatTextWithLinks = (text: string): string => {
   return result
 }
 </script>
-
-

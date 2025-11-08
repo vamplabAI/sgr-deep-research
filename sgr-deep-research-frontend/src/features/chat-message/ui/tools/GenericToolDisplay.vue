@@ -43,5 +43,3 @@ const toggleCollapsed = () => {
   isCollapsed.value = !isCollapsed.value
 }
 </script>
-
-

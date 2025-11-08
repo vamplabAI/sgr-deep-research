@@ -131,4 +131,3 @@ const getToolData = (step: any) => {
   overflow: hidden;
 }
 </style>
-

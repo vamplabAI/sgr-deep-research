@@ -131,7 +131,7 @@ function clearInput() {
     cursor: not-allowed;
     background-color: #f3f4f6;
     color: #9ca3af;
-    
+
     &::placeholder {
       color: #9ca3af;
     }

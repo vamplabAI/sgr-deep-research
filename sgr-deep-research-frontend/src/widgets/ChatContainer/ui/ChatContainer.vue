@@ -17,7 +17,7 @@
         @error="handleSendError"
         ref="messageSenderRef"
       />
-      
+
       <!-- Message when agent is completed -->
       <div v-if="isAgentCompleted" class="chat-container__completed-message">
         ✅ Задача выполнена. Нажмите "Новый диалог" чтобы начать новый разговор.
@@ -84,13 +84,13 @@ const handleSendMessage = async (message: string) => {
         needsClarification: needsClarification.value,
         agentId,
       })
-      
+
       if (needsClarification.value) {
         console.log('💬 Providing clarification to agent:', agentId)
-        
+
         // Add user message to chat first
         chatStore.addUserMessage(message)
-        
+
         // Send clarification and receive streaming response
         await chatStore.provideClarificationWithStreaming(agentId, message)
       } else {

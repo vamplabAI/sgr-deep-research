@@ -84,7 +84,7 @@ export class StreamProcessor {
       const { session, rawChunk, agentId, onFinish } = this.pendingChunks.shift()!
       console.log('📦 Processing chunk, hasOnFinish:', !!onFinish)
       const shouldStop = await this.processRawChunkInternal(session, rawChunk, agentId, onFinish)
-      
+
       // If onFinish was called, stop processing queue and clear remaining chunks
       if (shouldStop) {
         console.log('🛑 Stopping queue processing after onFinish')
@@ -156,7 +156,7 @@ export class StreamProcessor {
       await onFinish()
       return true // Signal to stop processing queue
     }
-    
+
     return false // Continue processing queue
   }
 
@@ -205,7 +205,7 @@ export class StreamProcessor {
         console.log(`🎯 Finalizing tool calls on finish_reason: ${finishReason}`)
         this.finalizeToolCalls(lastMessage)
       }
-      
+
       // Only trigger stream finish on "stop" finish reason, not on "tool_calls"
       // This allows backend to send complete tool call data after finish_reason: "tool_calls"
       const shouldTriggerFinish = finishReason === 'stop'
@@ -248,7 +248,7 @@ export class StreamProcessor {
 
         // Check if this is a complete tool call from backend (ID like "1-action", "2-action")
         const isBackendComplete = toolCall.id && /^\d+-action$/.test(toolCall.id)
-        
+
         // Skip backend complete tool calls - we already have them from streaming
         if (isBackendComplete) {
           console.log(`⏭️ Skipping backend complete tool call: ${toolName} (${toolCall.id})`)
@@ -330,8 +330,8 @@ export class StreamProcessor {
     const trimmed = content.trim()
     // Check if it's a JSON object with typical tool call fields
     if (trimmed.startsWith('{') && (
-      trimmed.includes('"reasoning"') || 
-      trimmed.includes('"answer"') || 
+      trimmed.includes('"reasoning"') ||
+      trimmed.includes('"answer"') ||
       trimmed.includes('"completed_steps"')
     )) {
       console.log('⏭️ Skipping JSON tool call in content:', trimmed.substring(0, 50))

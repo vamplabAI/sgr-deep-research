@@ -12,9 +12,9 @@
       >
         Новый диалог
       </button>
-      
+
       <h1 class="workspace-page__title">SGR Agent Core</h1>
-      
+
       <div class="workspace-page__model-selector">
         <SelectAgent />
       </div>
@@ -120,10 +120,10 @@ const handleContinueChat = async (message: string) => {
 
     if (chatStore.needsClarification) {
       console.log('💬 Providing clarification to agent:', agentId)
-      
+
       // Add user message to chat first
       chatStore.addUserMessage(message)
-      
+
       // Send clarification and receive streaming response
       await chatStore.provideClarificationWithStreaming(agentId, message)
     } else {
@@ -146,11 +146,11 @@ const handleRetryMessage = async (message: ChatMessageExtended) => {
 
 const handleNewChat = async () => {
   console.log('🆕 Starting new chat')
-  
+
   // Clear current session and start fresh
   chatStore.clearCurrentSession()
   await chatStore.initializeChat(currentAgent.value)
-  
+
   console.log('✅ New chat initialized')
 }
 

@@ -13,11 +13,11 @@ function formatReasoningContent(content: string): string {
   try {
     const data = JSON.parse(content)
     const steps = data.reasoning_steps || []
-    
+
     if (steps.length > 0) {
       return steps.map((step: string) => `• ${step}`).join('\n')
     }
-    
+
     return content
   } catch {
     return content
@@ -145,10 +145,9 @@ export async function loadChatDetails(agentId: string): Promise<{
   createdAt: Date
 }> {
   const chatDetail = await apiServices.chatHistory.getChatDetail(agentId)
-  
+
   return {
     title: chatDetail.initial_task,
     createdAt: new Date(chatDetail.created_at || Date.now()),
   }
 }
-

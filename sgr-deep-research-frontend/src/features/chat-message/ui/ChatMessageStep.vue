@@ -122,4 +122,3 @@ const getToolData = (step: any) => {
 </script>
 
 <style src="./tools/tool-display-styles.css"></style>
-

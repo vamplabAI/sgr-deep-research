@@ -35,10 +35,10 @@ export const useAgentsStore = defineStore('agents', () => {
       console.log('📡 Fetching models from API...')
       const response = await apiServices.models.getAvailableModels()
       console.log('✅ Received models:', response.data.length)
-      
+
       // Filter to show only sgr_tool_calling_agent
       const allowedModels = ['sgr_tool_calling_agent']
-      
+
       // Map and filter models from API response
       const models = response.data
         .filter((model) => allowedModels.includes(model.id))

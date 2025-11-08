@@ -228,11 +228,11 @@
                 class="search-result-item"
               >
                 <div class="search-result-title">
-                  [{{ index + 1 }}] 
-                  <a 
-                    v-if="result.link" 
-                    :href="result.link" 
-                    target="_blank" 
+                  [{{ index + 1 }}]
+                  <a
+                    v-if="result.link"
+                    :href="result.link"
+                    target="_blank"
                     rel="noopener noreferrer"
                   >
                     {{ result.title }}
@@ -964,7 +964,7 @@ const formatTextWithLinks = (text: string): string => {
   a {
     color: #3b82f6;
     text-decoration: none;
-    
+
     &:hover {
       text-decoration: underline;
     }
