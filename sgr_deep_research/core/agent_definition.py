@@ -1,3 +1,4 @@
+import inspect
 import logging
 import os
 from functools import cached_property
@@ -6,7 +7,7 @@ from typing import Any, Self
 
 import yaml
 from fastmcp.mcp_config import MCPConfig
-from pydantic import BaseModel, Field, FilePath, computed_field, model_validator
+from pydantic import BaseModel, Field, FilePath, ImportString, computed_field, field_validator, model_validator
 
 logger = logging.getLogger(__name__)
 
@@ -128,12 +129,11 @@ class AgentDefinition(AgentConfig):
 
     name: str = Field(description="Unique agent name/ID")
     # ToDo: not sure how to type this properly and avoid circular imports
-    base_class: type[Any] | str = Field(description="Agent class name")
+    base_class: type[Any] | ImportString | str = Field(description="Agent class name")
     tools: list[type[Any] | str] = Field(default_factory=list, description="List of tool names to include")
 
     @model_validator(mode="before")
     def default_config_override_validator(cls, data):
-        print(data)
         from sgr_deep_research.core.agent_config import GlobalConfig
 
         data["llm"] = GlobalConfig().llm.model_copy(update=data.get("llm", {})).model_dump()
@@ -156,6 +156,14 @@ class AgentDefinition(AgentConfig):
         if not self.tools:
             raise ValueError(f"Tools are not provided for agent '{self.name}'")
         return self
+
+    @field_validator("base_class", mode="after")
+    def base_class_is_agent(cls, v: Any) -> type[Any]:
+        from sgr_deep_research.core.base_agent import BaseAgent
+
+        if inspect.isclass(v) and not issubclass(v, BaseAgent):
+            raise TypeError("Imported base_class must be a subclass of BaseAgent")
+        return v
 
     def __str__(self) -> str:
         base_class_name = self.base_class.__name__ if isinstance(self.base_class, type) else self.base_class
