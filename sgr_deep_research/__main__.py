@@ -7,11 +7,12 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from sgr_deep_research import __version__
 from sgr_deep_research.api.endpoints import router
 from sgr_deep_research.services import MCP2ToolConverter
-from sgr_deep_research.settings import setup_logging
+from sgr_deep_research.settings import get_config, setup_logging
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -24,6 +25,19 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="SGR Deep Research API", version=__version__, lifespan=lifespan)
+
+# Configure CORS from config
+config = get_config()
+if config.api.cors.enabled:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=config.api.cors.allow_origins,
+        allow_credentials=config.api.cors.allow_credentials,
+        allow_methods=config.api.cors.allow_methods,
+        allow_headers=config.api.cors.allow_headers,
+    )
+    logger.info(f"CORS enabled for origins: {config.api.cors.allow_origins}")
+
 app.include_router(router)
 
 

@@ -41,6 +41,21 @@ prompts:
 logging:
   config_file: "logging_config.yaml"  # Logging configuration file path
 
+# API Server Settings
+api:
+  cors:
+    enabled: true                      # Enable CORS middleware
+    allow_origins:                     # List of allowed origins
+      - "http://localhost:5173"        # Vite dev server
+      - "http://localhost:3000"        # Alternative frontend port
+      - "http://127.0.0.1:5173"
+      - "http://127.0.0.1:3000"
+    allow_credentials: true            # Allow credentials (cookies, authorization headers)
+    allow_methods:                     # Allowed HTTP methods
+      - "*"
+    allow_headers:                     # Allowed HTTP headers
+      - "*"
+
 mcp:
 
   # Limit on the result of MCP tool invocation.

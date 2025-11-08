@@ -1,0 +1,13 @@
+@mixin content-width {
+  width: 100%;
+  max-width: 692px;
+  margin-inline: auto;
+
+  @media (min-width: 1440px) {
+    max-width: 867px;
+  }
+
+  @media (min-width: 1680px) {
+    max-width: 1042px;
+  }
+}

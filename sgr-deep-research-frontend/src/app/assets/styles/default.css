@@ -1,0 +1,64 @@
+/* Generated CSS for color scheme: default */
+/* Auto-generated - do not edit manually */
+
+:root {
+  --bg-2-1-dark: #000000;
+  --bg-2-10-hover: #f5f5f5;
+  --bg-2-2-dark-gray: #1f1f1f;
+  --bg-2-3-white: #ffffff;
+  --bg-2-4-gray-1: #f5f5f5;
+  --bg-2-5-gray-2: #ededed;
+  --bg-2-6-gray-alpha: #82828280;
+  --bg-2-7-dark-alpha: #000000b3;
+  --bg-2-8-white-alpha: #ffffffcc;
+  --bg-2-9-shadow: #00000026;
+
+  --but-4-1-dark: #000000;
+  --but-4-2-dark-gray: #ededed;
+  --but-4-3-dark-disable: #e4e4e4;
+  --but-4-4-dark-hover: #e4e4e4;
+  --but-4-5-white: #ffffff;
+  --but-4-6-white-gray: #333333;
+  --but-4-7-white-disable: #2b2b2b;
+  --but-4-8-white-hover: #232323;
+
+  --core-1-1-core: #1636ff;
+  --core-1-2-hover: #3860ff;
+
+  --divider-6-1-white: #b8b8b8;
+  --divider-6-2-dark: #404040;
+  --divider-6-3-super-black: #141414;
+  --divider-6-4-super-white: #ffffff;
+
+  --icon-5-1-dark: #000000;
+  --icon-5-2-dark-hover: #636363;
+  --icon-5-3-dark-disable: #ababab;
+  --icon-5-4-white: #ffffff;
+  --icon-5-5-white-disable: #5d5d5d;
+  --icon-5-6-white-hover: #707070;
+  --icon-5-7-core-white: #ffffff;
+  --icon-5-8-core-black: #000000;
+
+  --kit-9-1-1: #03ffd533;
+  --kit-9-2-2: #b330b333;
+  --kit-9-3-3: #d5ffc9;
+
+  --more-8-1-1: #8769e1;
+  --more-8-2-2: #fb6906;
+  --more-8-3-3: #738198;
+
+  --system-7-1-success: #69c16d;
+  --system-7-2-error: #fa3939;
+  --system-7-3-attention: #ff9d00;
+  --system-7-4-process: #fcff5c;
+
+  --text-3-1-dark: #000000;
+  --text-3-2-dark-gray: #707070;
+  --text-3-3-dark-disable: #a6a6a6;
+  --text-3-4-white: #ffffff;
+  --text-3-5-white-gray: #707070;
+  --text-3-6-white-disable: #333333;
+  --text-3-7-core-white: #ffffff;
+  --text-3-8-core-black: #000000;
+  --text-3-9-text-selection: #e8ebff;
+}

@@ -1,0 +1,21 @@
+# dependencies
+/node_modules
+.idea*
+
+# production
+/dist
+
+*.tar
+
+# misc
+.DS_Store
+*.pem
+.vscode
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# typescript
+*.tsbuildinfo
