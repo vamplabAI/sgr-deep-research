@@ -10,6 +10,7 @@ from sgr_deep_research import AgentFactory, __version__
 from sgr_deep_research.api.endpoints import router
 from sgr_deep_research.core import AgentRegistry, ToolRegistry
 from sgr_deep_research.core.agent_config import GlobalConfig
+from sgr_deep_research.default_definitions import get_default_agents_definitions
 from sgr_deep_research.settings import ServerConfig, setup_logging
 
 setup_logging()
@@ -30,8 +31,9 @@ async def lifespan(app: FastAPI):
 def main():
     """Запуск FastAPI сервера."""
     args = ServerConfig()
-    GlobalConfig.from_yaml(args.config_file)
-    GlobalConfig.definitions_from_yaml(args.agents_file)
+    config = GlobalConfig.from_yaml(args.config_file)
+    config.agents.update(get_default_agents_definitions())
+    config.definitions_from_yaml(args.agents_file)
     app = FastAPI(title="SGR Deep Research API", version=__version__, lifespan=lifespan)
     app.include_router(router)
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")

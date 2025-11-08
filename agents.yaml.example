@@ -11,7 +11,7 @@
 
 agents:
   # Example 1: Simple custom research agent with overrides
-  - name: "custom_research_agent"
+  custom_research_agent:
     base_class: "SGRResearchAgent"
 
     # Optional: Override LLM settings for this agent
@@ -68,7 +68,7 @@ agents:
       - "FinalAnswerTool"
 
   # Example 2: Minimal agent with defaults
-  - name: "simple_agent"
+  simple_agent:
     base_class: "SGRToolCallingResearchAgent"
 
     # Only override what's needed
@@ -80,7 +80,7 @@ agents:
       - "FinalAnswerTool"
 
   # Example 3: Fast research agent optimized for speed
-  - name: "fast_research_agent"
+  fast_research_agent:
     base_class: "SGRToolCallingResearchAgent"
 
     llm:
@@ -101,7 +101,7 @@ agents:
       - "ReasoningTool"
 
   # Example 4: Specialized technical analyst with custom prompts
-  - name: "technical_analyst"
+  technical_analyst:
     base_class: "SGRResearchAgent"
 
     llm:
@@ -125,7 +125,7 @@ agents:
       - "FinalAnswerTool"
 
   # Example 5: Agent using inline prompts instead of files
-  - name: "inline_prompt_agent"
+  inline_prompt_agent:
     base_class: "SGRResearchAgent"
 
     prompts:

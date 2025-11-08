@@ -176,4 +176,6 @@ class AgentDefinition(AgentConfig):
 
 
 class Definitions(BaseModel):
-    agents: list[AgentDefinition] = Field(default_factory=list, description="List of agent definitions")
+    agents: dict[str, AgentDefinition] = Field(
+        default_factory=dict, description="Dictionary of agent definitions by name"
+    )
