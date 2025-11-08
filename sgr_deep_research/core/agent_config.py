@@ -38,11 +38,31 @@ class GlobalConfig(BaseSettings, AgentConfig, Definitions):
         if not yaml_path.exists():
             raise FileNotFoundError(f"Configuration file not found: {yaml_path}")
         config_data = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
+        main_config_agents = config_data.pop("agents", {})
         if cls._instance is None:
-            cls._instance = cls(**config_data)
+            cls._instance = cls(
+                **config_data,
+            )
         else:
             cls._initialized = False
             cls._instance = cls(**config_data, agents=cls._instance.agents)
+        # agents should be initialized last to allow merging
+        cls._definitions_from_dict({"agents": main_config_agents})
+        return cls._instance
+
+    @classmethod
+    def _definitions_from_dict(cls, agents_data: dict) -> Self:
+        for agent_name, agent_config in agents_data.get("agents").items():
+            agent_config["name"] = agent_name
+
+        custom_agents = Definitions(**agents_data).agents
+
+        # Check for agents that will be overridden
+        overridden = set(cls._instance.agents.keys()) & set(custom_agents.keys())
+        if overridden:
+            logger.warning(f"Loaded agents will override existing agents: " f"{', '.join(sorted(overridden))}")
+
+        cls._instance.agents.update(custom_agents)
         return cls._instance
 
     @classmethod
@@ -68,18 +88,4 @@ class GlobalConfig(BaseSettings, AgentConfig, Definitions):
         if not yaml_data.get("agents"):
             raise ValueError(f"Agents definitions file must contain 'agents' key: {agents_yaml_path}")
 
-        for agent_name, agent_config in yaml_data.get("agents").items():
-            agent_config["name"] = agent_name
-
-        custom_agents = Definitions(**yaml_data).agents
-
-        # Check for agents that will be overridden
-        overridden = set(cls._instance.agents.keys()) & set(custom_agents.keys())
-        if overridden:
-            logger.warning(
-                f"Custom agents from {agents_yaml_path.name} will override existing agents: "
-                f"{', '.join(sorted(overridden))}"
-            )
-
-        cls._instance.agents.update(custom_agents)
-        return cls._instance
+        return cls._definitions_from_dict(yaml_data)
