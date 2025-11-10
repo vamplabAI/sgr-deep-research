@@ -38,7 +38,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  isAgentCompleted: false
+  isAgentCompleted: false,
 })
 
 const emit = defineEmits<{
@@ -108,7 +108,7 @@ const handleSendMessage = async (message: string) => {
       }
 
       // Send message through chat store
-      await chatStore.sendMessage(message, currentAgent.value, currentSession.value)
+      await chatStore.sendMessage(message, currentAgent.value)
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Failed to send message'

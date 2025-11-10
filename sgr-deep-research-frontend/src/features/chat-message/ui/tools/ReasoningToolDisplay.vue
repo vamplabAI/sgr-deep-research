@@ -12,9 +12,7 @@
         <span class="agent-reasoning-step__tool-name">REASONINGTOOL</span>
       </div>
       <div class="agent-reasoning-step__toggle">
-        <AppIconChevronDown24
-          :class="{ 'agent-reasoning-step__chevron--rotated': !isCollapsed }"
-        />
+        <AppIconChevronDown24 :class="{ 'agent-reasoning-step__chevron--rotated': !isCollapsed }" />
       </div>
     </div>
 
@@ -101,7 +99,7 @@ const previewText = computed(() => {
   }
   // Otherwise use first reasoning step
   if (props.data.reasoning_steps && props.data.reasoning_steps.length > 0) {
-    return truncateText(props.data.reasoning_steps[0], 100)
+    return truncateText(props.data.reasoning_steps[0] || '', 100)
   }
   // Or plan status
   if (props.data.plan_status) {

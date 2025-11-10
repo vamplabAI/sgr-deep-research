@@ -5,7 +5,7 @@
       <button
         :class="[
           'workspace-page__new-chat-btn',
-          { 'workspace-page__new-chat-btn--highlighted': isAgentCompleted }
+          { 'workspace-page__new-chat-btn--highlighted': isAgentCompleted },
         ]"
         @click="handleNewChat"
         :disabled="isStreaming"
@@ -37,9 +37,7 @@
       <div class="welcome-content">
         <div class="welcome-icon">🤖</div>
         <h2 class="welcome-title">Start a conversation</h2>
-        <p class="welcome-subtitle">
-          Select a model above and start chatting with AI
-        </p>
+        <p class="welcome-subtitle">Select a model above and start chatting with AI</p>
       </div>
     </div>
 
@@ -96,7 +94,7 @@ const handleSendMessage = async (message: string) => {
     await chatStore.initializeChat(currentAgent.value)
 
     // Send message
-    await chatStore.sendMessage(message, currentAgent.value, chatStore.currentSession)
+    await chatStore.sendMessage(message, currentAgent.value)
 
     console.log('✅ Message sent')
   } catch (error) {
@@ -235,7 +233,8 @@ onMounted(async () => {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
   }
   50% {

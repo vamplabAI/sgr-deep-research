@@ -79,21 +79,3 @@ export const createStreamingChat = async (messages: ChatMessage[]) => {
     throw error
   }
 }
-
-// Example: Provide clarification to an agent
-export const provideClarification = async (agentId: string, messages: ChatMessage[]) => {
-  try {
-    const result = await apiServices.agents.provideClarification(agentId, {
-      messages: messages.map((msg) => ({
-        role: 'user' as const,
-        content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content),
-      })),
-      model: 'sgr_agent',
-    })
-    console.log('Clarification result:', result)
-    return result
-  } catch (error) {
-    console.error('Failed to provide clarification:', error)
-    throw error
-  }
-}

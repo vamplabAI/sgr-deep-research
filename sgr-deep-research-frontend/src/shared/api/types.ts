@@ -48,7 +48,9 @@ export interface ReasoningStep {
   current_situation?: string
   plan_status?: string
   remaining_steps?: string[]
+  questions?: string[]
   answer?: string
+  _raw_content: string
   enough_data?: boolean
   task_completed?: boolean
   function?: {
@@ -62,6 +64,7 @@ export interface ReasoningStep {
     content?: string
     confidence?: string
     completed_steps?: string[]
+    questions?: string[]
     status?: string
     urls?: string[]
     answer?: string
