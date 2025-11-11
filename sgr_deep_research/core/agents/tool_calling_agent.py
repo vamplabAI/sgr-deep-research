@@ -3,7 +3,7 @@ from typing import Literal, Type
 from openai import pydantic_function_tool
 from openai.types.chat import ChatCompletionFunctionToolParam
 
-from sgr_deep_research.core.agents.base_agent import BaseAgent
+from sgr_deep_research.core.base_agent import BaseAgent
 from sgr_deep_research.core.tools import (
     BaseTool,
     ClarificationTool,
@@ -20,7 +20,7 @@ from sgr_deep_research.settings import get_config
 config = get_config()
 
 
-class ToolCallingResearchAgent(BaseAgent):
+class ToolCallingAgent(BaseAgent):
     """Tool Calling Research Agent relying entirely on LLM native function
     calling."""
 

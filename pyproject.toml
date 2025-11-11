@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "sgr-deep-research"
 dynamic = ["version"]
-description = "SGR Deep Research - Schema-Guided Reasoning for Deep Research"
+description = "SGR Agent Core - Schema-Guided Reasoning for building agent"
 readme = "README.md"
 authors = [
     {name = "virrius"},

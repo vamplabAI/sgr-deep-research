@@ -7,31 +7,31 @@ from typing import Any, Dict, List, Literal
 from pydantic import BaseModel, Field
 
 from sgr_deep_research.core.agents import (
-    SGRAutoToolCallingResearchAgent,
-    SGRResearchAgent,
-    SGRSOToolCallingResearchAgent,
-    SGRToolCallingResearchAgent,
-    ToolCallingResearchAgent,
+    SGRAgent,
+    SGRAutoToolCallingAgent,
+    SGRSOToolCallingAgent,
+    SGRToolCallingAgent,
+    ToolCallingAgent,
 )
 
 
 class AgentModel(str, Enum):
     """Available agent models for chat completion."""
 
-    SGR_AGENT = SGRResearchAgent.name
-    SGR_TOOLS_AGENT = SGRToolCallingResearchAgent.name
-    SGR_AUTO_TOOLS_AGENT = SGRAutoToolCallingResearchAgent.name
-    SGR_SO_TOOLS_AGENT = SGRSOToolCallingResearchAgent.name
-    TOOLS_AGENT = ToolCallingResearchAgent.name
+    SGR_AGENT = SGRAgent.name
+    SGR_TOOL_CALLING_AGENT = SGRToolCallingAgent.name
+    SGR_AUTO_TOOL_CALLING_AGENT = SGRAutoToolCallingAgent.name
+    SGR_SO_TOOL_CALLING_AGENT = SGRSOToolCallingAgent.name
+    TOOL_CALLING_AGENT = ToolCallingAgent.name
 
 
 # Mapping of agent types to their classes
 AGENT_MODEL_MAPPING = {
-    AgentModel.SGR_AGENT: SGRResearchAgent,
-    AgentModel.SGR_TOOLS_AGENT: SGRToolCallingResearchAgent,
-    AgentModel.SGR_AUTO_TOOLS_AGENT: SGRAutoToolCallingResearchAgent,
-    AgentModel.SGR_SO_TOOLS_AGENT: SGRSOToolCallingResearchAgent,
-    AgentModel.TOOLS_AGENT: ToolCallingResearchAgent,
+    AgentModel.SGR_AGENT: SGRAgent,
+    AgentModel.SGR_TOOL_CALLING_AGENT: SGRToolCallingAgent,
+    AgentModel.SGR_AUTO_TOOL_CALLING_AGENT: SGRAutoToolCallingAgent,
+    AgentModel.SGR_SO_TOOL_CALLING_AGENT: SGRSOToolCallingAgent,
+    AgentModel.TOOL_CALLING_AGENT: ToolCallingAgent,
 }
 
 
@@ -77,7 +77,7 @@ class ChatCompletionResponse(BaseModel):
 
 class HealthResponse(BaseModel):
     status: Literal["healthy"] = "healthy"
-    service: str = Field(default="SGR Deep Research API", description="Service name")
+    service: str = Field(default="SGR Agent Core API", description="Service name")
 
 
 class AgentStateResponse(BaseModel):

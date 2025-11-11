@@ -1,12 +1,12 @@
-"""Core modules for SGR Deep Research."""
+"""Core modules for SGR Agent Core."""
 
 from sgr_deep_research.core.agents import (  # noqa: F403
     BaseAgent,
-    SGRAutoToolCallingResearchAgent,
-    SGRResearchAgent,
-    SGRSOToolCallingResearchAgent,
-    SGRToolCallingResearchAgent,
-    ToolCallingResearchAgent,
+    SGRAgent,
+    SGRAutoToolCallingAgent,
+    SGRSOToolCallingAgent,
+    SGRToolCallingAgent,
+    ToolCallingAgent,
 )
 from sgr_deep_research.core.models import AgentStatesEnum, ResearchContext, SearchResult, SourceData
 from sgr_deep_research.core.prompts import PromptLoader
@@ -16,11 +16,11 @@ from sgr_deep_research.core.tools import *  # noqa: F403
 __all__ = [
     # Agents
     "BaseAgent",
-    "SGRResearchAgent",
-    "SGRToolCallingResearchAgent",
-    "SGRAutoToolCallingResearchAgent",
-    "ToolCallingResearchAgent",
-    "SGRSOToolCallingResearchAgent",
+    "SGRAgent",
+    "SGRAutoToolCallingAgent",
+    "SGRSOToolCallingAgent",
+    "SGRToolCallingAgent",
+    "ToolCallingAgent",
     # Models
     "AgentStatesEnum",
     "ResearchContext",

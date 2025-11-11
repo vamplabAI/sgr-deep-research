@@ -1,9 +1,9 @@
-# SGR Deep Research - Open-Source Schema-Guided Reasoning System
+# SGR Agent Core — the first SGR open-source agentic framework for Schema-Guided Reasoning
 
 ## Description
 
 ![SGR Concept Architecture](docs/sgr_concept.png)
-Open-source framework for building intelligent research agents using Schema-Guided Reasoning. The project provides a core library with a extendable BaseAgent interface implementing a two-phase architecture and multiple ready-to-use research agent implementations built on top of it.
+Open-source agentic framework for building intelligent research agents using Schema-Guided Reasoning. The project provides a core library with a extendable BaseAgent interface implementing a two-phase architecture and multiple ready-to-use research agent implementations built on top of it.
 
 The library includes extensible tools for search, reasoning, and clarification, real-time streaming responses, OpenAI-compatible REST API. Works with any OpenAI-compatible LLM, including local models for fully private research.
 
@@ -54,7 +54,6 @@ This project is developed by the **neuraldeep** community. It is inspired by the
 Recent benchmarks and validation experiments were conducted in collaboration with the AI R&D team at red_mad_robot. The lab operates at the intersection of fundamental science and real-world business challenges, running applied experiments and building scalable AI solutions with measurable value.
 
 Learn more about the company: [redmadrobot.ai](https://redmadrobot.ai/) ↗️
-
 
 ## Star History
 
