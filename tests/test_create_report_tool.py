@@ -77,7 +77,7 @@ class TestCreateReportTool:
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("sgr_deep_research.core.tools.create_report_tool.config") as mock_config:
                 mock_config.execution.reports_dir = tmpdir
-                
+
                 tool = CreateReportTool(
                     reasoning="Complete",
                     title="Test Report",
@@ -85,10 +85,10 @@ class TestCreateReportTool:
                     content="This is the report content",
                     confidence="high",
                 )
-                
+
                 context = ResearchContext()
                 result = await tool(context)
-                
+
                 # Verify JSON result
                 result_data = json.loads(result)
                 assert result_data["title"] == "Test Report"
@@ -96,7 +96,7 @@ class TestCreateReportTool:
                 assert result_data["confidence"] == "high"
                 assert result_data["sources_count"] == 0
                 assert "filepath" in result_data
-                
+
                 # Verify file was created
                 assert os.path.exists(result_data["filepath"])
 
@@ -106,7 +106,7 @@ class TestCreateReportTool:
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("sgr_deep_research.core.tools.create_report_tool.config") as mock_config:
                 mock_config.execution.reports_dir = tmpdir
-                
+
                 tool = CreateReportTool(
                     reasoning="Complete",
                     title="My Report",
@@ -114,17 +114,17 @@ class TestCreateReportTool:
                     content="Report body text",
                     confidence="medium",
                 )
-                
+
                 context = ResearchContext()
                 result = await tool(context)
-                
+
                 result_data = json.loads(result)
                 filepath = result_data["filepath"]
-                
+
                 # Read and verify file content
                 with open(filepath, "r", encoding="utf-8") as f:
                     file_content = f.read()
-                
+
                 assert "# My Report" in file_content
                 assert "Report body text" in file_content
                 assert "Created:" in file_content
@@ -135,7 +135,7 @@ class TestCreateReportTool:
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("sgr_deep_research.core.tools.create_report_tool.config") as mock_config:
                 mock_config.execution.reports_dir = tmpdir
-                
+
                 tool = CreateReportTool(
                     reasoning="Complete",
                     title="Report",
@@ -143,7 +143,7 @@ class TestCreateReportTool:
                     content="Content with citations [1] and [2]",
                     confidence="high",
                 )
-                
+
                 # Add sources to context
                 context = ResearchContext()
                 context.sources = {
@@ -158,16 +158,16 @@ class TestCreateReportTool:
                         url="https://example.com/2",
                     ),
                 }
-                
+
                 result = await tool(context)
                 result_data = json.loads(result)
-                
+
                 assert result_data["sources_count"] == 2
-                
+
                 # Verify sources in file
                 with open(result_data["filepath"], "r", encoding="utf-8") as f:
                     file_content = f.read()
-                
+
                 assert "Источники / Sources" in file_content
                 assert "Source 1" in file_content
                 assert "Source 2" in file_content
@@ -179,7 +179,7 @@ class TestCreateReportTool:
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("sgr_deep_research.core.tools.create_report_tool.config") as mock_config:
                 mock_config.execution.reports_dir = tmpdir
-                
+
                 tool = CreateReportTool(
                     reasoning="Complete",
                     title="Report/with\\invalid:chars?and*stuff",
@@ -187,14 +187,14 @@ class TestCreateReportTool:
                     content="Content",
                     confidence="high",
                 )
-                
+
                 context = ResearchContext()
                 result = await tool(context)
                 result_data = json.loads(result)
-                
+
                 filepath = result_data["filepath"]
                 filename = os.path.basename(filepath)
-                
+
                 # Verify filename doesn't have invalid characters
                 assert "/" not in filename
                 assert "\\" not in filename
@@ -208,7 +208,7 @@ class TestCreateReportTool:
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("sgr_deep_research.core.tools.create_report_tool.config") as mock_config:
                 mock_config.execution.reports_dir = tmpdir
-                
+
                 # Very long title
                 long_title = "A" * 200
                 tool = CreateReportTool(
@@ -218,14 +218,14 @@ class TestCreateReportTool:
                     content="Content",
                     confidence="high",
                 )
-                
+
                 context = ResearchContext()
                 result = await tool(context)
                 result_data = json.loads(result)
-                
+
                 filepath = result_data["filepath"]
                 filename = os.path.basename(filepath)
-                
+
                 # Filename should be limited (timestamp + underscore + max 50 chars + .md)
                 # Format: YYYYMMDD_HHMMSS_<title>.md
                 assert len(filename) < 100
@@ -236,7 +236,7 @@ class TestCreateReportTool:
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("sgr_deep_research.core.tools.create_report_tool.config") as mock_config:
                 mock_config.execution.reports_dir = tmpdir
-                
+
                 content = "This is a test report with exactly ten words here"
                 tool = CreateReportTool(
                     reasoning="Complete",
@@ -245,11 +245,11 @@ class TestCreateReportTool:
                     content=content,
                     confidence="high",
                 )
-                
+
                 context = ResearchContext()
                 result = await tool(context)
                 result_data = json.loads(result)
-                
+
                 assert result_data["word_count"] == 10
 
     @pytest.mark.asyncio
@@ -258,7 +258,7 @@ class TestCreateReportTool:
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("sgr_deep_research.core.tools.create_report_tool.config") as mock_config:
                 mock_config.execution.reports_dir = tmpdir
-                
+
                 tool = CreateReportTool(
                     reasoning="Complete",
                     title="Report",
@@ -266,11 +266,11 @@ class TestCreateReportTool:
                     content="Content",
                     confidence="high",
                 )
-                
+
                 context = ResearchContext()
                 result = await tool(context)
                 result_data = json.loads(result)
-                
+
                 # Verify timestamp format
                 timestamp = result_data["timestamp"]
                 # Should be ISO format
@@ -282,10 +282,10 @@ class TestCreateReportTool:
         with tempfile.TemporaryDirectory() as tmpdir:
             reports_dir = os.path.join(tmpdir, "reports_subdir")
             assert not os.path.exists(reports_dir)
-            
+
             with patch("sgr_deep_research.core.tools.create_report_tool.config") as mock_config:
                 mock_config.execution.reports_dir = reports_dir
-                
+
                 tool = CreateReportTool(
                     reasoning="Complete",
                     title="Report",
@@ -293,10 +293,10 @@ class TestCreateReportTool:
                     content="Content",
                     confidence="high",
                 )
-                
+
                 context = ResearchContext()
                 await tool(context)
-                
+
                 # Verify directory was created
                 assert os.path.exists(reports_dir)
                 assert os.path.isdir(reports_dir)
@@ -307,7 +307,7 @@ class TestCreateReportTool:
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("sgr_deep_research.core.tools.create_report_tool.config") as mock_config:
                 mock_config.execution.reports_dir = tmpdir
-                
+
                 tool = CreateReportTool(
                     reasoning="Complete",
                     title="Test Report",
@@ -315,11 +315,11 @@ class TestCreateReportTool:
                     content="Content",
                     confidence="high",
                 )
-                
+
                 context = ResearchContext()
                 result = await tool(context)
                 result_data = json.loads(result)
-                
+
                 # Verify file extension
                 assert result_data["filepath"].endswith(".md")
 
@@ -329,7 +329,7 @@ class TestCreateReportTool:
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("sgr_deep_research.core.tools.create_report_tool.config") as mock_config:
                 mock_config.execution.reports_dir = tmpdir
-                
+
                 tool = CreateReportTool(
                     reasoning="Complete",
                     title="Report",
@@ -337,17 +337,17 @@ class TestCreateReportTool:
                     content="Content without citations",
                     confidence="low",
                 )
-                
+
                 context = ResearchContext()
                 result = await tool(context)
                 result_data = json.loads(result)
-                
+
                 assert result_data["sources_count"] == 0
-                
+
                 # File should not have sources section
                 with open(result_data["filepath"], "r", encoding="utf-8") as f:
                     file_content = f.read()
-                
+
                 assert "Источники / Sources" not in file_content
 
     @pytest.mark.asyncio
@@ -356,7 +356,7 @@ class TestCreateReportTool:
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("sgr_deep_research.core.tools.create_report_tool.config") as mock_config:
                 mock_config.execution.reports_dir = tmpdir
-                
+
                 tool = CreateReportTool(
                     reasoning="Complete",
                     title="Report",
@@ -364,12 +364,11 @@ class TestCreateReportTool:
                     content="Russian content here",
                     confidence="high",
                 )
-                
+
                 context = ResearchContext()
                 result = await tool(context)
                 result_data = json.loads(result)
-                
+
                 # Just verify it doesn't crash and creates report
                 assert result_data["title"] == "Report"
                 assert os.path.exists(result_data["filepath"])
-

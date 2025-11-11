@@ -1,9 +1,10 @@
 """Tests for Tavily Search Service.
 
-This module contains tests for TavilySearchService with mocked API calls.
+This module contains tests for TavilySearchService with mocked API
+calls.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -19,7 +20,7 @@ class TestTavilySearchService:
         with patch("sgr_deep_research.services.tavily_search.get_config") as mock_config:
             mock_config.return_value.tavily.api_key = "test_key"
             mock_config.return_value.tavily.api_base_url = "https://api.tavily.com"
-            
+
             service = TavilySearchService()
             assert service._config is not None
             assert service._client is not None
@@ -37,9 +38,9 @@ class TestTavilySearchService:
             SourceData(number=20, url="https://example.com/2"),
             SourceData(number=30, url="https://example.com/3"),
         ]
-        
+
         result = TavilySearchService.rearrange_sources(sources)
-        
+
         assert len(result) == 3
         assert result[0].number == 1
         assert result[1].number == 2
@@ -51,9 +52,9 @@ class TestTavilySearchService:
             SourceData(number=100, url="https://example.com/1"),
             SourceData(number=200, url="https://example.com/2"),
         ]
-        
+
         result = TavilySearchService.rearrange_sources(sources, starting_number=5)
-        
+
         assert len(result) == 2
         assert result[0].number == 5
         assert result[1].number == 6
@@ -70,9 +71,9 @@ class TestTavilySearchService:
                 char_count=100,
             )
         ]
-        
+
         result = TavilySearchService.rearrange_sources(sources, starting_number=10)
-        
+
         assert result[0].number == 10
         assert result[0].title == "Test Title"
         assert result[0].url == "https://example.com"
@@ -84,9 +85,9 @@ class TestTavilySearchService:
         """Test _convert_to_source_data with empty response."""
         service = TavilySearchService()
         response = {"results": []}
-        
+
         result = service._convert_to_source_data(response)
-        
+
         assert result == []
 
     def test_convert_to_source_data_basic(self):
@@ -101,9 +102,9 @@ class TestTavilySearchService:
                 }
             ]
         }
-        
+
         result = service._convert_to_source_data(response)
-        
+
         assert len(result) == 1
         assert result[0].number == 0
         assert result[0].title == "Test Article"
@@ -123,9 +124,9 @@ class TestTavilySearchService:
                 }
             ]
         }
-        
+
         result = service._convert_to_source_data(response)
-        
+
         assert len(result) == 1
         assert result[0].full_content == "Full raw content of the page"
         assert result[0].char_count == len("Full raw content of the page")
@@ -152,9 +153,9 @@ class TestTavilySearchService:
                 },
             ]
         }
-        
+
         result = service._convert_to_source_data(response)
-        
+
         # Should only include the valid one
         assert len(result) == 1
         assert result[0].title == "Valid Article"
@@ -169,9 +170,9 @@ class TestTavilySearchService:
                 {"title": "Third", "url": "https://example.com/3", "content": "Content 3"},
             ]
         }
-        
+
         result = service._convert_to_source_data(response)
-        
+
         assert len(result) == 3
         assert result[0].number == 0
         assert result[1].number == 1
@@ -184,9 +185,9 @@ class TestTavilySearchService:
             mock_config.return_value.tavily.api_key = "test_key"
             mock_config.return_value.tavily.api_base_url = "https://api.tavily.com"
             mock_config.return_value.search.max_results = 10
-            
+
             service = TavilySearchService()
-            
+
             # Mock the Tavily client search method
             mock_response = {
                 "results": [
@@ -198,13 +199,13 @@ class TestTavilySearchService:
                 ]
             }
             service._client.search = AsyncMock(return_value=mock_response)
-            
+
             result = await service.search("test query")
-            
+
             assert len(result) == 1
             assert result[0].title == "Search Result"
             assert result[0].url == "https://example.com"
-            
+
             # Verify the client was called with correct parameters
             service._client.search.assert_called_once_with(
                 query="test query",
@@ -219,12 +220,12 @@ class TestTavilySearchService:
             mock_config.return_value.tavily.api_key = "test_key"
             mock_config.return_value.tavily.api_base_url = "https://api.tavily.com"
             mock_config.return_value.search.max_results = 10
-            
+
             service = TavilySearchService()
             service._client.search = AsyncMock(return_value={"results": []})
-            
+
             await service.search("test query", max_results=5)
-            
+
             service._client.search.assert_called_once_with(
                 query="test query",
                 max_results=5,
@@ -238,12 +239,12 @@ class TestTavilySearchService:
             mock_config.return_value.tavily.api_key = "test_key"
             mock_config.return_value.tavily.api_base_url = "https://api.tavily.com"
             mock_config.return_value.search.max_results = 10
-            
+
             service = TavilySearchService()
             service._client.search = AsyncMock(return_value={"results": []})
-            
+
             await service.search("test query", include_raw_content=False)
-            
+
             service._client.search.assert_called_once_with(
                 query="test query",
                 max_results=10,
@@ -256,9 +257,9 @@ class TestTavilySearchService:
         with patch("sgr_deep_research.services.tavily_search.get_config") as mock_config:
             mock_config.return_value.tavily.api_key = "test_key"
             mock_config.return_value.tavily.api_base_url = "https://api.tavily.com"
-            
+
             service = TavilySearchService()
-            
+
             # Mock the Tavily client extract method
             mock_response = {
                 "results": [
@@ -269,15 +270,15 @@ class TestTavilySearchService:
                 ]
             }
             service._client.extract = AsyncMock(return_value=mock_response)
-            
+
             urls = ["https://example.com/page"]
             result = await service.extract(urls)
-            
+
             assert len(result) == 1
             assert result[0].url == "https://example.com/page"
             assert result[0].full_content == "Full page content extracted"
             assert result[0].char_count == len("Full page content extracted")
-            
+
             # Verify the client was called
             service._client.extract.assert_called_once_with(urls=urls)
 
@@ -287,9 +288,9 @@ class TestTavilySearchService:
         with patch("sgr_deep_research.services.tavily_search.get_config") as mock_config:
             mock_config.return_value.tavily.api_key = "test_key"
             mock_config.return_value.tavily.api_base_url = "https://api.tavily.com"
-            
+
             service = TavilySearchService()
-            
+
             mock_response = {
                 "results": [
                     {"url": "https://example.com/1", "raw_content": "Content 1"},
@@ -297,10 +298,10 @@ class TestTavilySearchService:
                 ]
             }
             service._client.extract = AsyncMock(return_value=mock_response)
-            
+
             urls = ["https://example.com/1", "https://example.com/2"]
             result = await service.extract(urls)
-            
+
             assert len(result) == 2
             assert result[0].url == "https://example.com/1"
             assert result[1].url == "https://example.com/2"
@@ -311,9 +312,9 @@ class TestTavilySearchService:
         with patch("sgr_deep_research.services.tavily_search.get_config") as mock_config:
             mock_config.return_value.tavily.api_key = "test_key"
             mock_config.return_value.tavily.api_base_url = "https://api.tavily.com"
-            
+
             service = TavilySearchService()
-            
+
             mock_response = {
                 "results": [
                     {"url": "https://example.com/success", "raw_content": "Content"},
@@ -323,10 +324,10 @@ class TestTavilySearchService:
                 ],
             }
             service._client.extract = AsyncMock(return_value=mock_response)
-            
+
             urls = ["https://example.com/success", "https://example.com/failed"]
             result = await service.extract(urls)
-            
+
             # Should only return successful extractions
             assert len(result) == 1
             assert result[0].url == "https://example.com/success"
@@ -337,9 +338,9 @@ class TestTavilySearchService:
         with patch("sgr_deep_research.services.tavily_search.get_config") as mock_config:
             mock_config.return_value.tavily.api_key = "test_key"
             mock_config.return_value.tavily.api_base_url = "https://api.tavily.com"
-            
+
             service = TavilySearchService()
-            
+
             mock_response = {
                 "results": [
                     {"url": "https://example.com", "raw_content": "Valid"},
@@ -348,9 +349,9 @@ class TestTavilySearchService:
                 ]
             }
             service._client.extract = AsyncMock(return_value=mock_response)
-            
+
             result = await service.extract(["https://example.com"])
-            
+
             # Should only include the valid one
             assert len(result) == 1
             assert result[0].url == "https://example.com"
@@ -361,9 +362,9 @@ class TestTavilySearchService:
         with patch("sgr_deep_research.services.tavily_search.get_config") as mock_config:
             mock_config.return_value.tavily.api_key = "test_key"
             mock_config.return_value.tavily.api_base_url = "https://api.tavily.com"
-            
+
             service = TavilySearchService()
-            
+
             mock_response = {
                 "results": [
                     {
@@ -373,10 +374,9 @@ class TestTavilySearchService:
                 ]
             }
             service._client.extract = AsyncMock(return_value=mock_response)
-            
+
             result = await service.extract(["https://example.com/article/test-page"])
-            
+
             assert len(result) == 1
             # Title should be extracted from URL path
             assert result[0].title == "test-page"
-

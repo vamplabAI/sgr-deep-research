@@ -153,7 +153,7 @@ class TestFinalAnswerToolExecution:
         )
         context = ResearchContext()
         result = await tool(context)
-        
+
         data = json.loads(result)
         assert isinstance(data, dict)
 
@@ -168,7 +168,7 @@ class TestFinalAnswerToolExecution:
         )
         context = ResearchContext()
         await tool(context)
-        
+
         assert context.state == AgentStatesEnum.COMPLETED
 
     @pytest.mark.asyncio
@@ -182,7 +182,7 @@ class TestFinalAnswerToolExecution:
         )
         context = ResearchContext()
         await tool(context)
-        
+
         assert context.state == AgentStatesEnum.FAILED
 
     @pytest.mark.asyncio
@@ -197,7 +197,7 @@ class TestFinalAnswerToolExecution:
         )
         context = ResearchContext()
         await tool(context)
-        
+
         assert context.execution_result == answer_text
 
     @pytest.mark.asyncio
@@ -212,7 +212,7 @@ class TestFinalAnswerToolExecution:
         context = ResearchContext()
         result = await tool(context)
         data = json.loads(result)
-        
+
         assert "reasoning" in data
         assert "completed_steps" in data
         assert "answer" in data
@@ -230,7 +230,7 @@ class TestFinalAnswerToolExecution:
         context = ResearchContext()
         result = await tool(context)
         data = json.loads(result)
-        
+
         assert data["reasoning"] == "Task completed successfully"
         assert data["completed_steps"] == ["Step 1", "Step 2"]
         assert data["answer"] == "Detailed final answer"
@@ -247,7 +247,7 @@ class TestFinalAnswerToolExecution:
         )
         context = ResearchContext()
         result = await tool(context)
-        
+
         # Indented JSON should contain newlines
         assert "\n" in result
         # Should contain proper indentation
@@ -265,7 +265,7 @@ class TestFinalAnswerToolExecution:
         )
         context = ResearchContext()
         result = await tool(context)
-        
+
         assert context.execution_result == long_answer
         data = json.loads(result)
         assert data["answer"] == long_answer
@@ -282,7 +282,7 @@ class TestFinalAnswerToolExecution:
         )
         context = ResearchContext()
         result = await tool(context)
-        
+
         assert context.execution_result == multiline_answer
         data = json.loads(result)
         assert data["answer"] == multiline_answer
@@ -299,9 +299,9 @@ class TestFinalAnswerToolExecution:
         context = ResearchContext()
         context.iteration = 5
         context.searches_used = 3
-        
+
         await tool(context)
-        
+
         # These should remain unchanged
         assert context.iteration == 5
         assert context.searches_used == 3
@@ -330,6 +330,7 @@ class TestFinalAnswerToolAttributes:
     def test_tool_is_base_tool_subclass(self):
         """Test that FinalAnswerTool is a subclass of BaseTool."""
         from sgr_deep_research.core.base_tool import BaseTool
+
         assert issubclass(FinalAnswerTool, BaseTool)
 
 
@@ -380,7 +381,7 @@ class TestFinalAnswerToolEdgeCases:
         context = ResearchContext()
         result = await tool(context)
         data = json.loads(result)
-        
+
         assert data["answer"] == special_answer
 
     def test_with_unicode_characters(self):
@@ -407,14 +408,14 @@ class TestFinalAnswerToolEdgeCases:
         context = ResearchContext()
         result = await tool(context)
         data = json.loads(result)
-        
+
         assert data["answer"] == unicode_answer
 
     @pytest.mark.asyncio
     async def test_multiple_executions_update_context_correctly(self):
         """Test that multiple executions correctly update context."""
         context = ResearchContext()
-        
+
         # First execution
         tool1 = FinalAnswerTool(
             reasoning="First attempt",
@@ -425,7 +426,7 @@ class TestFinalAnswerToolEdgeCases:
         await tool1(context)
         assert context.state == AgentStatesEnum.FAILED
         assert context.execution_result == "First answer"
-        
+
         # Second execution (overwriting)
         tool2 = FinalAnswerTool(
             reasoning="Second attempt",
@@ -447,4 +448,3 @@ class TestFinalAnswerToolEdgeCases:
             status=AgentStatesEnum.COMPLETED,
         )
         assert tool.completed_steps[0] == long_step
-

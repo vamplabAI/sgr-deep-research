@@ -1,6 +1,7 @@
 """Tests for settings module.
 
-This module contains tests for application configuration using Pydantic and EnvYAML.
+This module contains tests for application configuration using Pydantic
+and EnvYAML.
 """
 
 import pytest
@@ -244,11 +245,7 @@ class TestMCPConfig:
 
     def test_mcp_config_creation(self):
         """Test creating MCP config with valid data."""
-        transport = {
-            "mcpServers": {
-                "test_server": {"url": "https://test.com/mcp"}
-            }
-        }
+        transport = {"mcpServers": {"test_server": {"url": "https://test.com/mcp"}}}
         config = MCPConfig(
             context_limit=20000,
             transport_config=transport,
@@ -385,4 +382,3 @@ class TestAppConfig:
         assert config.prompts.prompts_dir == "my_prompts"
         assert config.logging.config_file == "my_logging.yaml"
         assert config.mcp.context_limit == 20000
-

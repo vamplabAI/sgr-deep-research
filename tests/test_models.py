@@ -1,6 +1,7 @@
 """Tests for core models module.
 
-This module contains tests for data models used in the SGR Deep Research system.
+This module contains tests for data models used in the SGR Deep Research
+system.
 """
 
 import asyncio
@@ -74,7 +75,7 @@ class TestSourceData:
         """Test that number field accepts integers."""
         source = SourceData(number=0, url="https://example.com")
         assert source.number == 0
-        
+
         source = SourceData(number=999, url="https://example.com")
         assert source.number == 999
 
@@ -121,7 +122,7 @@ class TestSearchResult:
         before = datetime.now()
         result = SearchResult(query="Test query")
         after = datetime.now()
-        
+
         assert before <= result.timestamp <= after
 
     def test_search_result_empty_citations(self):
@@ -161,6 +162,7 @@ class TestAgentStatesEnum:
     def test_agent_states_is_enum(self):
         """Test that AgentStatesEnum is a proper Enum."""
         from enum import Enum
+
         assert issubclass(AgentStatesEnum, Enum)
         assert isinstance(AgentStatesEnum.INITED, str)
 
@@ -186,7 +188,7 @@ class TestResearchContext:
         context = ResearchContext()
         context.state = AgentStatesEnum.RESEARCHING
         assert context.state == AgentStatesEnum.RESEARCHING
-        
+
         context.state = AgentStatesEnum.COMPLETED
         assert context.state == AgentStatesEnum.COMPLETED
 
@@ -194,10 +196,10 @@ class TestResearchContext:
         """Test incrementing iteration counter."""
         context = ResearchContext()
         assert context.iteration == 0
-        
+
         context.iteration += 1
         assert context.iteration == 1
-        
+
         context.iteration += 1
         assert context.iteration == 2
 
@@ -206,7 +208,7 @@ class TestResearchContext:
         context = ResearchContext()
         search = SearchResult(query="Test query")
         context.searches.append(search)
-        
+
         assert len(context.searches) == 1
         assert context.searches[0].query == "Test query"
 
@@ -215,7 +217,7 @@ class TestResearchContext:
         context = ResearchContext()
         source = SourceData(number=1, url="https://example.com")
         context.sources["https://example.com"] = source
-        
+
         assert len(context.sources) == 1
         assert "https://example.com" in context.sources
         assert context.sources["https://example.com"].number == 1
@@ -224,10 +226,10 @@ class TestResearchContext:
         """Test tracking number of searches used."""
         context = ResearchContext()
         assert context.searches_used == 0
-        
+
         context.searches_used += 1
         assert context.searches_used == 1
-        
+
         context.searches_used += 2
         assert context.searches_used == 3
 
@@ -235,7 +237,7 @@ class TestResearchContext:
         """Test tracking number of clarifications used."""
         context = ResearchContext()
         assert context.clarifications_used == 0
-        
+
         context.clarifications_used += 1
         assert context.clarifications_used == 1
 
@@ -246,9 +248,9 @@ class TestResearchContext:
         context.iteration = 5
         context.searches_used = 3
         context.clarifications_used = 1
-        
+
         state = context.agent_state()
-        
+
         assert isinstance(state, dict)
         assert state["state"] == AgentStatesEnum.RESEARCHING
         assert state["iteration"] == 5
@@ -263,14 +265,14 @@ class TestResearchContext:
         context = ResearchContext()
         context.searches.append(SearchResult(query="Test"))
         context.sources["url"] = SourceData(number=1, url="url")
-        
+
         state = context.agent_state()
-        
+
         # These fields should NOT be in agent_state output
         assert "searches" not in state
         assert "sources" not in state
         assert "clarification_received" not in state
-        
+
         # These fields SHOULD be in agent_state output
         assert "state" in state
         assert "iteration" in state
@@ -281,14 +283,14 @@ class TestResearchContext:
     async def test_research_context_clarification_event(self):
         """Test clarification event functionality."""
         context = ResearchContext()
-        
+
         # Event should not be set initially
         assert not context.clarification_received.is_set()
-        
+
         # Set the event
         context.clarification_received.set()
         assert context.clarification_received.is_set()
-        
+
         # Clear the event
         context.clarification_received.clear()
         assert not context.clarification_received.is_set()
@@ -297,7 +299,7 @@ class TestResearchContext:
         """Test setting execution result."""
         context = ResearchContext()
         assert context.execution_result is None
-        
+
         context.execution_result = "Final answer text"
         assert context.execution_result == "Final answer text"
 
@@ -305,8 +307,7 @@ class TestResearchContext:
         """Test setting current step reasoning."""
         context = ResearchContext()
         assert context.current_step_reasoning is None
-        
+
         reasoning_data = {"step": 1, "action": "search"}
         context.current_step_reasoning = reasoning_data
         assert context.current_step_reasoning == reasoning_data
-

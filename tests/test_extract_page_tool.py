@@ -1,6 +1,7 @@
 """Tests for ExtractPageContentTool.
 
-This module contains tests for ExtractPageContentTool with mocked TavilySearchService.
+This module contains tests for ExtractPageContentTool with mocked
+TavilySearchService.
 """
 
 from unittest.mock import AsyncMock, patch
@@ -76,7 +77,7 @@ class TestExtractPageContentTool:
             reasoning="Extract content",
             urls=["https://example.com/page"],
         )
-        
+
         # Mock the extract service
         mock_sources = [
             SourceData(
@@ -88,15 +89,13 @@ class TestExtractPageContentTool:
             ),
         ]
         tool._search_service.extract = AsyncMock(return_value=mock_sources)
-        
+
         context = ResearchContext()
         result = await tool(context)
-        
+
         # Verify extract was called
-        tool._search_service.extract.assert_called_once_with(
-            urls=["https://example.com/page"]
-        )
-        
+        tool._search_service.extract.assert_called_once_with(urls=["https://example.com/page"])
+
         # Verify result format
         assert "Extracted Page Content:" in result
         assert "Full page content here" in result
@@ -104,12 +103,13 @@ class TestExtractPageContentTool:
 
     @pytest.mark.asyncio
     async def test_extract_page_tool_updates_existing_source(self):
-        """Test that ExtractPageContentTool updates existing sources with full content."""
+        """Test that ExtractPageContentTool updates existing sources with full
+        content."""
         tool = ExtractPageContentTool(
             reasoning="Extract",
             urls=["https://example.com/page"],
         )
-        
+
         # Context already has this source from search
         context = ResearchContext()
         context.sources = {
@@ -122,7 +122,7 @@ class TestExtractPageContentTool:
                 char_count=0,
             ),
         }
-        
+
         # Mock extracted content
         mock_sources = [
             SourceData(
@@ -133,9 +133,9 @@ class TestExtractPageContentTool:
             ),
         ]
         tool._search_service.extract = AsyncMock(return_value=mock_sources)
-        
+
         await tool(context)
-        
+
         # Verify existing source was updated
         source = context.sources["https://example.com/page"]
         assert source.number == 5  # Original number preserved
@@ -145,12 +145,13 @@ class TestExtractPageContentTool:
 
     @pytest.mark.asyncio
     async def test_extract_page_tool_adds_new_source(self):
-        """Test that ExtractPageContentTool adds new sources if URL not in context."""
+        """Test that ExtractPageContentTool adds new sources if URL not in
+        context."""
         tool = ExtractPageContentTool(
             reasoning="Extract",
             urls=["https://example.com/new"],
         )
-        
+
         # Context has 3 existing sources
         context = ResearchContext()
         context.sources = {
@@ -158,7 +159,7 @@ class TestExtractPageContentTool:
             "https://example.com/2": SourceData(number=2, url="https://example.com/2"),
             "https://example.com/3": SourceData(number=3, url="https://example.com/3"),
         }
-        
+
         mock_sources = [
             SourceData(
                 number=0,
@@ -168,9 +169,9 @@ class TestExtractPageContentTool:
             ),
         ]
         tool._search_service.extract = AsyncMock(return_value=mock_sources)
-        
+
         await tool(context)
-        
+
         # Verify new source was added with next number
         assert len(context.sources) == 4
         assert "https://example.com/new" in context.sources
@@ -183,36 +184,37 @@ class TestExtractPageContentTool:
             reasoning="Extract multiple",
             urls=["https://example.com/1", "https://example.com/2"],
         )
-        
+
         mock_sources = [
             SourceData(number=0, url="https://example.com/1", full_content="Content 1", char_count=9),
             SourceData(number=1, url="https://example.com/2", full_content="Content 2", char_count=9),
         ]
         tool._search_service.extract = AsyncMock(return_value=mock_sources)
-        
+
         context = ResearchContext()
         result = await tool(context)
-        
+
         # Verify both sources added
         assert len(context.sources) == 2
         assert "https://example.com/1" in context.sources
         assert "https://example.com/2" in context.sources
-        
+
         # Verify both in result
         assert "Content 1" in result
         assert "Content 2" in result
 
     @pytest.mark.asyncio
     async def test_extract_page_tool_content_limit(self):
-        """Test that ExtractPageContentTool respects content limit from config."""
+        """Test that ExtractPageContentTool respects content limit from
+        config."""
         with patch("sgr_deep_research.core.tools.extract_page_content_tool.config") as mock_config:
             mock_config.scraping.content_limit = 50
-            
+
             tool = ExtractPageContentTool(
                 reasoning="Extract",
                 urls=["https://example.com"],
             )
-            
+
             long_content = "A" * 200  # 200 characters
             mock_sources = [
                 SourceData(
@@ -223,10 +225,10 @@ class TestExtractPageContentTool:
                 ),
             ]
             tool._search_service.extract = AsyncMock(return_value=mock_sources)
-            
+
             context = ResearchContext()
             result = await tool(context)
-            
+
             # Result should only show first 50 characters
             assert "A" * 50 in result
             assert "A" * 51 not in result
@@ -239,7 +241,7 @@ class TestExtractPageContentTool:
             reasoning="Extract",
             urls=["https://example.com/failed"],
         )
-        
+
         # Mock a source without full_content (failed extraction)
         mock_sources = [
             SourceData(
@@ -250,7 +252,7 @@ class TestExtractPageContentTool:
             ),
         ]
         tool._search_service.extract = AsyncMock(return_value=mock_sources)
-        
+
         # Add the URL to context first
         context = ResearchContext()
         context.sources = {
@@ -259,9 +261,9 @@ class TestExtractPageContentTool:
                 url="https://example.com/failed",
             ),
         }
-        
+
         result = await tool(context)
-        
+
         # Should indicate failure
         assert "Failed to extract content" in result
 
@@ -272,7 +274,7 @@ class TestExtractPageContentTool:
             reasoning="Extract",
             urls=["https://example.com/2", "https://example.com/5"],
         )
-        
+
         # Context has sources with specific numbers
         context = ResearchContext()
         for i in range(1, 11):
@@ -280,15 +282,15 @@ class TestExtractPageContentTool:
                 number=i,
                 url=f"https://example.com/{i}",
             )
-        
+
         mock_sources = [
             SourceData(number=0, url="https://example.com/2", full_content="Content 2", char_count=9),
             SourceData(number=1, url="https://example.com/5", full_content="Content 5", char_count=9),
         ]
         tool._search_service.extract = AsyncMock(return_value=mock_sources)
-        
+
         await tool(context)
-        
+
         # Verify numbers are preserved
         assert context.sources["https://example.com/2"].number == 2
         assert context.sources["https://example.com/5"].number == 5
@@ -300,12 +302,12 @@ class TestExtractPageContentTool:
             reasoning="Extract",
             urls=["https://example.com"],
         )
-        
+
         tool._search_service.extract = AsyncMock(return_value=[])
-        
+
         context = ResearchContext()
         result = await tool(context)
-        
+
         # Should still return formatted result
         assert "Extracted Page Content:" in result
 
@@ -316,7 +318,7 @@ class TestExtractPageContentTool:
             reasoning="Extract",
             urls=["https://example.com/existing", "https://example.com/new"],
         )
-        
+
         # Context has one existing source
         context = ResearchContext()
         context.sources = {
@@ -326,7 +328,7 @@ class TestExtractPageContentTool:
                 snippet="Existing snippet",
             ),
         }
-        
+
         mock_sources = [
             SourceData(
                 number=0,
@@ -342,12 +344,11 @@ class TestExtractPageContentTool:
             ),
         ]
         tool._search_service.extract = AsyncMock(return_value=mock_sources)
-        
+
         await tool(context)
-        
+
         # Verify existing updated, new added
         assert len(context.sources) == 2
         assert context.sources["https://example.com/existing"].number == 1
         assert context.sources["https://example.com/existing"].full_content == "Updated content"
         assert context.sources["https://example.com/new"].number == 2
-

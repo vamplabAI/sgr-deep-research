@@ -1,22 +1,19 @@
 """Tests for BaseAgent.
 
 This module contains comprehensive tests for the BaseAgent class,
-including initialization, logging, clarification handling, and execution flow.
+including initialization, logging, clarification handling, and execution
+flow.
 """
 
-import asyncio
-import json
-import os
-import tempfile
 import uuid
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
 from sgr_deep_research.core.base_agent import BaseAgent
 from sgr_deep_research.core.models import AgentStatesEnum, ResearchContext
-from sgr_deep_research.core.tools import BaseTool, ClarificationTool, ReasoningTool
+from sgr_deep_research.core.tools import BaseTool, ReasoningTool
 
 
 class TestBaseAgentInitialization:
@@ -31,9 +28,9 @@ class TestBaseAgentInitialization:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         agent = BaseAgent(task="Test task")
-        
+
         assert agent.task == "Test task"
         assert agent.name == "base_agent"
         assert agent.max_iterations == 20
@@ -42,19 +39,16 @@ class TestBaseAgentInitialization:
     @patch("sgr_deep_research.core.base_agent.get_config")
     @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     def test_initialization_with_custom_limits(self, mock_openai, mock_get_config):
-        """Test initialization with custom iteration and clarification limits."""
+        """Test initialization with custom iteration and clarification
+        limits."""
         mock_config = Mock()
         mock_config.openai.base_url = "https://api.openai.com/v1"
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
-        agent = BaseAgent(
-            task="Test task",
-            max_iterations=10,
-            max_clarifications=5
-        )
-        
+
+        agent = BaseAgent(task="Test task", max_iterations=10, max_clarifications=5)
+
         assert agent.max_iterations == 10
         assert agent.max_clarifications == 5
 
@@ -67,9 +61,9 @@ class TestBaseAgentInitialization:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         agent = BaseAgent(task="Test")
-        
+
         assert agent.id.startswith("base_agent_")
         # Verify UUID format
         uuid_part = agent.id.replace("base_agent_", "")
@@ -84,10 +78,10 @@ class TestBaseAgentInitialization:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         agent1 = BaseAgent(task="Task 1")
         agent2 = BaseAgent(task="Task 2")
-        
+
         assert agent1.id != agent2.id
 
     @patch("sgr_deep_research.core.base_agent.get_config")
@@ -99,12 +93,12 @@ class TestBaseAgentInitialization:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         # Configure mock to return a regular Mock instead of AsyncMock
         mock_openai.return_value = Mock()
-        
+
         agent = BaseAgent(task="Test")
-        
+
         # Should have system_agent_tools
         assert len(agent.toolkit) > 0
         # Check that ReasoningTool and ClarificationTool are present
@@ -121,12 +115,12 @@ class TestBaseAgentInitialization:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         class CustomTool(BaseTool):
             pass
-        
+
         agent = BaseAgent(task="Test", toolkit=[CustomTool])
-        
+
         # Should have both system tools and custom tool
         assert CustomTool in agent.toolkit
 
@@ -139,9 +133,9 @@ class TestBaseAgentInitialization:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         agent = BaseAgent(task="Test")
-        
+
         assert isinstance(agent._context, ResearchContext)
         assert agent._context.iteration == 0
         assert agent._context.searches_used == 0
@@ -156,9 +150,9 @@ class TestBaseAgentInitialization:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         agent = BaseAgent(task="Test")
-        
+
         assert agent.conversation == []
         assert agent.log == []
 
@@ -171,11 +165,11 @@ class TestBaseAgentInitialization:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         before = datetime.now()
         agent = BaseAgent(task="Test")
         after = datetime.now()
-        
+
         assert before <= agent.creation_time <= after
 
     @patch("sgr_deep_research.core.base_agent.get_config")
@@ -187,9 +181,9 @@ class TestBaseAgentInitialization:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         agent = BaseAgent(task="Test")
-        
+
         assert agent.logger is not None
         assert "sgr_deep_research.agents" in agent.logger.name
         assert agent.id in agent.logger.name
@@ -204,9 +198,9 @@ class TestBaseAgentInitialization:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         agent = BaseAgent(task="Test")
-        
+
         mock_generator.assert_called_once_with(model=agent.id)
 
 
@@ -223,12 +217,12 @@ class TestBaseAgentClarificationHandling:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         agent = BaseAgent(task="Test")
         clarification = "This is a clarification"
-        
+
         await agent.provide_clarification(clarification)
-        
+
         assert len(agent.conversation) == 1
         assert agent.conversation[0]["role"] == "user"
 
@@ -242,12 +236,12 @@ class TestBaseAgentClarificationHandling:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         agent = BaseAgent(task="Test")
-        
+
         await agent.provide_clarification("First clarification")
         assert agent._context.clarifications_used == 1
-        
+
         await agent.provide_clarification("Second clarification")
         assert agent._context.clarifications_used == 2
 
@@ -255,18 +249,19 @@ class TestBaseAgentClarificationHandling:
     @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     @pytest.mark.asyncio
     async def test_provide_clarification_sets_event(self, mock_openai, mock_get_config):
-        """Test that providing clarification sets the clarification_received event."""
+        """Test that providing clarification sets the clarification_received
+        event."""
         mock_config = Mock()
         mock_config.openai.base_url = "https://api.openai.com/v1"
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         agent = BaseAgent(task="Test")
         agent._context.clarification_received.clear()
-        
+
         await agent.provide_clarification("Clarification")
-        
+
         assert agent._context.clarification_received.is_set()
 
     @patch("sgr_deep_research.core.base_agent.get_config")
@@ -279,12 +274,12 @@ class TestBaseAgentClarificationHandling:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         agent = BaseAgent(task="Test")
         agent._context.state = AgentStatesEnum.WAITING_FOR_CLARIFICATION
-        
+
         await agent.provide_clarification("Clarification")
-        
+
         assert agent._context.state == AgentStatesEnum.RESEARCHING
 
     @patch("sgr_deep_research.core.base_agent.get_config")
@@ -297,12 +292,12 @@ class TestBaseAgentClarificationHandling:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         agent = BaseAgent(task="Test")
         long_clarification = "A" * 5000
-        
+
         await agent.provide_clarification(long_clarification)
-        
+
         assert len(agent.conversation) == 1
 
     @patch("sgr_deep_research.core.base_agent.get_config")
@@ -315,12 +310,12 @@ class TestBaseAgentClarificationHandling:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         agent = BaseAgent(task="Test")
         unicode_clarification = "Пояснение на русском 中文 日本語"
-        
+
         await agent.provide_clarification(unicode_clarification)
-        
+
         assert len(agent.conversation) == 1
 
 
@@ -336,21 +331,21 @@ class TestBaseAgentLogging:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         agent = BaseAgent(task="Test")
         agent._context.iteration = 1
-        
+
         reasoning = ReasoningTool(
             reasoning_steps=["Step 1", "Step 2"],
             current_situation="Testing",
             plan_status="In progress",
             enough_data=False,
             remaining_steps=["Next step"],
-            task_completed=False
+            task_completed=False,
         )
-        
+
         agent._log_reasoning(reasoning)
-        
+
         assert len(agent.log) == 1
         assert agent.log[0]["step_type"] == "reasoning"
         assert agent.log[0]["step_number"] == 1
@@ -364,20 +359,20 @@ class TestBaseAgentLogging:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         agent = BaseAgent(task="Test")
-        
+
         reasoning = ReasoningTool(
             reasoning_steps=["Step 1", "Step 2"],
             current_situation="Testing",
             plan_status="Good",
             enough_data=True,
             remaining_steps=["Final"],
-            task_completed=False
+            task_completed=False,
         )
-        
+
         agent._log_reasoning(reasoning)
-        
+
         log_entry = agent.log[0]
         assert "agent_reasoning" in log_entry
         assert log_entry["agent_reasoning"]["enough_data"] is True
@@ -391,21 +386,21 @@ class TestBaseAgentLogging:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         agent = BaseAgent(task="Test")
         agent._context.iteration = 1
-        
+
         tool = ReasoningTool(
             reasoning_steps=["Step 1", "Step 2"],
             current_situation="Testing",
             plan_status="Good",
             enough_data=False,
             remaining_steps=["Next"],
-            task_completed=False
+            task_completed=False,
         )
-        
+
         agent._log_tool_execution(tool, "Tool result")
-        
+
         assert len(agent.log) == 1
         assert agent.log[0]["step_type"] == "tool_execution"
         assert agent.log[0]["tool_name"] == "reasoningtool"
@@ -419,24 +414,23 @@ class TestBaseAgentLogging:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         agent = BaseAgent(task="Test")
-        
+
         tool = ReasoningTool(
             reasoning_steps=["Step 1", "Step 2"],
             current_situation="Testing",
             plan_status="Good",
             enough_data=False,
             remaining_steps=["Next"],
-            task_completed=False
+            task_completed=False,
         )
-        
+
         result = "Test execution result"
         agent._log_tool_execution(tool, result)
-        
+
         log_entry = agent.log[0]
         assert log_entry["agent_tool_execution_result"] == result
-
 
 
 class TestBaseAgentAbstractMethods:
@@ -452,9 +446,9 @@ class TestBaseAgentAbstractMethods:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         agent = BaseAgent(task="Test")
-        
+
         with pytest.raises(NotImplementedError):
             await agent._prepare_tools()
 
@@ -468,9 +462,9 @@ class TestBaseAgentAbstractMethods:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         agent = BaseAgent(task="Test")
-        
+
         with pytest.raises(NotImplementedError):
             await agent._reasoning_phase()
 
@@ -484,10 +478,10 @@ class TestBaseAgentAbstractMethods:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         agent = BaseAgent(task="Test")
         reasoning = Mock()
-        
+
         with pytest.raises(NotImplementedError):
             await agent._select_action_phase(reasoning)
 
@@ -501,10 +495,10 @@ class TestBaseAgentAbstractMethods:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         agent = BaseAgent(task="Test")
         tool = Mock()
-        
+
         with pytest.raises(NotImplementedError):
             await agent._action_phase(tool)
 
@@ -522,12 +516,12 @@ class TestBaseAgentPrepareContext:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         agent = BaseAgent(task="Test")
         agent.conversation = [{"role": "user", "content": "test"}]
-        
+
         context = await agent._prepare_context()
-        
+
         assert len(context) == 2  # system + user
         assert context[0]["role"] == "system"
         assert context[1]["role"] == "user"
@@ -542,15 +536,14 @@ class TestBaseAgentPrepareContext:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         agent = BaseAgent(task="Test")
         agent.conversation = [
             {"role": "user", "content": "message 1"},
             {"role": "assistant", "content": "response 1"},
-            {"role": "user", "content": "message 2"}
+            {"role": "user", "content": "message 2"},
         ]
-        
-        context = await agent._prepare_context()
-        
-        assert len(context) == 4  # system + 3 messages
 
+        context = await agent._prepare_context()
+
+        assert len(context) == 4  # system + 3 messages

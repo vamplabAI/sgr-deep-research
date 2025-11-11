@@ -1,15 +1,16 @@
 """Tests for MCP (Model Context Protocol) integration.
 
-This module contains comprehensive tests for MCPBaseTool and MCP2ToolConverter,
-including mocking of FastMCP Client and tool creation from MCP schemas.
+This module contains comprehensive tests for MCPBaseTool and
+MCP2ToolConverter, including mocking of FastMCP Client and tool creation
+from MCP schemas.
 """
 
 import json
 from typing import ClassVar
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from sgr_deep_research.core.base_tool import BaseTool, MCPBaseTool
 from sgr_deep_research.core.models import ResearchContext
@@ -43,6 +44,7 @@ class TestMCPBaseTool:
 
     def test_mcp_base_tool_subclass_can_set_client(self):
         """Test that subclass can set custom _client."""
+
         class CustomMCPTool(MCPBaseTool):
             _client: ClassVar = Mock()
 
@@ -55,9 +57,7 @@ class TestMCPBaseTool:
         # Create mock client
         mock_client = AsyncMock()
         mock_result = Mock()
-        mock_result.content = [
-            Mock(model_dump_json=Mock(return_value='{"result": "test"}'))
-        ]
+        mock_result.content = [Mock(model_dump_json=Mock(return_value='{"result": "test"}'))]
         mock_client.call_tool = AsyncMock(return_value=mock_result)
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
@@ -68,12 +68,12 @@ class TestMCPBaseTool:
             _client: ClassVar = mock_client
 
         TestMCPTool.tool_name = "test_tool"
-        
+
         tool = TestMCPTool()
         context = ResearchContext()
-        
+
         result = await tool(context)
-        
+
         assert isinstance(result, str)
         assert "test" in result.lower()
 
@@ -82,7 +82,7 @@ class TestMCPBaseTool:
         """Test that __call__ passes correct payload to client."""
         mock_client = AsyncMock()
         mock_result = Mock()
-        mock_result.content = [Mock(model_dump_json=Mock(return_value='{}'))]
+        mock_result.content = [Mock(model_dump_json=Mock(return_value="{}"))]
         mock_client.call_tool = AsyncMock(return_value=mock_result)
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
@@ -93,12 +93,12 @@ class TestMCPBaseTool:
             _client: ClassVar = mock_client
 
         TestMCPTool.tool_name = "test_tool"
-        
+
         tool = TestMCPTool()
         context = ResearchContext()
-        
+
         await tool(context)
-        
+
         # Verify call_tool was called with correct arguments
         mock_client.call_tool.assert_called_once()
         call_args = mock_client.call_tool.call_args
@@ -118,12 +118,12 @@ class TestMCPBaseTool:
             _client: ClassVar = mock_client
 
         TestMCPTool.tool_name = "test_tool"
-        
+
         tool = TestMCPTool()
         context = ResearchContext()
-        
+
         result = await tool(context)
-        
+
         assert "Error" in result
         assert "MCP Error" in result
 
@@ -132,13 +132,11 @@ class TestMCPBaseTool:
     async def test_mcp_base_tool_call_truncates_by_context_limit(self, mock_config):
         """Test that result is truncated by context_limit."""
         mock_config.mcp.context_limit = 20
-        
+
         mock_client = AsyncMock()
         mock_result = Mock()
         long_content = "A" * 100
-        mock_result.content = [
-            Mock(model_dump_json=Mock(return_value=f'"{long_content}"'))
-        ]
+        mock_result.content = [Mock(model_dump_json=Mock(return_value=f'"{long_content}"'))]
         mock_client.call_tool = AsyncMock(return_value=mock_result)
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
@@ -147,12 +145,12 @@ class TestMCPBaseTool:
             _client: ClassVar = mock_client
 
         TestMCPTool.tool_name = "test_tool"
-        
+
         tool = TestMCPTool()
         context = ResearchContext()
-        
+
         result = await tool(context)
-        
+
         assert len(result) == 20
 
     @pytest.mark.asyncio
@@ -163,7 +161,7 @@ class TestMCPBaseTool:
         mock_result.content = [
             Mock(model_dump_json=Mock(return_value='{"item": 1}')),
             Mock(model_dump_json=Mock(return_value='{"item": 2}')),
-            Mock(model_dump_json=Mock(return_value='{"item": 3}'))
+            Mock(model_dump_json=Mock(return_value='{"item": 3}')),
         ]
         mock_client.call_tool = AsyncMock(return_value=mock_result)
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
@@ -173,12 +171,12 @@ class TestMCPBaseTool:
             _client: ClassVar = mock_client
 
         TestMCPTool.tool_name = "test_tool"
-        
+
         tool = TestMCPTool()
         context = ResearchContext()
-        
+
         result = await tool(context)
-        
+
         # Should be a JSON array containing all items
         parsed = json.loads(result)
         assert len(parsed) == 3
@@ -192,9 +190,7 @@ class TestMCPBaseTool:
         mock_client = AsyncMock()
         mock_result = Mock()
         unicode_content = "世界"
-        mock_result.content = [
-            Mock(model_dump_json=Mock(return_value=f'"{unicode_content}"'))
-        ]
+        mock_result.content = [Mock(model_dump_json=Mock(return_value=f'"{unicode_content}"'))]
         mock_client.call_tool = AsyncMock(return_value=mock_result)
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
@@ -203,12 +199,12 @@ class TestMCPBaseTool:
             _client: ClassVar = mock_client
 
         TestMCPTool.tool_name = "test_tool"
-        
+
         tool = TestMCPTool()
         context = ResearchContext()
-        
+
         result = await tool(context)
-        
+
         # Unicode should be preserved (not escaped)
         assert unicode_content in result
 
@@ -219,10 +215,10 @@ class TestMCP2ToolConverter:
     def test_mcp2tool_converter_is_singleton(self):
         """Test that MCP2ToolConverter follows Singleton pattern."""
         from sgr_deep_research.services.mcp_service import MCP2ToolConverter
-        
+
         instance1 = MCP2ToolConverter()
         instance2 = MCP2ToolConverter()
-        
+
         assert instance1 is instance2
 
     @patch("sgr_deep_research.services.mcp_service.get_config")
@@ -231,15 +227,15 @@ class TestMCP2ToolConverter:
         mock_config = Mock()
         mock_config.mcp.transport_config = None
         mock_get_config.return_value = mock_config
-        
+
         from sgr_deep_research.services.mcp_service import MCP2ToolConverter
-        
+
         # Clear singleton instance
         if MCP2ToolConverter in MCP2ToolConverter._instances:
             del MCP2ToolConverter._instances[MCP2ToolConverter]
-        
+
         converter = MCP2ToolConverter()
-        
+
         assert converter.toolkit == []
         assert not hasattr(converter, "client")
 
@@ -250,57 +246,57 @@ class TestMCP2ToolConverter:
         mock_config = Mock()
         mock_config.mcp.transport_config = {"type": "stdio"}
         mock_get_config.return_value = mock_config
-        
+
         from sgr_deep_research.services.mcp_service import MCP2ToolConverter
-        
+
         # Clear singleton
         if MCP2ToolConverter in MCP2ToolConverter._instances:
             del MCP2ToolConverter._instances[MCP2ToolConverter]
-        
+
         converter = MCP2ToolConverter()
-        
+
         assert hasattr(converter, "client")
         mock_client_class.assert_called_once_with({"type": "stdio"})
 
     def test_to_camel_case_simple(self):
         """Test _to_CamelCase with simple snake_case."""
         from sgr_deep_research.services.mcp_service import MCP2ToolConverter
-        
+
         converter = MCP2ToolConverter()
-        
+
         assert converter._to_CamelCase("test_tool") == "TestTool"
         assert converter._to_CamelCase("my_function") == "MyFunction"
 
     def test_to_camel_case_single_word(self):
         """Test _to_CamelCase with single word."""
         from sgr_deep_research.services.mcp_service import MCP2ToolConverter
-        
+
         converter = MCP2ToolConverter()
-        
+
         assert converter._to_CamelCase("test") == "Test"
 
     def test_to_camel_case_already_camel(self):
         """Test _to_CamelCase with already CamelCase input."""
         from sgr_deep_research.services.mcp_service import MCP2ToolConverter
-        
+
         converter = MCP2ToolConverter()
-        
+
         assert converter._to_CamelCase("TestTool") == "Testtool"
 
     def test_to_camel_case_multiple_underscores(self):
         """Test _to_CamelCase with multiple underscores."""
         from sgr_deep_research.services.mcp_service import MCP2ToolConverter
-        
+
         converter = MCP2ToolConverter()
-        
+
         assert converter._to_CamelCase("test_my_long_tool_name") == "TestMyLongToolName"
 
     def test_to_camel_case_with_numbers(self):
         """Test _to_CamelCase with numbers."""
         from sgr_deep_research.services.mcp_service import MCP2ToolConverter
-        
+
         converter = MCP2ToolConverter()
-        
+
         assert converter._to_CamelCase("test_tool_2") == "TestTool2"
 
     @pytest.mark.asyncio
@@ -310,16 +306,16 @@ class TestMCP2ToolConverter:
         mock_config = Mock()
         mock_config.mcp.transport_config = None
         mock_get_config.return_value = mock_config
-        
+
         from sgr_deep_research.services.mcp_service import MCP2ToolConverter
-        
+
         # Clear singleton
         if MCP2ToolConverter in MCP2ToolConverter._instances:
             del MCP2ToolConverter._instances[MCP2ToolConverter]
-        
+
         converter = MCP2ToolConverter()
         await converter.build_tools_from_mcp()
-        
+
         assert converter.toolkit == []
 
     @pytest.mark.asyncio
@@ -335,40 +331,37 @@ class TestMCP2ToolConverter:
         mock_config = Mock()
         mock_config.mcp.transport_config = {"type": "stdio"}
         mock_get_config.return_value = mock_config
-        
+
         # Setup client
         mock_client = AsyncMock()
         mock_tool = Mock()
         mock_tool.name = "test_tool"
         mock_tool.description = "Test tool description"
-        mock_tool.inputSchema = {
-            "type": "object",
-            "properties": {"param": {"type": "string"}}
-        }
+        mock_tool.inputSchema = {"type": "object", "properties": {"param": {"type": "string"}}}
         mock_client.list_tools = AsyncMock(return_value=[mock_tool])
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
         mock_client_class.return_value = mock_client
-        
+
         # Setup schema converter
         mock_pydantic_model = Mock()
         mock_schema_converter.build.return_value = mock_pydantic_model
-        
+
         # Setup create_model
         mock_tool_class = Mock()
         mock_tool_class.tool_name = "test_tool"
         mock_tool_class.description = "Test tool description"
         mock_create_model.return_value = mock_tool_class
-        
+
         from sgr_deep_research.services.mcp_service import MCP2ToolConverter
-        
+
         # Clear singleton
         if MCP2ToolConverter in MCP2ToolConverter._instances:
             del MCP2ToolConverter._instances[MCP2ToolConverter]
-        
+
         converter = MCP2ToolConverter()
         await converter.build_tools_from_mcp()
-        
+
         assert len(converter.toolkit) == 1
         assert converter.toolkit[0].tool_name == "test_tool"
 
@@ -380,7 +373,7 @@ class TestMCP2ToolConverter:
         mock_config = Mock()
         mock_config.mcp.transport_config = {"type": "stdio"}
         mock_get_config.return_value = mock_config
-        
+
         mock_client = AsyncMock()
         mock_tool = Mock()
         mock_tool.name = None  # No name
@@ -389,15 +382,15 @@ class TestMCP2ToolConverter:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
         mock_client_class.return_value = mock_client
-        
+
         from sgr_deep_research.services.mcp_service import MCP2ToolConverter
-        
+
         if MCP2ToolConverter in MCP2ToolConverter._instances:
             del MCP2ToolConverter._instances[MCP2ToolConverter]
-        
+
         converter = MCP2ToolConverter()
         await converter.build_tools_from_mcp()
-        
+
         assert len(converter.toolkit) == 0
 
     @pytest.mark.asyncio
@@ -408,7 +401,7 @@ class TestMCP2ToolConverter:
         mock_config = Mock()
         mock_config.mcp.transport_config = {"type": "stdio"}
         mock_get_config.return_value = mock_config
-        
+
         mock_client = AsyncMock()
         mock_tool = Mock()
         mock_tool.name = "test_tool"
@@ -417,29 +410,27 @@ class TestMCP2ToolConverter:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
         mock_client_class.return_value = mock_client
-        
+
         from sgr_deep_research.services.mcp_service import MCP2ToolConverter
-        
+
         if MCP2ToolConverter in MCP2ToolConverter._instances:
             del MCP2ToolConverter._instances[MCP2ToolConverter]
-        
+
         converter = MCP2ToolConverter()
         await converter.build_tools_from_mcp()
-        
+
         assert len(converter.toolkit) == 0
 
     @pytest.mark.asyncio
     @patch("sgr_deep_research.services.mcp_service.get_config")
     @patch("sgr_deep_research.services.mcp_service.Client")
     @patch("sgr_deep_research.services.mcp_service.SchemaConverter")
-    async def test_build_tools_handles_schema_error(
-        self, mock_schema_converter, mock_client_class, mock_get_config
-    ):
+    async def test_build_tools_handles_schema_error(self, mock_schema_converter, mock_client_class, mock_get_config):
         """Test handling of schema conversion errors."""
         mock_config = Mock()
         mock_config.mcp.transport_config = {"type": "stdio"}
         mock_get_config.return_value = mock_config
-        
+
         mock_client = AsyncMock()
         mock_tool = Mock()
         mock_tool.name = "test_tool"
@@ -449,18 +440,18 @@ class TestMCP2ToolConverter:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
         mock_client_class.return_value = mock_client
-        
+
         # Make schema converter raise error
         mock_schema_converter.build.side_effect = Exception("Schema error")
-        
+
         from sgr_deep_research.services.mcp_service import MCP2ToolConverter
-        
+
         if MCP2ToolConverter in MCP2ToolConverter._instances:
             del MCP2ToolConverter._instances[MCP2ToolConverter]
-        
+
         converter = MCP2ToolConverter()
         await converter.build_tools_from_mcp()
-        
+
         # Should skip tool with error
         assert len(converter.toolkit) == 0
 
@@ -476,7 +467,7 @@ class TestMCP2ToolConverter:
         mock_config = Mock()
         mock_config.mcp.transport_config = {"type": "stdio"}
         mock_get_config.return_value = mock_config
-        
+
         mock_client = AsyncMock()
         mock_tools = [
             Mock(name="tool1", description="Tool 1", inputSchema={"type": "object"}),
@@ -487,25 +478,25 @@ class TestMCP2ToolConverter:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
         mock_client_class.return_value = mock_client
-        
+
         mock_pydantic_model = Mock()
         mock_schema_converter.build.return_value = mock_pydantic_model
-        
+
         def create_tool_class(name, **kwargs):
             tool_class = Mock()
             tool_class.tool_name = name.replace("MCP", "").lower()
             return tool_class
-        
+
         mock_create_model.side_effect = create_tool_class
-        
+
         from sgr_deep_research.services.mcp_service import MCP2ToolConverter
-        
+
         if MCP2ToolConverter in MCP2ToolConverter._instances:
             del MCP2ToolConverter._instances[MCP2ToolConverter]
-        
+
         converter = MCP2ToolConverter()
         await converter.build_tools_from_mcp()
-        
+
         assert len(converter.toolkit) == 3
 
     @pytest.mark.asyncio
@@ -520,7 +511,7 @@ class TestMCP2ToolConverter:
         mock_config = Mock()
         mock_config.mcp.transport_config = {"type": "stdio"}
         mock_get_config.return_value = mock_config
-        
+
         mock_client = AsyncMock()
         mock_tool = Mock()
         mock_tool.name = "test_tool"
@@ -530,21 +521,21 @@ class TestMCP2ToolConverter:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
         mock_client_class.return_value = mock_client
-        
+
         mock_pydantic_model = Mock()
         mock_schema_converter.build.return_value = mock_pydantic_model
-        
+
         mock_tool_class = Mock()
         mock_create_model.return_value = mock_tool_class
-        
+
         from sgr_deep_research.services.mcp_service import MCP2ToolConverter
-        
+
         if MCP2ToolConverter in MCP2ToolConverter._instances:
             del MCP2ToolConverter._instances[MCP2ToolConverter]
-        
+
         converter = MCP2ToolConverter()
         await converter.build_tools_from_mcp()
-        
+
         # Verify _client was set
         assert mock_tool_class._client == mock_client
 
@@ -560,7 +551,7 @@ class TestMCP2ToolConverter:
         mock_config = Mock()
         mock_config.mcp.transport_config = {"type": "stdio"}
         mock_get_config.return_value = mock_config
-        
+
         mock_client = AsyncMock()
         mock_tool = Mock()
         mock_tool.name = "test_tool"
@@ -570,20 +561,19 @@ class TestMCP2ToolConverter:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
         mock_client_class.return_value = mock_client
-        
+
         mock_pydantic_model = Mock()
         mock_schema_converter.build.return_value = mock_pydantic_model
         mock_create_model.return_value = Mock()
-        
+
         from sgr_deep_research.services.mcp_service import MCP2ToolConverter
-        
+
         if MCP2ToolConverter in MCP2ToolConverter._instances:
             del MCP2ToolConverter._instances[MCP2ToolConverter]
-        
+
         converter = MCP2ToolConverter()
         await converter.build_tools_from_mcp()
-        
+
         # Check that schema converter was called with modified schema
         called_schema = mock_schema_converter.build.call_args[0][0]
         assert called_schema["title"] == "TestTool"
-

@@ -1,7 +1,7 @@
 """Extended tests for ReasoningTool.
 
-This module contains comprehensive tests for the ReasoningTool,
-covering validation, execution, JSON output, and context interaction.
+This module contains comprehensive tests for the ReasoningTool, covering
+validation, execution, JSON output, and context interaction.
 """
 
 import json
@@ -67,7 +67,8 @@ class TestReasoningToolValidation:
         assert len(tool3.reasoning_steps) == 3
 
     def test_current_situation_max_length(self):
-        """Test validation fails when current_situation exceeds 300 characters."""
+        """Test validation fails when current_situation exceeds 300
+        characters."""
         long_situation = "A" * 301
         with pytest.raises(ValidationError) as exc_info:
             ReasoningTool(
@@ -252,7 +253,7 @@ class TestReasoningToolExecution:
         )
         context = ResearchContext()
         result = await tool(context)
-        
+
         # Should be parseable as JSON
         data = json.loads(result)
         assert isinstance(data, dict)
@@ -271,7 +272,7 @@ class TestReasoningToolExecution:
         context = ResearchContext()
         result = await tool(context)
         data = json.loads(result)
-        
+
         assert "reasoning_steps" in data
         assert "current_situation" in data
         assert "plan_status" in data
@@ -293,7 +294,7 @@ class TestReasoningToolExecution:
         context = ResearchContext()
         result = await tool(context)
         data = json.loads(result)
-        
+
         assert data["reasoning_steps"] == ["Step 1", "Step 2"]
         assert data["current_situation"] == "Analyzing data"
         assert data["plan_status"] == "Almost done"
@@ -314,7 +315,7 @@ class TestReasoningToolExecution:
         )
         context = ResearchContext()
         result = await tool(context)
-        
+
         # Indented JSON should contain newlines
         assert "\n" in result
         # Should contain proper indentation
@@ -334,9 +335,9 @@ class TestReasoningToolExecution:
         context = ResearchContext()
         original_state = context.state
         original_iteration = context.iteration
-        
+
         await tool(context)
-        
+
         assert context.state == original_state
         assert context.iteration == original_iteration
 
@@ -354,7 +355,7 @@ class TestReasoningToolExecution:
         context = ResearchContext()
         result = await tool(context)
         data = json.loads(result)
-        
+
         assert "$" in data["current_situation"]
         assert "&" in data["reasoning_steps"][1]
 
@@ -382,6 +383,7 @@ class TestReasoningToolAttributes:
     def test_tool_is_base_tool_subclass(self):
         """Test that ReasoningTool is a subclass of BaseTool."""
         from sgr_deep_research.core.base_tool import BaseTool
+
         assert issubclass(ReasoningTool, BaseTool)
 
 
@@ -429,7 +431,7 @@ class TestReasoningToolEdgeCases:
         context = ResearchContext()
         result = await tool(context)
         data = json.loads(result)
-        
+
         assert data["reasoning_steps"][0] == "Шаг 1"
         assert data["current_situation"] == "分析中"
 
@@ -458,4 +460,3 @@ class TestReasoningToolEdgeCases:
         )
         assert tool.enough_data is True
         assert tool.task_completed is True
-

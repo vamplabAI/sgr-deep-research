@@ -1,7 +1,7 @@
 """Extended tests for AdaptPlanTool.
 
-This module contains comprehensive tests for the AdaptPlanTool,
-covering validation, execution, JSON output, and plan adaptation scenarios.
+This module contains comprehensive tests for the AdaptPlanTool, covering
+validation, execution, JSON output, and plan adaptation scenarios.
 """
 
 import json
@@ -176,7 +176,7 @@ class TestAdaptPlanToolExecution:
         )
         context = ResearchContext()
         result = await tool(context)
-        
+
         data = json.loads(result)
         assert isinstance(data, dict)
 
@@ -193,12 +193,13 @@ class TestAdaptPlanToolExecution:
         context = ResearchContext()
         result = await tool(context)
         data = json.loads(result)
-        
+
         assert "reasoning" not in data
 
     @pytest.mark.asyncio
     async def test_execution_json_contains_expected_fields(self):
-        """Test that JSON output contains expected fields (excluding reasoning)."""
+        """Test that JSON output contains expected fields (excluding
+        reasoning)."""
         tool = AdaptPlanTool(
             reasoning="Plan needs adaptation",
             original_goal="Original goal",
@@ -209,7 +210,7 @@ class TestAdaptPlanToolExecution:
         context = ResearchContext()
         result = await tool(context)
         data = json.loads(result)
-        
+
         assert "original_goal" in data
         assert "new_goal" in data
         assert "plan_changes" in data
@@ -228,7 +229,7 @@ class TestAdaptPlanToolExecution:
         context = ResearchContext()
         result = await tool(context)
         data = json.loads(result)
-        
+
         assert data["original_goal"] == "Research AI basics"
         assert data["new_goal"] == "Focus on deep learning"
         assert data["plan_changes"] == ["Narrow scope", "Add GPU requirements"]
@@ -246,7 +247,7 @@ class TestAdaptPlanToolExecution:
         )
         context = ResearchContext()
         result = await tool(context)
-        
+
         # Indented JSON should contain newlines
         assert "\n" in result
         # Should contain proper indentation
@@ -265,9 +266,9 @@ class TestAdaptPlanToolExecution:
         context = ResearchContext()
         original_state = context.state
         original_iteration = context.iteration
-        
+
         await tool(context)
-        
+
         assert context.state == original_state
         assert context.iteration == original_iteration
 
@@ -295,6 +296,7 @@ class TestAdaptPlanToolAttributes:
     def test_tool_is_base_tool_subclass(self):
         """Test that AdaptPlanTool is a subclass of BaseTool."""
         from sgr_deep_research.core.base_tool import BaseTool
+
         assert issubclass(AdaptPlanTool, BaseTool)
 
 
@@ -361,7 +363,7 @@ class TestAdaptPlanToolEdgeCases:
         context = ResearchContext()
         result = await tool(context)
         data = json.loads(result)
-        
+
         assert data["original_goal"] == "原始目標"
         assert data["new_goal"] == "新しい目標"
 
@@ -390,13 +392,14 @@ class TestAdaptPlanToolEdgeCases:
         context = ResearchContext()
         result = await tool(context)
         data = json.loads(result)
-        
+
         assert "$100" in data["original_goal"]
         assert "$200" in data["new_goal"]
 
     @pytest.mark.asyncio
     async def test_multiple_executions_produce_same_output(self):
-        """Test that multiple executions of the same tool produce the same output."""
+        """Test that multiple executions of the same tool produce the same
+        output."""
         tool = AdaptPlanTool(
             reasoning="Plan needs adaptation",
             original_goal="Original goal",
@@ -405,10 +408,10 @@ class TestAdaptPlanToolEdgeCases:
             next_steps=["Step 1", "Step 2"],
         )
         context = ResearchContext()
-        
+
         result1 = await tool(context)
         result2 = await tool(context)
-        
+
         assert result1 == result2
 
     def test_plan_changes_vs_next_steps_independence(self):
@@ -437,7 +440,6 @@ class TestAdaptPlanToolEdgeCases:
         context = ResearchContext()
         result = await tool(context)
         data = json.loads(result)
-        
+
         assert "With multiple lines" in data["original_goal"]
         assert "Multiple lines" in data["new_goal"]
-

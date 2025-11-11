@@ -1,6 +1,7 @@
 """Tests for API models module.
 
-This module contains tests for OpenAI-compatible API models used in REST endpoints.
+This module contains tests for OpenAI-compatible API models used in REST
+endpoints.
 """
 
 import pytest
@@ -20,8 +21,8 @@ from sgr_deep_research.api.models import (
     HealthResponse,
 )
 from sgr_deep_research.core.agents import (
-    SGRAutoToolCallingAgent,
     SGRAgent,
+    SGRAutoToolCallingAgent,
     SGRSOToolCallingAgent,
     SGRToolCallingAgent,
     ToolCallingAgent,
@@ -211,14 +212,14 @@ class TestAgentModel:
     def test_agent_model_mapping_completeness(self):
         """Test that AGENT_MODEL_MAPPING has exactly 5 entries."""
         assert len(AGENT_MODEL_MAPPING) == 5
-        
+
         for agent_model in AgentModel:
             assert agent_model in AGENT_MODEL_MAPPING
 
     def test_agent_model_mapping_agent_classes_valid(self):
         """Test that all mapped classes are valid agent classes."""
         from sgr_deep_research.core.base_agent import BaseAgent
-        
+
         for agent_model, agent_class in AGENT_MODEL_MAPPING.items():
             # Verify it's a class
             assert isinstance(agent_class, type)
@@ -229,18 +230,18 @@ class TestAgentModel:
 
     def test_agent_model_mapping_instantiation(self):
         """Test that agent classes can be instantiated from mapping."""
-        import pytest
         from unittest.mock import Mock, patch
-        
-        with patch("sgr_deep_research.core.base_agent.get_config") as mock_get_config, \
-             patch("sgr_deep_research.core.base_agent.AsyncOpenAI") as mock_openai:
-            
+
+        with (
+            patch("sgr_deep_research.core.base_agent.get_config") as mock_get_config,
+            patch("sgr_deep_research.core.base_agent.AsyncOpenAI"),
+        ):
             mock_config = Mock()
             mock_config.openai.base_url = "https://api.openai.com/v1"
             mock_config.openai.api_key = "test-key"
             mock_config.openai.proxy = ""
             mock_get_config.return_value = mock_config
-            
+
             # Test each agent type can be instantiated
             for agent_model, agent_class in AGENT_MODEL_MAPPING.items():
                 agent = agent_class(task="Test task for " + agent_model.value)
@@ -249,24 +250,24 @@ class TestAgentModel:
 
     def test_agent_model_factory_pattern(self):
         """Test the factory pattern for creating agents from model strings."""
-        import pytest
         from unittest.mock import Mock, patch
-        
-        with patch("sgr_deep_research.core.base_agent.get_config") as mock_get_config, \
-             patch("sgr_deep_research.core.base_agent.AsyncOpenAI") as mock_openai:
-            
+
+        with (
+            patch("sgr_deep_research.core.base_agent.get_config") as mock_get_config,
+            patch("sgr_deep_research.core.base_agent.AsyncOpenAI"),
+        ):
             mock_config = Mock()
             mock_config.openai.base_url = "https://api.openai.com/v1"
             mock_config.openai.api_key = "test-key"
             mock_config.openai.proxy = ""
             mock_get_config.return_value = mock_config
-            
+
             # Test factory pattern
             model_name = "sgr_agent"
             agent_model = AgentModel(model_name)
             agent_class = AGENT_MODEL_MAPPING[agent_model]
             agent = agent_class(task="Factory pattern test")
-            
+
             assert isinstance(agent, SGRAgent)
             assert agent.name == "sgr_agent"
 
@@ -417,4 +418,3 @@ class TestClarificationRequest:
         """Test clarification request with empty string."""
         request = ClarificationRequest(clarifications="")
         assert request.clarifications == ""
-

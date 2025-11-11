@@ -1,10 +1,11 @@
 """Tests for WebSearchTool.
 
-This module contains tests for WebSearchTool with mocked TavilySearchService.
+This module contains tests for WebSearchTool with mocked
+TavilySearchService.
 """
 
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from pydantic import ValidationError
@@ -41,7 +42,7 @@ class TestWebSearchTool:
         """Test default max_results value."""
         with patch("sgr_deep_research.core.tools.web_search_tool.config") as mock_config:
             mock_config.search.max_results = 10
-            
+
             tool = WebSearchTool(
                 reasoning="Test",
                 query="test query",
@@ -89,7 +90,7 @@ class TestWebSearchTool:
             query="test query",
             max_results=3,
         )
-        
+
         # Mock the search service
         mock_sources = [
             SourceData(
@@ -105,19 +106,19 @@ class TestWebSearchTool:
                 snippet="Snippet 2",
             ),
         ]
-        
+
         tool._search_service.search = AsyncMock(return_value=mock_sources)
-        
+
         context = ResearchContext()
         result = await tool(context)
-        
+
         # Verify search was called with correct parameters
         tool._search_service.search.assert_called_once_with(
             query="test query",
             max_results=3,
             include_raw_content=False,
         )
-        
+
         # Verify result format
         assert "Search Query: test query" in result
         assert "Result 1" in result
@@ -132,15 +133,15 @@ class TestWebSearchTool:
             query="test",
             max_results=2,
         )
-        
+
         mock_sources = [
             SourceData(number=1, title="Test", url="https://example.com/1", snippet="Snippet"),
         ]
         tool._search_service.search = AsyncMock(return_value=mock_sources)
-        
+
         context = ResearchContext()
         await tool(context)
-        
+
         # Verify sources were added to context
         assert len(context.sources) == 1
         assert "https://example.com/1" in context.sources
@@ -154,17 +155,17 @@ class TestWebSearchTool:
             query="test query",
             max_results=2,
         )
-        
+
         mock_sources = [
             SourceData(number=1, url="https://example.com/1", snippet="Snippet"),
         ]
         tool._search_service.search = AsyncMock(return_value=mock_sources)
-        
+
         context = ResearchContext()
         assert len(context.searches) == 0
-        
+
         await tool(context)
-        
+
         # Verify searches were updated
         assert len(context.searches) == 1
         assert isinstance(context.searches[0], SearchResult)
@@ -179,32 +180,33 @@ class TestWebSearchTool:
             query="test",
             max_results=1,
         )
-        
+
         tool._search_service.search = AsyncMock(return_value=[])
-        
+
         context = ResearchContext()
         assert context.searches_used == 0
-        
+
         await tool(context)
-        
+
         assert context.searches_used == 1
 
     @pytest.mark.asyncio
     async def test_web_search_tool_rearranges_source_numbers(self):
-        """Test that WebSearchTool rearranges source numbers based on existing sources."""
+        """Test that WebSearchTool rearranges source numbers based on existing
+        sources."""
         tool = WebSearchTool(
             reasoning="Test",
             query="test",
             max_results=2,
         )
-        
+
         # Mock sources that will be returned
         mock_sources = [
             SourceData(number=99, url="https://example.com/new1", snippet="New 1"),
             SourceData(number=100, url="https://example.com/new2", snippet="New 2"),
         ]
         tool._search_service.search = AsyncMock(return_value=mock_sources)
-        
+
         # Context already has 3 sources
         context = ResearchContext()
         context.sources = {
@@ -212,9 +214,9 @@ class TestWebSearchTool:
             "https://example.com/old2": SourceData(number=2, url="https://example.com/old2"),
             "https://example.com/old3": SourceData(number=3, url="https://example.com/old3"),
         }
-        
+
         await tool(context)
-        
+
         # New sources should be numbered 4 and 5
         assert context.sources["https://example.com/new1"].number == 4
         assert context.sources["https://example.com/new2"].number == 5
@@ -227,7 +229,7 @@ class TestWebSearchTool:
             query="test",
             max_results=1,
         )
-        
+
         long_snippet = "A" * 150  # 150 characters
         mock_sources = [
             SourceData(
@@ -237,10 +239,10 @@ class TestWebSearchTool:
             ),
         ]
         tool._search_service.search = AsyncMock(return_value=mock_sources)
-        
+
         context = ResearchContext()
         result = await tool(context)
-        
+
         # Snippet should be truncated to 100 chars + "..."
         assert "A" * 100 in result
         assert "..." in result
@@ -255,12 +257,12 @@ class TestWebSearchTool:
             query="test",
             max_results=5,
         )
-        
+
         tool._search_service.search = AsyncMock(return_value=[])
-        
+
         context = ResearchContext()
         result = await tool(context)
-        
+
         # Should still return formatted result
         assert "Search Query: test" in result
         assert "Search Results" in result
@@ -273,19 +275,19 @@ class TestWebSearchTool:
         """Test multiple executions of WebSearchTool."""
         tool1 = WebSearchTool(reasoning="First", query="query 1", max_results=1)
         tool2 = WebSearchTool(reasoning="Second", query="query 2", max_results=1)
-        
+
         mock_sources_1 = [SourceData(number=1, url="https://example.com/1", snippet="S1")]
         mock_sources_2 = [SourceData(number=2, url="https://example.com/2", snippet="S2")]
-        
+
         tool1._search_service.search = AsyncMock(return_value=mock_sources_1)
         tool2._search_service.search = AsyncMock(return_value=mock_sources_2)
-        
+
         context = ResearchContext()
-        
+
         await tool1(context)
         assert len(context.searches) == 1
         assert context.searches_used == 1
-        
+
         await tool2(context)
         assert len(context.searches) == 2
         assert context.searches_used == 2
@@ -296,12 +298,11 @@ class TestWebSearchTool:
         """Test that search results have timestamp."""
         tool = WebSearchTool(reasoning="Test", query="test", max_results=1)
         tool._search_service.search = AsyncMock(return_value=[])
-        
+
         context = ResearchContext()
         before = datetime.now()
         await tool(context)
         after = datetime.now()
-        
+
         assert len(context.searches) == 1
         assert before <= context.searches[0].timestamp <= after
-

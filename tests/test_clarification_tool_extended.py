@@ -1,7 +1,8 @@
 """Extended tests for ClarificationTool.
 
 This module contains comprehensive tests for the ClarificationTool,
-covering edge cases, validation, context interaction, and output formatting.
+covering edge cases, validation, context interaction, and output
+formatting.
 """
 
 import pytest
@@ -57,7 +58,8 @@ class TestClarificationToolValidation:
         assert len(tool3.unclear_terms) == 3
 
     def test_assumptions_min_length(self):
-        """Test validation fails when assumptions list has less than 2 items."""
+        """Test validation fails when assumptions list has less than 2
+        items."""
         with pytest.raises(ValidationError) as exc_info:
             ClarificationTool(
                 reasoning="Need clarification",
@@ -194,7 +196,7 @@ class TestClarificationToolExecution:
         )
         context = ResearchContext()
         result = await tool(context)
-        
+
         for question in questions:
             assert question in result
 
@@ -209,7 +211,7 @@ class TestClarificationToolExecution:
         )
         context = ResearchContext()
         result = await tool(context)
-        
+
         assert result == "Q1?\nQ2?\nQ3?"
 
     @pytest.mark.asyncio
@@ -218,7 +220,7 @@ class TestClarificationToolExecution:
         questions = [
             "What is the primary objective?\nPlease be specific.",
             "How should we approach this?",
-            "When is the deadline?"
+            "When is the deadline?",
         ]
         tool = ClarificationTool(
             reasoning="Need clarification",
@@ -228,7 +230,7 @@ class TestClarificationToolExecution:
         )
         context = ResearchContext()
         result = await tool(context)
-        
+
         assert questions[0] in result
         assert questions[1] in result
         assert questions[2] in result
@@ -245,20 +247,16 @@ class TestClarificationToolExecution:
         context = ResearchContext()
         original_state = context.state
         original_iteration = context.iteration
-        
+
         await tool(context)
-        
+
         assert context.state == original_state
         assert context.iteration == original_iteration
 
     @pytest.mark.asyncio
     async def test_execution_with_special_characters(self):
         """Test execution with special characters in questions."""
-        questions = [
-            "What's the cost ($)?",
-            "Is it 50% complete?",
-            "Can we use <tags>?"
-        ]
+        questions = ["What's the cost ($)?", "Is it 50% complete?", "Can we use <tags>?"]
         tool = ClarificationTool(
             reasoning="Need clarification",
             unclear_terms=["Term 1"],
@@ -267,7 +265,7 @@ class TestClarificationToolExecution:
         )
         context = ResearchContext()
         result = await tool(context)
-        
+
         for question in questions:
             assert question in result
 
@@ -295,6 +293,7 @@ class TestClarificationToolAttributes:
     def test_tool_is_base_tool_subclass(self):
         """Test that ClarificationTool is a subclass of BaseTool."""
         from sgr_deep_research.core.base_tool import BaseTool
+
         assert issubclass(ClarificationTool, BaseTool)
 
     def test_tool_instance_fields(self):
@@ -323,7 +322,7 @@ class TestClarificationToolSerialization:
             questions=["Q1?", "Q2?", "Q3?"],
         )
         data = tool.model_dump()
-        
+
         assert isinstance(data, dict)
         assert data["reasoning"] == "Need clarification"
         assert data["unclear_terms"] == ["Term 1"]
@@ -339,9 +338,10 @@ class TestClarificationToolSerialization:
             questions=["Q1?", "Q2?", "Q3?"],
         )
         json_str = tool.model_dump_json()
-        
+
         assert isinstance(json_str, str)
         import json
+
         data = json.loads(json_str)
         assert data["reasoning"] == "Need clarification"
 
@@ -354,9 +354,8 @@ class TestClarificationToolSerialization:
             "questions": ["Q1?", "Q2?", "Q3?"],
         }
         tool = ClarificationTool.model_validate(data)
-        
+
         assert tool.reasoning == data["reasoning"]
         assert tool.unclear_terms == data["unclear_terms"]
         assert tool.assumptions == data["assumptions"]
         assert tool.questions == data["questions"]
-

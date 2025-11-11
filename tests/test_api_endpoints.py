@@ -5,28 +5,23 @@ including agent creation, agent state management, and chat completions.
 """
 
 import asyncio
+from unittest.mock import Mock, patch
+
 import pytest
-from unittest.mock import AsyncMock, Mock, patch
-from fastapi.testclient import TestClient
 from fastapi import HTTPException
 
 from sgr_deep_research.api.endpoints import (
+    _is_agent_id,
+    agents_storage,
     create_chat_completion,
+    extract_user_content_from_messages,
     get_agent_state,
     get_agents_list,
     provide_clarification,
-    _is_agent_id,
-    agents_storage,
-    extract_user_content_from_messages
 )
-from sgr_deep_research.api.models import (
-    ChatCompletionRequest,
-    ChatMessage,
-    ClarificationRequest,
-    AgentModel
-)
+from sgr_deep_research.api.models import AgentModel, ChatCompletionRequest, ChatMessage, ClarificationRequest
 from sgr_deep_research.core.agents import SGRAgent
-from sgr_deep_research.core.models import AgentStatesEnum, ResearchContext
+from sgr_deep_research.core.models import AgentStatesEnum
 
 
 class TestIsAgentId:
@@ -37,9 +32,9 @@ class TestIsAgentId:
         valid_ids = [
             "sgr_agent_12345678-1234-1234-1234-123456789012",
             "tool_calling_agent_abcdef01-2345-6789-abcd-ef0123456789",
-            "custom_agent_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+            "custom_agent_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
         ]
-        
+
         for agent_id in valid_ids:
             assert _is_agent_id(agent_id) is True
 
@@ -47,26 +42,26 @@ class TestIsAgentId:
         """Test that invalid agent ID format is rejected."""
         invalid_ids = [
             "sgr_agent",  # No UUID
-            "short_id",   # Too short
-            "",           # Empty string
-            "model_name"  # Regular model name
+            "short_id",  # Too short
+            "",  # Empty string
+            "model_name",  # Regular model name
         ]
-        
+
         for invalid_id in invalid_ids:
             assert _is_agent_id(invalid_id) is False
 
     def test_edge_case_lengths(self):
         """Test edge cases around minimum length requirement."""
         # Exactly 20 characters with underscore - should be invalid (need >20)
-        exactly_20 = "a_bcdefghijklmnopqr"  
+        exactly_20 = "a_bcdefghijklmnopqr"
         assert len(exactly_20) == 19
         assert _is_agent_id(exactly_20) is False
-        
-        # 21 characters with underscore - should be valid  
+
+        # 21 characters with underscore - should be valid
         exactly_21 = "a_bcdefghijklmnopqrs"
         assert len(exactly_21) == 20
         assert _is_agent_id(exactly_21) is False
-        
+
         # 22 characters with underscore - should be valid
         exactly_22 = "a_bcdefghijklmnopqrst"
         assert len(exactly_22) == 21
@@ -78,10 +73,8 @@ class TestExtractUserContentFromMessages:
 
     def test_extract_from_single_user_message(self):
         """Test extracting content from single user message."""
-        messages = [
-            ChatMessage(role="user", content="Hello, this is a test message")
-        ]
-        
+        messages = [ChatMessage(role="user", content="Hello, this is a test message")]
+
         content = extract_user_content_from_messages(messages)
         assert content == "Hello, this is a test message"
 
@@ -91,9 +84,9 @@ class TestExtractUserContentFromMessages:
             ChatMessage(role="system", content="System message"),
             ChatMessage(role="user", content="First user message"),
             ChatMessage(role="assistant", content="Assistant response"),
-            ChatMessage(role="user", content="Latest user message")
+            ChatMessage(role="user", content="Latest user message"),
         ]
-        
+
         content = extract_user_content_from_messages(messages)
         assert content == "Latest user message"
 
@@ -101,16 +94,16 @@ class TestExtractUserContentFromMessages:
         """Test that missing user message raises ValueError."""
         messages = [
             ChatMessage(role="system", content="System message"),
-            ChatMessage(role="assistant", content="Assistant response")
+            ChatMessage(role="assistant", content="Assistant response"),
         ]
-        
+
         with pytest.raises(ValueError, match="User message not found"):
             extract_user_content_from_messages(messages)
 
     def test_extract_empty_messages_raises_error(self):
         """Test that empty messages list raises ValueError."""
         messages = []
-        
+
         with pytest.raises(ValueError, match="User message not found"):
             extract_user_content_from_messages(messages)
 
@@ -135,41 +128,44 @@ class TestChatCompletionEndpoint:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         mock_agent_class = Mock()
         mock_agent = Mock()
         mock_agent.id = "test_agent_12345678-1234-1234-1234-123456789012"
         mock_agent.streaming_generator.stream.return_value = iter(["chunk1", "chunk2"])
+
         # Use actual async function instead of AsyncMock to avoid warnings
         async def mock_execute():
             pass
+
         mock_agent.execute = mock_execute
         mock_agent_class.return_value = mock_agent
         mock_mapping = {AgentModel.SGR_AGENT: mock_agent_class}
-        
+
         # Create request
         request = ChatCompletionRequest(
-            model="sgr_agent",
-            messages=[ChatMessage(role="user", content="Test task")],
-            stream=True
+            model="sgr_agent", messages=[ChatMessage(role="user", content="Test task")], stream=True
         )
-        
+
         # Mock asyncio.create_task to properly handle coroutines
-        with patch("sgr_deep_research.api.endpoints.AGENT_MODEL_MAPPING", mock_mapping), \
-             patch("sgr_deep_research.api.endpoints.asyncio.create_task") as mock_create_task:
+        with (
+            patch("sgr_deep_research.api.endpoints.AGENT_MODEL_MAPPING", mock_mapping),
+            patch("sgr_deep_research.api.endpoints.asyncio.create_task") as mock_create_task,
+        ):
             # Schedule the coroutine via event loop to avoid 'never awaited' warnings
             def mock_create_task_func(coro):
                 loop = asyncio.get_event_loop()
                 return loop.create_task(coro)
+
             mock_create_task.side_effect = mock_create_task_func
-            
-            response = await create_chat_completion(request)
-            
+
+            await create_chat_completion(request)
+
             # Verify agent was created and stored
             mock_agent_class.assert_called_once_with(task="Test task")
             assert mock_agent.id in agents_storage
             assert agents_storage[mock_agent.id] == mock_agent
-            
+
             # Verify execute task was created
             mock_create_task.assert_called_once()
 
@@ -177,29 +173,25 @@ class TestChatCompletionEndpoint:
     async def test_non_streaming_request_raises_error(self):
         """Test that non-streaming request raises HTTPException."""
         request = ChatCompletionRequest(
-            model="sgr_agent",
-            messages=[ChatMessage(role="user", content="Test task")],
-            stream=False
+            model="sgr_agent", messages=[ChatMessage(role="user", content="Test task")], stream=False
         )
-        
+
         with pytest.raises(HTTPException) as exc_info:
             await create_chat_completion(request)
-        
+
         assert exc_info.value.status_code == 501
         assert "Only streaming responses are supported" in str(exc_info.value.detail)
 
-    @pytest.mark.asyncio 
+    @pytest.mark.asyncio
     async def test_invalid_model_raises_error(self):
         """Test that invalid model raises HTTPException."""
         request = ChatCompletionRequest(
-            model="invalid_model",
-            messages=[ChatMessage(role="user", content="Test task")],
-            stream=True
+            model="invalid_model", messages=[ChatMessage(role="user", content="Test task")], stream=True
         )
-        
+
         with pytest.raises(HTTPException) as exc_info:
             await create_chat_completion(request)
-        
+
         assert exc_info.value.status_code == 400
         assert "Invalid model" in str(exc_info.value.detail)
 
@@ -215,10 +207,10 @@ class TestChatCompletionEndpoint:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         # Configure mock to return a regular Mock instead of AsyncMock
         mock_openai.return_value = Mock()
-        
+
         # Mock asyncio.Event to avoid async warnings
         mock_event_instance = Mock()
         mock_event_instance.set = Mock()
@@ -228,21 +220,20 @@ class TestChatCompletionEndpoint:
         agent = SGRAgent(task="Test task")
         agent._context.state = AgentStatesEnum.WAITING_FOR_CLARIFICATION
         agents_storage[agent.id] = agent
-        
+
         # Mock the agent's methods with actual async function
         async def mock_provide_clarification(clarifications):
             pass
+
         agent.provide_clarification = Mock(side_effect=mock_provide_clarification)
         agent.streaming_generator.stream = Mock(return_value=iter(["clarification response"]))
-        
+
         request = ChatCompletionRequest(
-            model=agent.id,
-            messages=[ChatMessage(role="user", content="Here is my clarification")],
-            stream=True
+            model=agent.id, messages=[ChatMessage(role="user", content="Here is my clarification")], stream=True
         )
-        
-        response = await create_chat_completion(request)
-        
+
+        await create_chat_completion(request)
+
         # Verify clarification was provided
         agent.provide_clarification.assert_called_once_with("Here is my clarification")
 
@@ -261,16 +252,16 @@ class TestAgentStateEndpoint:
     async def test_get_agent_state_success(self, mock_openai, mock_get_config, mock_event):
         """Test successful retrieval of agent state."""
         from sgr_deep_research.core.models import SourceData
-        
+
         mock_config = Mock()
         mock_config.openai.base_url = "https://api.openai.com/v1"
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         # Configure mock to return a regular Mock instead of AsyncMock
         mock_openai.return_value = Mock()
-        
+
         # Mock asyncio.Event to avoid async warnings
         mock_event_instance = Mock()
         mock_event_instance.set = Mock()
@@ -280,12 +271,12 @@ class TestAgentStateEndpoint:
         agent = SGRAgent(task="Test task")
         agent._context.sources = {
             "https://example.com/1": SourceData(number=1, url="https://example.com/1", title="Source 1"),
-            "https://example.com/2": SourceData(number=2, url="https://example.com/2", title="Source 2")
+            "https://example.com/2": SourceData(number=2, url="https://example.com/2", title="Source 2"),
         }
         agents_storage[agent.id] = agent
-        
+
         response = await get_agent_state(agent.id)
-        
+
         assert response.agent_id == agent.id
         assert response.task == "Test task"
         assert response.sources_count == 2
@@ -294,10 +285,10 @@ class TestAgentStateEndpoint:
     async def test_get_agent_state_not_found(self):
         """Test agent state retrieval for non-existent agent."""
         non_existent_id = "non_existent_agent_id"
-        
+
         with pytest.raises(HTTPException) as exc_info:
             await get_agent_state(non_existent_id)
-        
+
         assert exc_info.value.status_code == 404
         assert "Agent not found" in str(exc_info.value.detail)
 
@@ -313,7 +304,7 @@ class TestAgentsListEndpoint:
     async def test_get_agents_list_empty(self):
         """Test getting agents list when storage is empty."""
         response = await get_agents_list()
-        
+
         assert response.agents == []
         assert response.total == 0
 
@@ -331,15 +322,15 @@ class TestAgentsListEndpoint:
         # Create and store multiple agents
         agent1 = SGRAgent(task="Task 1")
         agent2 = SGRAgent(task="Task 2")
-        
+
         agents_storage[agent1.id] = agent1
         agents_storage[agent2.id] = agent2
-        
+
         response = await get_agents_list()
-        
+
         assert response.total == 2
         assert len(response.agents) == 2
-        
+
         # Check that both agents are in the response
         agent_ids = [item.agent_id for item in response.agents]
         assert agent1.id in agent_ids
@@ -364,10 +355,10 @@ class TestProvideClarificationEndpoint:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         # Configure mock to return a regular Mock instead of AsyncMock
         mock_openai.return_value = Mock()
-        
+
         # Mock asyncio.Event to avoid async warnings
         mock_event_instance = Mock()
         mock_event_instance.set = Mock()
@@ -375,17 +366,19 @@ class TestProvideClarificationEndpoint:
 
         # Create and store an agent
         agent = SGRAgent(task="Test task")
+
         # Mock the agent's methods with actual async function
         async def mock_provide_clarification(clarifications):
             pass
+
         agent.provide_clarification = Mock(side_effect=mock_provide_clarification)
         agent.streaming_generator.stream = Mock(return_value=iter(["clarification response"]))
         agents_storage[agent.id] = agent
-        
+
         request = ClarificationRequest(clarifications="This is my clarification")
-        
-        response = await provide_clarification(agent.id, request)
-        
+
+        await provide_clarification(agent.id, request)
+
         # Verify clarification was provided
         agent.provide_clarification.assert_called_once_with("This is my clarification")
 
@@ -394,12 +387,12 @@ class TestProvideClarificationEndpoint:
         """Test clarification provision for non-existent agent."""
         non_existent_id = "non_existent_agent_id"
         request = ClarificationRequest(clarifications="Some clarification")
-        
+
         # Agent not found, exception will be raised
         # The code catches any exception and returns 500, not 404
         with pytest.raises(HTTPException) as exc_info:
             await provide_clarification(non_existent_id, request)
-        
+
         # The endpoint returns 500 for any error, including missing agent
         assert exc_info.value.status_code == 500
         assert "404" in str(exc_info.value.detail) or "Agent not found" in str(exc_info.value.detail)
@@ -415,10 +408,10 @@ class TestProvideClarificationEndpoint:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         # Configure mock to return a regular Mock instead of AsyncMock
         mock_openai.return_value = Mock()
-        
+
         # Mock asyncio.Event to avoid async warnings
         mock_event_instance = Mock()
         mock_event_instance.set = Mock()
@@ -426,17 +419,19 @@ class TestProvideClarificationEndpoint:
 
         # Create agent that raises exception
         agent = SGRAgent(task="Test task")
+
         # Mock the agent's method to raise exception
         async def mock_provide_clarification_error(clarifications):
             raise Exception("Test error")
+
         agent.provide_clarification = Mock(side_effect=mock_provide_clarification_error)
         agents_storage[agent.id] = agent
-        
+
         request = ClarificationRequest(clarifications="Some clarification")
-        
+
         with pytest.raises(HTTPException) as exc_info:
             await provide_clarification(agent.id, request)
-        
+
         assert exc_info.value.status_code == 500
         assert "Test error" in str(exc_info.value.detail)
 
@@ -458,10 +453,10 @@ class TestAgentStorageIntegration:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
-        
+
         # Configure mock to return a regular Mock instead of AsyncMock
         mock_openai.return_value = Mock()
-        
+
         # Mock asyncio.Event to avoid async warnings
         mock_event_instance = Mock()
         mock_event_instance.set = Mock()
@@ -470,11 +465,11 @@ class TestAgentStorageIntegration:
         # Create agents
         agent1 = SGRAgent(task="Task 1")
         agent2 = SGRAgent(task="Task 2")
-        
+
         # Store in agents_storage
         agents_storage[agent1.id] = agent1
         agents_storage[agent2.id] = agent2
-        
+
         # Verify storage state
         assert len(agents_storage) == 2
         assert agent1.id in agents_storage

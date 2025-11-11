@@ -6,7 +6,7 @@ This module contains tests for PromptLoader utility class.
 import os
 import tempfile
 from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -31,7 +31,7 @@ class TestPromptLoader:
                 mock_config.prompts.prompts_dir = tmpdir
                 # Clear cache to test fresh load
                 PromptLoader._load_prompt_file.cache_clear()
-                
+
                 result = PromptLoader._load_prompt_file("test_prompt.txt")
                 assert result == test_content
 
@@ -45,12 +45,12 @@ class TestPromptLoader:
             with patch("sgr_deep_research.core.prompts.config") as mock_config:
                 mock_config.prompts.prompts_dir = tmpdir
                 PromptLoader._load_prompt_file.cache_clear()
-                
+
                 # First call
                 result1 = PromptLoader._load_prompt_file("cached_prompt.txt")
                 # Second call should use cache
                 result2 = PromptLoader._load_prompt_file("cached_prompt.txt")
-                
+
                 assert result1 == result2 == "Cached content"
 
     def test_load_prompt_file_not_found(self):
@@ -59,7 +59,7 @@ class TestPromptLoader:
             with patch("sgr_deep_research.core.prompts.config") as mock_config:
                 mock_config.prompts.prompts_dir = tmpdir
                 PromptLoader._load_prompt_file.cache_clear()
-                
+
                 with pytest.raises(FileNotFoundError) as exc_info:
                     PromptLoader._load_prompt_file("nonexistent.txt")
                 assert "Prompt file not found" in str(exc_info.value)
@@ -71,13 +71,14 @@ class TestPromptLoader:
                 with patch("sgr_deep_research.core.prompts.config") as mock_config:
                     mock_config.prompts.prompts_dir = "test"
                     PromptLoader._load_prompt_file.cache_clear()
-                    
+
                     with pytest.raises(IOError) as exc_info:
                         PromptLoader._load_prompt_file("test.txt")
                     assert "Error reading prompt file" in str(exc_info.value)
 
     def test_load_prompt_file_strips_whitespace(self):
-        """Test that loaded content is stripped of leading/trailing whitespace."""
+        """Test that loaded content is stripped of leading/trailing
+        whitespace."""
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = os.path.join(tmpdir, "whitespace.txt")
             with open(test_file, "w", encoding="utf-8") as f:
@@ -86,12 +87,13 @@ class TestPromptLoader:
             with patch("sgr_deep_research.core.prompts.config") as mock_config:
                 mock_config.prompts.prompts_dir = tmpdir
                 PromptLoader._load_prompt_file.cache_clear()
-                
+
                 result = PromptLoader._load_prompt_file("whitespace.txt")
                 assert result == "Content with spaces"
 
     def test_get_system_prompt_with_tools(self):
         """Test get_system_prompt with available tools."""
+
         # Create mock tools
         class MockTool1(BaseTool):
             tool_name = "mock_tool_1"
@@ -114,9 +116,9 @@ class TestPromptLoader:
                 mock_config.prompts.prompts_dir = tmpdir
                 mock_config.prompts.system_prompt_file = "system_prompt.txt"
                 PromptLoader._load_prompt_file.cache_clear()
-                
+
                 result = PromptLoader.get_system_prompt(tools)
-                
+
                 assert "Available tools:" in result
                 assert "1. mock_tool_1: First mock tool" in result
                 assert "2. mock_tool_2: Second mock tool" in result
@@ -134,9 +136,9 @@ class TestPromptLoader:
                 mock_config.prompts.prompts_dir = tmpdir
                 mock_config.prompts.system_prompt_file = "system_prompt.txt"
                 PromptLoader._load_prompt_file.cache_clear()
-                
+
                 result = PromptLoader.get_system_prompt([])
-                
+
                 assert "Available tools:\n\nDone." in result
 
     def test_get_system_prompt_missing_placeholder(self):
@@ -152,7 +154,7 @@ class TestPromptLoader:
                 mock_config.prompts.prompts_dir = tmpdir
                 mock_config.prompts.system_prompt_file = "system_prompt.txt"
                 PromptLoader._load_prompt_file.cache_clear()
-                
+
                 # This should work since no placeholder is used
                 result = PromptLoader.get_system_prompt([])
                 assert result == "This template has no placeholders."
@@ -168,10 +170,10 @@ class TestPromptLoader:
             with patch("sgr_deep_research.core.prompts.config") as mock_config:
                 mock_config.prompts.prompts_dir = tmpdir
                 PromptLoader._load_prompt_file.cache_clear()
-                
+
                 task = "Research quantum computing"
                 result = PromptLoader.get_initial_user_request(task)
-                
+
                 assert "TASK:" in result
                 assert "Research quantum computing" in result
                 assert "Current Date:" in result
@@ -180,7 +182,8 @@ class TestPromptLoader:
                 assert str(current_year) in result
 
     def test_get_initial_user_request_date_format(self):
-        """Test that get_initial_user_request includes properly formatted date."""
+        """Test that get_initial_user_request includes properly formatted
+        date."""
         with tempfile.TemporaryDirectory() as tmpdir:
             template_file = os.path.join(tmpdir, "initial_user_request.txt")
             template = "{current_date}|{task}"
@@ -190,9 +193,9 @@ class TestPromptLoader:
             with patch("sgr_deep_research.core.prompts.config") as mock_config:
                 mock_config.prompts.prompts_dir = tmpdir
                 PromptLoader._load_prompt_file.cache_clear()
-                
+
                 result = PromptLoader.get_initial_user_request("test task")
-                
+
                 # Check format YYYY-MM-DD HH:MM:SS
                 parts = result.split("|")
                 date_part = parts[0]
@@ -214,17 +217,18 @@ class TestPromptLoader:
             with patch("sgr_deep_research.core.prompts.config") as mock_config:
                 mock_config.prompts.prompts_dir = tmpdir
                 PromptLoader._load_prompt_file.cache_clear()
-                
+
                 clarifications = "1. Answer A\n2. Answer B"
                 result = PromptLoader.get_clarification_template(clarifications)
-                
+
                 assert "CLARIFICATIONS:" in result
                 assert "1. Answer A" in result
                 assert "2. Answer B" in result
                 assert "Date:" in result
 
     def test_get_clarification_template_date_format(self):
-        """Test that get_clarification_template includes properly formatted date."""
+        """Test that get_clarification_template includes properly formatted
+        date."""
         with tempfile.TemporaryDirectory() as tmpdir:
             template_file = os.path.join(tmpdir, "clarification_response.txt")
             template = "{current_date}|{clarifications}"
@@ -234,22 +238,23 @@ class TestPromptLoader:
             with patch("sgr_deep_research.core.prompts.config") as mock_config:
                 mock_config.prompts.prompts_dir = tmpdir
                 PromptLoader._load_prompt_file.cache_clear()
-                
+
                 result = PromptLoader.get_clarification_template("test")
-                
+
                 # Check that date is properly formatted
                 parts = result.split("|")
                 date_part = parts[0]
                 assert len(date_part) == 19  # YYYY-MM-DD HH:MM:SS
 
     def test_load_prompt_file_falls_back_to_lib_dir(self):
-        """Test that loader falls back to library directory when user dir doesn't exist."""
+        """Test that loader falls back to library directory when user dir
+        doesn't exist."""
         # This tests the fallback mechanism in _load_prompt_file
         # In real scenario, it should find files in the installed package
         with patch("sgr_deep_research.core.prompts.config") as mock_config:
             mock_config.prompts.prompts_dir = "prompts"
             PromptLoader._load_prompt_file.cache_clear()
-            
+
             # Try to load one of the actual prompt files
             # This should work if the package is properly installed
             try:
@@ -259,4 +264,3 @@ class TestPromptLoader:
             except FileNotFoundError:
                 # If file is not found, that's also acceptable in test environment
                 pytest.skip("Prompt files not found in package - this is ok in test env")
-

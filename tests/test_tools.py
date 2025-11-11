@@ -1,6 +1,7 @@
 """Tests for core tools module.
 
-This module contains tests for various tools used in the SGR Deep Research system.
+This module contains tests for various tools used in the SGR Deep
+Research system.
 """
 
 import pytest
@@ -357,6 +358,7 @@ class TestBaseTool:
 
     def test_custom_tool_name(self):
         """Test that a tool can have a custom tool_name."""
+
         # Create a simple test tool class
         class CustomTool(BaseTool):
             tool_name = "custom_name"
@@ -370,4 +372,3 @@ class TestBaseTool:
         context = ResearchContext()
         with pytest.raises(NotImplementedError):
             await tool(context)
-

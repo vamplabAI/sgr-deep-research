@@ -59,7 +59,8 @@ class TestGeneratePlanToolValidation:
         assert len(tool4.planned_steps) == 4
 
     def test_search_strategies_min_length(self):
-        """Test validation fails when search_strategies has less than 2 items."""
+        """Test validation fails when search_strategies has less than 2
+        items."""
         with pytest.raises(ValidationError) as exc_info:
             GeneratePlanTool(
                 reasoning="Need a plan",
@@ -153,7 +154,7 @@ class TestGeneratePlanToolExecution:
         )
         context = ResearchContext()
         result = await tool(context)
-        
+
         data = json.loads(result)
         assert isinstance(data, dict)
 
@@ -169,12 +170,13 @@ class TestGeneratePlanToolExecution:
         context = ResearchContext()
         result = await tool(context)
         data = json.loads(result)
-        
+
         assert "reasoning" not in data
 
     @pytest.mark.asyncio
     async def test_execution_json_contains_expected_fields(self):
-        """Test that JSON output contains expected fields (excluding reasoning)."""
+        """Test that JSON output contains expected fields (excluding
+        reasoning)."""
         tool = GeneratePlanTool(
             reasoning="Need to create a plan",
             research_goal="Understand AI",
@@ -184,7 +186,7 @@ class TestGeneratePlanToolExecution:
         context = ResearchContext()
         result = await tool(context)
         data = json.loads(result)
-        
+
         assert "research_goal" in data
         assert "planned_steps" in data
         assert "search_strategies" in data
@@ -201,7 +203,7 @@ class TestGeneratePlanToolExecution:
         context = ResearchContext()
         result = await tool(context)
         data = json.loads(result)
-        
+
         assert data["research_goal"] == "Understand machine learning"
         assert data["planned_steps"] == ["Gather data", "Analyze patterns", "Draw conclusions"]
         assert data["search_strategies"] == ["Academic papers", "Industry reports"]
@@ -217,7 +219,7 @@ class TestGeneratePlanToolExecution:
         )
         context = ResearchContext()
         result = await tool(context)
-        
+
         # Indented JSON should contain newlines
         assert "\n" in result
         # Should contain proper indentation
@@ -235,9 +237,9 @@ class TestGeneratePlanToolExecution:
         context = ResearchContext()
         original_state = context.state
         original_iteration = context.iteration
-        
+
         await tool(context)
-        
+
         assert context.state == original_state
         assert context.iteration == original_iteration
 
@@ -265,6 +267,7 @@ class TestGeneratePlanToolAttributes:
     def test_tool_is_base_tool_subclass(self):
         """Test that GeneratePlanTool is a subclass of BaseTool."""
         from sgr_deep_research.core.base_tool import BaseTool
+
         assert issubclass(GeneratePlanTool, BaseTool)
 
 
@@ -327,7 +330,7 @@ class TestGeneratePlanToolEdgeCases:
         context = ResearchContext()
         result = await tool(context)
         data = json.loads(result)
-        
+
         assert "理解" in data["research_goal"]
         assert data["planned_steps"][0] == "Шаг 1"
 
@@ -354,13 +357,14 @@ class TestGeneratePlanToolEdgeCases:
         context = ResearchContext()
         result = await tool(context)
         data = json.loads(result)
-        
+
         assert "$100" in data["research_goal"]
         assert "A&B" in data["planned_steps"][0]
 
     @pytest.mark.asyncio
     async def test_multiple_executions_produce_same_output(self):
-        """Test that multiple executions of the same tool produce the same output."""
+        """Test that multiple executions of the same tool produce the same
+        output."""
         tool = GeneratePlanTool(
             reasoning="Need a plan",
             research_goal="Understand AI",
@@ -368,9 +372,8 @@ class TestGeneratePlanToolEdgeCases:
             search_strategies=["Strategy 1", "Strategy 2"],
         )
         context = ResearchContext()
-        
+
         result1 = await tool(context)
         result2 = await tool(context)
-        
-        assert result1 == result2
 
+        assert result1 == result2
