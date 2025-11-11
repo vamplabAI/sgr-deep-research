@@ -14,7 +14,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-from sgr_deep_research.core.agents.base_agent import BaseAgent
+from sgr_deep_research.core.base_agent import BaseAgent
 from sgr_deep_research.core.models import AgentStatesEnum, ResearchContext
 from sgr_deep_research.core.tools import BaseTool, ClarificationTool, ReasoningTool
 
@@ -22,8 +22,8 @@ from sgr_deep_research.core.tools import BaseTool, ClarificationTool, ReasoningT
 class TestBaseAgentInitialization:
     """Tests for BaseAgent initialization and setup."""
 
-    @patch("sgr_deep_research.core.agents.base_agent.get_config")
-    @patch("sgr_deep_research.core.agents.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.core.base_agent.get_config")
+    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     def test_initialization_basic(self, mock_openai, mock_get_config):
         """Test basic initialization with required parameters."""
         mock_config = Mock()
@@ -39,8 +39,8 @@ class TestBaseAgentInitialization:
         assert agent.max_iterations == 20
         assert agent.max_clarifications == 3
 
-    @patch("sgr_deep_research.core.agents.base_agent.get_config")
-    @patch("sgr_deep_research.core.agents.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.core.base_agent.get_config")
+    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     def test_initialization_with_custom_limits(self, mock_openai, mock_get_config):
         """Test initialization with custom iteration and clarification limits."""
         mock_config = Mock()
@@ -58,8 +58,8 @@ class TestBaseAgentInitialization:
         assert agent.max_iterations == 10
         assert agent.max_clarifications == 5
 
-    @patch("sgr_deep_research.core.agents.base_agent.get_config")
-    @patch("sgr_deep_research.core.agents.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.core.base_agent.get_config")
+    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     def test_id_generation(self, mock_openai, mock_get_config):
         """Test that unique ID is generated correctly."""
         mock_config = Mock()
@@ -75,8 +75,8 @@ class TestBaseAgentInitialization:
         uuid_part = agent.id.replace("base_agent_", "")
         uuid.UUID(uuid_part)  # Should not raise
 
-    @patch("sgr_deep_research.core.agents.base_agent.get_config")
-    @patch("sgr_deep_research.core.agents.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.core.base_agent.get_config")
+    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     def test_multiple_agents_have_unique_ids(self, mock_openai, mock_get_config):
         """Test that multiple agents get unique IDs."""
         mock_config = Mock()
@@ -90,8 +90,8 @@ class TestBaseAgentInitialization:
         
         assert agent1.id != agent2.id
 
-    @patch("sgr_deep_research.core.agents.base_agent.get_config")
-    @patch("sgr_deep_research.core.agents.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.core.base_agent.get_config")
+    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     def test_toolkit_initialization_default(self, mock_openai, mock_get_config):
         """Test that toolkit includes system_agent_tools by default."""
         mock_config = Mock()
@@ -99,6 +99,9 @@ class TestBaseAgentInitialization:
         mock_config.openai.api_key = "test-key"
         mock_config.openai.proxy = ""
         mock_get_config.return_value = mock_config
+        
+        # Configure mock to return a regular Mock instead of AsyncMock
+        mock_openai.return_value = Mock()
         
         agent = BaseAgent(task="Test")
         
@@ -109,8 +112,8 @@ class TestBaseAgentInitialization:
         assert "reasoningtool" in tool_names
         assert "clarificationtool" in tool_names
 
-    @patch("sgr_deep_research.core.agents.base_agent.get_config")
-    @patch("sgr_deep_research.core.agents.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.core.base_agent.get_config")
+    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     def test_toolkit_initialization_with_custom_tools(self, mock_openai, mock_get_config):
         """Test adding custom tools to toolkit."""
         mock_config = Mock()
@@ -127,8 +130,8 @@ class TestBaseAgentInitialization:
         # Should have both system tools and custom tool
         assert CustomTool in agent.toolkit
 
-    @patch("sgr_deep_research.core.agents.base_agent.get_config")
-    @patch("sgr_deep_research.core.agents.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.core.base_agent.get_config")
+    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     def test_context_initialization(self, mock_openai, mock_get_config):
         """Test that ResearchContext is initialized."""
         mock_config = Mock()
@@ -144,8 +147,8 @@ class TestBaseAgentInitialization:
         assert agent._context.searches_used == 0
         assert agent._context.clarifications_used == 0
 
-    @patch("sgr_deep_research.core.agents.base_agent.get_config")
-    @patch("sgr_deep_research.core.agents.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.core.base_agent.get_config")
+    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     def test_conversation_log_initialization(self, mock_openai, mock_get_config):
         """Test that conversation and log are initialized as empty lists."""
         mock_config = Mock()
@@ -159,8 +162,8 @@ class TestBaseAgentInitialization:
         assert agent.conversation == []
         assert agent.log == []
 
-    @patch("sgr_deep_research.core.agents.base_agent.get_config")
-    @patch("sgr_deep_research.core.agents.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.core.base_agent.get_config")
+    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     def test_creation_time_set(self, mock_openai, mock_get_config):
         """Test that creation_time is set."""
         mock_config = Mock()
@@ -175,8 +178,8 @@ class TestBaseAgentInitialization:
         
         assert before <= agent.creation_time <= after
 
-    @patch("sgr_deep_research.core.agents.base_agent.get_config")
-    @patch("sgr_deep_research.core.agents.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.core.base_agent.get_config")
+    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     def test_logger_initialization(self, mock_openai, mock_get_config):
         """Test that logger is correctly initialized."""
         mock_config = Mock()
@@ -191,9 +194,9 @@ class TestBaseAgentInitialization:
         assert "sgr_deep_research.agents" in agent.logger.name
         assert agent.id in agent.logger.name
 
-    @patch("sgr_deep_research.core.agents.base_agent.get_config")
-    @patch("sgr_deep_research.core.agents.base_agent.AsyncOpenAI")
-    @patch("sgr_deep_research.core.agents.base_agent.OpenAIStreamingGenerator")
+    @patch("sgr_deep_research.core.base_agent.get_config")
+    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.core.base_agent.OpenAIStreamingGenerator")
     def test_streaming_generator_initialization(self, mock_generator, mock_openai, mock_get_config):
         """Test that streaming generator is initialized with agent ID."""
         mock_config = Mock()
@@ -210,8 +213,8 @@ class TestBaseAgentInitialization:
 class TestBaseAgentClarificationHandling:
     """Tests for clarification handling functionality."""
 
-    @patch("sgr_deep_research.core.agents.base_agent.get_config")
-    @patch("sgr_deep_research.core.agents.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.core.base_agent.get_config")
+    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     @pytest.mark.asyncio
     async def test_provide_clarification_basic(self, mock_openai, mock_get_config):
         """Test basic clarification provision."""
@@ -229,8 +232,8 @@ class TestBaseAgentClarificationHandling:
         assert len(agent.conversation) == 1
         assert agent.conversation[0]["role"] == "user"
 
-    @patch("sgr_deep_research.core.agents.base_agent.get_config")
-    @patch("sgr_deep_research.core.agents.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.core.base_agent.get_config")
+    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     @pytest.mark.asyncio
     async def test_provide_clarification_increments_counter(self, mock_openai, mock_get_config):
         """Test that providing clarification increments the counter."""
@@ -248,8 +251,8 @@ class TestBaseAgentClarificationHandling:
         await agent.provide_clarification("Second clarification")
         assert agent._context.clarifications_used == 2
 
-    @patch("sgr_deep_research.core.agents.base_agent.get_config")
-    @patch("sgr_deep_research.core.agents.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.core.base_agent.get_config")
+    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     @pytest.mark.asyncio
     async def test_provide_clarification_sets_event(self, mock_openai, mock_get_config):
         """Test that providing clarification sets the clarification_received event."""
@@ -266,8 +269,8 @@ class TestBaseAgentClarificationHandling:
         
         assert agent._context.clarification_received.is_set()
 
-    @patch("sgr_deep_research.core.agents.base_agent.get_config")
-    @patch("sgr_deep_research.core.agents.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.core.base_agent.get_config")
+    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     @pytest.mark.asyncio
     async def test_provide_clarification_changes_state(self, mock_openai, mock_get_config):
         """Test that providing clarification changes state to RESEARCHING."""
@@ -284,8 +287,8 @@ class TestBaseAgentClarificationHandling:
         
         assert agent._context.state == AgentStatesEnum.RESEARCHING
 
-    @patch("sgr_deep_research.core.agents.base_agent.get_config")
-    @patch("sgr_deep_research.core.agents.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.core.base_agent.get_config")
+    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     @pytest.mark.asyncio
     async def test_provide_clarification_with_long_text(self, mock_openai, mock_get_config):
         """Test clarification with very long text."""
@@ -302,8 +305,8 @@ class TestBaseAgentClarificationHandling:
         
         assert len(agent.conversation) == 1
 
-    @patch("sgr_deep_research.core.agents.base_agent.get_config")
-    @patch("sgr_deep_research.core.agents.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.core.base_agent.get_config")
+    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     @pytest.mark.asyncio
     async def test_provide_clarification_with_unicode(self, mock_openai, mock_get_config):
         """Test clarification with Unicode characters."""
@@ -324,8 +327,8 @@ class TestBaseAgentClarificationHandling:
 class TestBaseAgentLogging:
     """Tests for logging functionality."""
 
-    @patch("sgr_deep_research.core.agents.base_agent.get_config")
-    @patch("sgr_deep_research.core.agents.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.core.base_agent.get_config")
+    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     def test_log_reasoning_adds_to_log(self, mock_openai, mock_get_config):
         """Test that _log_reasoning adds entry to log."""
         mock_config = Mock()
@@ -352,8 +355,8 @@ class TestBaseAgentLogging:
         assert agent.log[0]["step_type"] == "reasoning"
         assert agent.log[0]["step_number"] == 1
 
-    @patch("sgr_deep_research.core.agents.base_agent.get_config")
-    @patch("sgr_deep_research.core.agents.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.core.base_agent.get_config")
+    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     def test_log_reasoning_contains_reasoning_data(self, mock_openai, mock_get_config):
         """Test that logged reasoning contains all reasoning data."""
         mock_config = Mock()
@@ -379,8 +382,8 @@ class TestBaseAgentLogging:
         assert "agent_reasoning" in log_entry
         assert log_entry["agent_reasoning"]["enough_data"] is True
 
-    @patch("sgr_deep_research.core.agents.base_agent.get_config")
-    @patch("sgr_deep_research.core.agents.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.core.base_agent.get_config")
+    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     def test_log_tool_execution_adds_to_log(self, mock_openai, mock_get_config):
         """Test that _log_tool_execution adds entry to log."""
         mock_config = Mock()
@@ -407,8 +410,8 @@ class TestBaseAgentLogging:
         assert agent.log[0]["step_type"] == "tool_execution"
         assert agent.log[0]["tool_name"] == "reasoningtool"
 
-    @patch("sgr_deep_research.core.agents.base_agent.get_config")
-    @patch("sgr_deep_research.core.agents.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.core.base_agent.get_config")
+    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     def test_log_tool_execution_contains_result(self, mock_openai, mock_get_config):
         """Test that logged tool execution contains result."""
         mock_config = Mock()
@@ -439,8 +442,8 @@ class TestBaseAgentLogging:
 class TestBaseAgentAbstractMethods:
     """Tests for abstract methods that must be implemented by subclasses."""
 
-    @patch("sgr_deep_research.core.agents.base_agent.get_config")
-    @patch("sgr_deep_research.core.agents.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.core.base_agent.get_config")
+    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     @pytest.mark.asyncio
     async def test_prepare_tools_raises_not_implemented(self, mock_openai, mock_get_config):
         """Test that _prepare_tools raises NotImplementedError."""
@@ -455,8 +458,8 @@ class TestBaseAgentAbstractMethods:
         with pytest.raises(NotImplementedError):
             await agent._prepare_tools()
 
-    @patch("sgr_deep_research.core.agents.base_agent.get_config")
-    @patch("sgr_deep_research.core.agents.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.core.base_agent.get_config")
+    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     @pytest.mark.asyncio
     async def test_reasoning_phase_raises_not_implemented(self, mock_openai, mock_get_config):
         """Test that _reasoning_phase raises NotImplementedError."""
@@ -471,8 +474,8 @@ class TestBaseAgentAbstractMethods:
         with pytest.raises(NotImplementedError):
             await agent._reasoning_phase()
 
-    @patch("sgr_deep_research.core.agents.base_agent.get_config")
-    @patch("sgr_deep_research.core.agents.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.core.base_agent.get_config")
+    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     @pytest.mark.asyncio
     async def test_select_action_phase_raises_not_implemented(self, mock_openai, mock_get_config):
         """Test that _select_action_phase raises NotImplementedError."""
@@ -488,8 +491,8 @@ class TestBaseAgentAbstractMethods:
         with pytest.raises(NotImplementedError):
             await agent._select_action_phase(reasoning)
 
-    @patch("sgr_deep_research.core.agents.base_agent.get_config")
-    @patch("sgr_deep_research.core.agents.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.core.base_agent.get_config")
+    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     @pytest.mark.asyncio
     async def test_action_phase_raises_not_implemented(self, mock_openai, mock_get_config):
         """Test that _action_phase raises NotImplementedError."""
@@ -509,8 +512,8 @@ class TestBaseAgentAbstractMethods:
 class TestBaseAgentPrepareContext:
     """Tests for context preparation."""
 
-    @patch("sgr_deep_research.core.agents.base_agent.get_config")
-    @patch("sgr_deep_research.core.agents.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.core.base_agent.get_config")
+    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     @pytest.mark.asyncio
     async def test_prepare_context_basic(self, mock_openai, mock_get_config):
         """Test basic context preparation."""
@@ -529,8 +532,8 @@ class TestBaseAgentPrepareContext:
         assert context[0]["role"] == "system"
         assert context[1]["role"] == "user"
 
-    @patch("sgr_deep_research.core.agents.base_agent.get_config")
-    @patch("sgr_deep_research.core.agents.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.core.base_agent.get_config")
+    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     @pytest.mark.asyncio
     async def test_prepare_context_with_multiple_messages(self, mock_openai, mock_get_config):
         """Test context preparation with multiple conversation messages."""
