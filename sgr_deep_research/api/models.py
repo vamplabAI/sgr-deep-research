@@ -77,7 +77,7 @@ class ChatCompletionResponse(BaseModel):
 
 class HealthResponse(BaseModel):
     status: Literal["healthy"] = "healthy"
-    service: str = Field(default="SGR Deep Research API", description="Service name")
+    service: str = Field(default="SGR Agent Core API", description="Service name")
 
 
 class AgentStateResponse(BaseModel):

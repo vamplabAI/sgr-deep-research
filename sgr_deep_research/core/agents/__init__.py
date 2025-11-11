@@ -1,4 +1,4 @@
-"""Agents module for SGR Deep Research."""
+"""Agents module for SGR Agent Core."""
 
 from sgr_deep_research.core.agents.sgr_agent import SGRAgent
 from sgr_deep_research.core.agents.sgr_auto_tool_calling_agent import SGRAutoToolCallingAgent

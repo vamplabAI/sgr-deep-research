@@ -1,4 +1,4 @@
-"""Основная точка входа для SGR Deep Research API сервера."""
+"""Основная точка входа для SGR Agent Core API сервера."""
 
 import argparse
 import logging
@@ -23,14 +23,14 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="SGR Deep Research API", version=__version__, lifespan=lifespan)
+app = FastAPI(title="SGR Agent Core API", version=__version__, lifespan=lifespan)
 app.include_router(router)
 
 
 def main():
     """Запуск FastAPI сервера."""
 
-    parser = argparse.ArgumentParser(description="SGR Deep Research Server")
+    parser = argparse.ArgumentParser(description="SGR Agent Core Server")
     parser.add_argument(
         "--host", type=str, dest="host", default=os.environ.get("HOST", "0.0.0.0"), help="Хост для прослушивания"
     )

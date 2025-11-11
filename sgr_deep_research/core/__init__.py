@@ -1,4 +1,4 @@
-"""Core modules for SGR Deep Research."""
+"""Core modules for SGR Agent Core."""
 
 from sgr_deep_research.core.agents import (  # noqa: F403
     BaseAgent,
