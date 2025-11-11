@@ -1,11 +1,11 @@
-from sgr_deep_research.core.agents.sgr_tools_agent import SGRToolCallingResearchAgent
+from sgr_deep_research.core.agents.sgr_tool_calling_agent import SGRToolCallingAgent
 from sgr_deep_research.core.tools import ReasoningTool
 from sgr_deep_research.settings import get_config
 
 config = get_config()
 
 
-class SGRSOToolCallingResearchAgent(SGRToolCallingResearchAgent):
+class SGRSOToolCallingAgent(SGRToolCallingAgent):
     """Agent that uses OpenAI native function calling to select and execute
     tools based on SGR like reasoning scheme."""
 
