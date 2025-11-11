@@ -7,7 +7,7 @@ client = OpenAI(base_url="http://localhost:8010/v1", api_key="dummy")
 # Step 1: Initial research request
 print("Starting research...")
 response = client.chat.completions.create(
-    model="sgr-agent",
+    model="sgr_agent",
     messages=[{"role": "user", "content": "Research AI market trends"}],
     stream=True,
     temperature=0,
