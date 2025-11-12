@@ -43,7 +43,7 @@
             <!-- Final Answer - displayed separately after all steps -->
             <div v-if="finalAnswer" class="chat-message__final-answer">
               <div class="chat-message__final-answer-text">
-                {{ finalAnswer }}
+                <MarkdownRenderer :content="finalAnswer" />
               </div>
             </div>
 
@@ -88,7 +88,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { AppCircleLoader, CopyButton } from '@/shared/ui'
+import { AppCircleLoader, CopyButton, MarkdownRenderer } from '@/shared/ui'
 import AgentReasoningDisplay from './AgentReasoningDisplay.vue'
 import type { ChatMessageExtended } from '@/shared/stores'
 import ChatMessageUser from './ChatMessageUser.vue'

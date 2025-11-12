@@ -17,6 +17,8 @@
   },
   "dependencies": {
     "axios": "^1.12.2",
+    "highlight.js": "^11.11.1",
+    "marked": "^17.0.0",
     "pinia": "^3.0.3",
     "vue": "^3.5.22",
     "vue-router": "^4.5.1"

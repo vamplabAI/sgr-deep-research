@@ -12,16 +12,21 @@
       </div>
     </div>
     <div v-if="!isCollapsed" class="agent-reasoning-step__content">
-      <div class="agent-reasoning-step__string-content" v-html="formattedContent"></div>
+      <div class="agent-reasoning-step__string-content">
+        <MarkdownRenderer :content="content" />
+      </div>
     </div>
   </div>
   <!-- Regular string content -->
-  <div v-else class="agent-reasoning-step__string-content" v-html="formattedContent"></div>
+  <div v-else class="agent-reasoning-step__string-content">
+    <MarkdownRenderer :content="content" />
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import AppIconChevronDown24 from '@/shared/ui/icons/AppIconChevronDown24.vue'
+import { MarkdownRenderer } from '@/shared/ui'
 
 interface Props {
   content: string

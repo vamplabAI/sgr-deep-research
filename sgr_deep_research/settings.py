@@ -74,25 +74,6 @@ class MCPConfig(BaseModel):
     transport_config: dict = Field(default_factory=dict, description="MCP servers configuration")
 
 
-class CORSConfig(BaseModel):
-    """CORS configuration settings."""
-
-    enabled: bool = Field(default=True, description="Enable CORS middleware")
-    allow_origins: list[str] = Field(
-        default_factory=lambda: ["http://localhost:5173", "http://localhost:3000"],
-        description="List of allowed origins",
-    )
-    allow_credentials: bool = Field(default=True, description="Allow credentials")
-    allow_methods: list[str] = Field(default_factory=lambda: ["*"], description="Allowed HTTP methods")
-    allow_headers: list[str] = Field(default_factory=lambda: ["*"], description="Allowed HTTP headers")
-
-
-class APIConfig(BaseModel):
-    """API server configuration settings."""
-
-    cors: CORSConfig = Field(default_factory=CORSConfig, description="CORS settings")
-
-
 class AppConfig(BaseModel):
     """Main application configuration."""
 
@@ -103,7 +84,6 @@ class AppConfig(BaseModel):
     execution: ExecutionConfig = Field(default_factory=ExecutionConfig, description="Execution settings")
     prompts: PromptsConfig = Field(default_factory=PromptsConfig, description="Prompts settings")
     logging: LoggingConfig = Field(default_factory=LoggingConfig, description="Logging settings")
-    api: APIConfig = Field(default_factory=APIConfig, description="API settings")
     mcp: MCPConfig = Field(default_factory=MCPConfig, description="MCP settings")
 
 

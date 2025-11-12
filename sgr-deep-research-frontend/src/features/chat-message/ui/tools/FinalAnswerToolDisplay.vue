@@ -31,7 +31,7 @@
         <div v-if="data.answer" class="agent-reasoning-step__field">
           <span class="agent-reasoning-step__field-label">Final Answer:</span>
           <div class="agent-reasoning-step__answer-text">
-            {{ data.answer }}
+            <MarkdownRenderer :content="data.answer" />
           </div>
         </div>
 
@@ -50,6 +50,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import AppIconChevronDown24 from '@/shared/ui/icons/AppIconChevronDown24.vue'
+import { MarkdownRenderer } from '@/shared/ui'
 
 interface Props {
   data: {

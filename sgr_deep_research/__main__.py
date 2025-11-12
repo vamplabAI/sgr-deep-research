@@ -26,17 +26,18 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="SGR Deep Research API", version=__version__, lifespan=lifespan)
 
-# Configure CORS from config
 config = get_config()
-if config.api.cors.enabled:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=config.api.cors.allow_origins,
-        allow_credentials=config.api.cors.allow_credentials,
-        allow_methods=config.api.cors.allow_methods,
-        allow_headers=config.api.cors.allow_headers,
-    )
-    logger.info(f"CORS enabled for origins: {config.api.cors.allow_origins}")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://127.0.0.1:5173",
+        "http://localhost:5173",
+    ],
+    allow_credentials=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+logger.info("CORS enabled for origins: http://localhost:5173")
 
 app.include_router(router)
 

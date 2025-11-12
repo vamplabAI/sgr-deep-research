@@ -34,7 +34,7 @@ services:
     container_name: sgr-deep-research-frontend
     restart: unless-stopped
     ports:
-      - "${FRONTEND_PORT:-5174}:80"
+      - "${FRONTEND_PORT:-5173}:80"
     depends_on:
       sgr-backend:
         condition: service_healthy
