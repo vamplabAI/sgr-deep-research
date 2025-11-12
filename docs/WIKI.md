@@ -57,7 +57,12 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ```bash
 # 1. Setup configuration
 cp config.yaml.example config.yaml
-# Edit config.yaml with your API keys
+# Edit config.yaml with your configuration
+
+#Optional:
+touch agents.yaml
+# Add your agents definitions based on config.yaml and agents.yaml.example
+
 
 # 2. Change to src directory and install dependencies
 uv sync
@@ -71,7 +76,11 @@ uv run python sgr_deep_research
 ```bash
 # 1. Setup configuration
 cp config.yaml.example config.yaml
-# Edit config.yaml with your API keys
+# Edit config.yaml with your configuration
+
+#Optional:
+touch agents.yaml
+# Add your agents definitions based on config.yaml and agents.yaml.example
 
 # 2. Go to the services folder
 cd services

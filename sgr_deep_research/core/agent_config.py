@@ -52,7 +52,7 @@ class GlobalConfig(BaseSettings, AgentConfig, Definitions):
 
     @classmethod
     def _definitions_from_dict(cls, agents_data: dict) -> Self:
-        for agent_name, agent_config in agents_data.get("agents").items():
+        for agent_name, agent_config in agents_data.get("agents", {}).items():
             agent_config["name"] = agent_name
 
         custom_agents = Definitions(**agents_data).agents

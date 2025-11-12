@@ -29,16 +29,16 @@ execution:
   reports_dir: "reports"  # Directory for saving agent reports
 
 # Prompts Configuration
-prompts:
-  # Option 1: Use file paths (absolute or relative to project root)
-  system_prompt_file: "sgr_deep_research/core/prompts/system_prompt.txt"
-  initial_user_request_file: "sgr_deep_research/core/prompts/initial_user_request.txt"
-  clarification_response_file: "sgr_deep_research/core/prompts/clarification_response.txt"
+# prompts:
+#   # Option 1: Use file paths (absolute or relative to project root)
+#   system_prompt_file: "path/to/your/system_prompt.txt"
+#   initial_user_request_file: "path/to/your/initial_user_request.txt"
+#   clarification_response_file: "path/to/your/clarification_response.txt"
 
-  # Option 2: Provide prompts directly as strings (uncomment to use)
-  # system_prompt_str: "Your custom system prompt here..."
-  # initial_user_request_str: "Your custom initial request template..."
-  # clarification_response_str: "Your custom clarification template..."
+#  # Option 2: Provide prompts directly as strings
+#   system_prompt_str: "Your custom system prompt here..."
+#   initial_user_request_str: "Your custom initial request template..."
+#   clarification_response_str: "Your custom clarification template..."
 
   # Note: If both file and string are provided, string takes precedence
 
@@ -59,4 +59,4 @@ mcp:
 # - This config.yaml file
 # - Any separate file by GlobalConfig.definitions_from_yaml method
 # See examples in agents.yaml.example for agent configuration options
-agents:
+agents: {}

@@ -28,18 +28,6 @@ agents:
       max_pages: 8
       content_limit: 2000
 
-    # Optional: Custom prompts for this agent
-    prompts:
-      # Option 1: Use custom prompt files
-      system_prompt_file: "prompts/custom_system_prompt.txt"
-      initial_user_request_file: "prompts/custom_initial_request.txt"
-      clarification_response_file: "prompts/custom_clarification.txt"
-
-      # Option 2: Provide prompts directly (uncomment to use)
-      # system_prompt_str: "You are a specialized research agent..."
-      # initial_user_request_str: "Custom initial request template..."
-      # clarification_response_str: "Custom clarification template..."
-
     # Optional: Execution configuration
     execution:
       max_steps: 8
@@ -108,7 +96,7 @@ agents:
       temperature: 0.2
 
     prompts:
-      system_prompt_file: "prompts/technical_analyst_prompt.txt"
+      system_prompt: "You are a highly specialized technical analyst."
 
     execution:
       max_steps: 10
