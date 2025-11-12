@@ -12,6 +12,8 @@ from pathlib import Path
 import yaml
 from envyaml import EnvYAML
 from pydantic import BaseModel, Field
+import importlib
+from typing import List, Optional
 
 
 class OpenAIConfig(BaseModel):
@@ -73,6 +75,34 @@ class MCPConfig(BaseModel):
     context_limit: int = Field(default=15000, gt=0, description="Maximum context length from MCP server response")
     transport_config: dict = Field(default_factory=dict, description="MCP servers configuration")
 
+class AgentModelConfig(BaseModel):
+    """Agent Model configuration"""
+    module: str = Field(..., description="Module of Agent Model")
+    name: str = Field(..., description="Name of Agent Model")
+    className: str = Field(..., description="Name of Agent Model class")
+
+    @property
+    def agent_class(self):
+        """Динамически загружает и возвращает класс агента"""
+        try:
+            module = importlib.import_module(self.module)
+            agent_class = getattr(module, self.className)
+
+            if not hasattr(agent_class, 'name'):
+                raise AttributeError(f"Class {self.className} must have 'name' attribute")
+
+            return agent_class
+        except (ImportError, AttributeError) as e:
+            raise ValueError(f"Cannot load agent class {self.className} from {self.module}: {e}")
+
+    @property
+    def enum_name(self):
+        """Генерирует имя для Enum из name"""
+        return self.name.upper()
+
+class ExtensionsConfig(BaseModel):
+    """Extentions configuration"""
+    agent_models: List[AgentModelConfig] = Field(default_factory=list, description="List of Agent Models")
 
 class AppConfig(BaseModel):
     """Main application configuration."""
@@ -85,7 +115,7 @@ class AppConfig(BaseModel):
     prompts: PromptsConfig = Field(default_factory=PromptsConfig, description="Prompts settings")
     logging: LoggingConfig = Field(default_factory=LoggingConfig, description="Logging settings")
     mcp: MCPConfig = Field(default_factory=MCPConfig, description="MCP settings")
-
+    extensions : Optional[ExtensionsConfig] = Field(default_factory=ExtensionsConfig, description="Extensions settings")
 
 class ServerConfig(BaseModel):
     """Server configuration."""

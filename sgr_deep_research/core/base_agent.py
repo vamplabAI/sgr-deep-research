@@ -49,9 +49,7 @@ class BaseAgent:
         self.max_iterations = max_iterations
         self.max_clarifications = max_clarifications
 
-        client_kwargs = {"base_url": config.openai.base_url, "api_key": config.openai.api_key}
-        if config.openai.proxy.strip():
-            client_kwargs["http_client"] = httpx.AsyncClient(proxy=config.openai.proxy)
+        client_kwargs = self.create_client_kwargs(config)
 
         self.openai_client = AsyncOpenAI(**client_kwargs)
         self.streaming_generator = OpenAIStreamingGenerator(model=self.id)
@@ -191,3 +189,20 @@ class BaseAgent:
             if self.streaming_generator is not None:
                 self.streaming_generator.finish()
             self._save_agent_log()
+
+    def create_client_kwargs(self, config):
+        """Descendant can modify this method to take into account the authorization features"""
+        client_kwargs = {"base_url": config.openai.base_url, "api_key": config.openai.api_key}
+        if config.openai.proxy.strip():
+            client_kwargs["http_client"] = httpx.AsyncClient(proxy=config.openai.proxy)
+        return client_kwargs
+
+    async def prepare_reasoning_phase_context(self, messages):
+        """Descendant can modify this method to change the context of the request"""
+        return messages
+
+    async def prepare_select_action_phase_context(self, messages):
+        """Descendant can modify this method to change the context of the request"""
+        return messages
+
+

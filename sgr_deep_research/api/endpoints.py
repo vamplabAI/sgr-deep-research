@@ -4,11 +4,10 @@ import logging
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
+import sgr_deep_research.api.models as api_models
 from sgr_deep_research.api.models import (
-    AGENT_MODEL_MAPPING,
     AgentListItem,
     AgentListResponse,
-    AgentModel,
     AgentStateResponse,
     ChatCompletionRequest,
     ClarificationRequest,
@@ -66,7 +65,7 @@ async def get_available_models():
     return {
         "data": [
             {"id": model.value, "object": "model", "created": 1234567890, "owned_by": "sgr-deep-research"}
-            for model in AgentModel
+            for model in api_models.AgentModel
         ],
         "object": "list",
     }
@@ -132,14 +131,14 @@ async def create_chat_completion(request: ChatCompletionRequest):
         task = extract_user_content_from_messages(request.messages)
 
         try:
-            agent_model = AgentModel(request.model)
+            agent_model = api_models.AgentModel(request.model)
         except ValueError:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid model '{request.model}'. Available models: {[m.value for m in AgentModel]}",
+                detail=f"Invalid model '{request.model}'. Available models: {[m.value for m in api_models.AgentModel]}",
             )
 
-        agent_class = AGENT_MODEL_MAPPING[agent_model]
+        agent_class = api_models.AGENT_MODEL_MAPPING[agent_model]
         agent = agent_class(task=task)
         agents_storage[agent.id] = agent
         logger.info(f"Agent {agent.id} ({agent_model.value}) created and stored for task: {task[:100]}...")

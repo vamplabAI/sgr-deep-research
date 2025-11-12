@@ -12,6 +12,7 @@ from sgr_deep_research import __version__
 from sgr_deep_research.api.endpoints import router
 from sgr_deep_research.services import MCP2ToolConverter
 from sgr_deep_research.settings import setup_logging
+from sgr_deep_research.extensions.utils.extension_utils import initialize_extensions
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -29,6 +30,7 @@ app.include_router(router)
 
 def main():
     """Запуск FastAPI сервера."""
+    initialize_extensions()
 
     parser = argparse.ArgumentParser(description="SGR Agent Core Server")
     parser.add_argument(
