@@ -8,7 +8,7 @@ client = OpenAI(
 
 # Make research request
 response = client.chat.completions.create(
-    model="sgr-agent",
+    model="sgr_agent",
     messages=[{"role": "user", "content": "Research BMW X6 2025 prices in Russia"}],
     stream=True,
     temperature=0.4,

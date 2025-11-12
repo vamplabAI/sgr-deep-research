@@ -1,5 +1,5 @@
 """
-SGR Deep Research - Schema-Guided Reasoning for Deep Research
+SGR Agent Core - Schema-Guided Reasoning for building agentic systems
 
 A powerful research assistant that combines structured reasoning with deep analysis capabilities.
 """
