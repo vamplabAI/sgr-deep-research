@@ -1,9 +1,8 @@
 """Pytest configuration and fixtures for tests."""
 
-from unittest.mock import Mock
 from typing import Type
+from unittest.mock import Mock
 
-import httpx
 import pytest
 from openai import AsyncOpenAI
 
@@ -102,4 +101,3 @@ def test_execution_config():
         max_clarifications=3,
         max_searches=4,
     )
-

@@ -1,6 +1,7 @@
 """Tests for agent factory and configuration-based agent creation.
 
-This module contains tests for AgentFactory and dynamic agent instantiation.
+This module contains tests for AgentFactory and dynamic agent
+instantiation.
 """
 
 from unittest.mock import Mock, patch
@@ -275,6 +276,7 @@ class TestAgentCreationEdgeCases:
     @pytest.mark.asyncio
     async def test_agent_creation_with_toolkit(self):
         """Test creating agent with custom toolkit."""
+
         class CustomTool(BaseTool):
             tool_name = "custom_tool"
             description = "A custom test tool"
@@ -402,6 +404,7 @@ class TestAgentFactoryRegistryIntegration:
     @pytest.mark.asyncio
     async def test_create_agent_with_mixed_tools(self):
         """Test creating agent with both class and string tool names."""
+
         class CustomTool(BaseTool):
             tool_name = "custom_tool"
             description = "A custom test tool"
@@ -511,6 +514,7 @@ class TestAgentFactoryMCPIntegration:
     @pytest.mark.asyncio
     async def test_create_agent_with_mcp_tools(self):
         """Test creating agent with MCP tools."""
+
         class MockMCPTool(BaseTool):
             tool_name = "mcp_tool"
             description = "Mock MCP tool"
@@ -545,6 +549,7 @@ class TestAgentFactoryMCPIntegration:
     @pytest.mark.asyncio
     async def test_create_agent_with_mcp_and_regular_tools(self):
         """Test creating agent with both MCP and regular tools."""
+
         class MockMCPTool1(BaseTool):
             tool_name = "mcp_tool_1"
             description = "Mock MCP tool 1"
@@ -613,4 +618,3 @@ class TestAgentFactoryDefinitionsList:
 
             assert len(definitions) == 0
             assert definitions == []
-

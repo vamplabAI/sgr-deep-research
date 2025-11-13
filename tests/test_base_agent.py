@@ -36,7 +36,8 @@ class TestBaseAgentInitialization:
         assert agent.max_clarifications == 3
 
     def test_initialization_with_custom_limits(self):
-        """Test initialization with custom iteration and clarification limits."""
+        """Test initialization with custom iteration and clarification
+        limits."""
         from sgr_deep_research.core.agent_definition import ExecutionConfig
 
         agent = create_test_agent(
@@ -72,6 +73,7 @@ class TestBaseAgentInitialization:
 
     def test_toolkit_initialization_with_custom_tools(self):
         """Test adding custom tools to toolkit."""
+
         class CustomTool(BaseTool):
             pass
 
@@ -139,7 +141,8 @@ class TestBaseAgentClarificationHandling:
 
     @pytest.mark.asyncio
     async def test_provide_clarification_sets_event(self):
-        """Test that providing clarification sets the clarification_received event."""
+        """Test that providing clarification sets the clarification_received
+        event."""
         agent = create_test_agent(BaseAgent, task="Test")
         agent._context.clarification_received.clear()
 

@@ -66,8 +66,8 @@ class TestPromptLoader:
             assert "Permission denied" in str(exc_info.value)
 
     def test_load_prompt_file_strips_whitespace(self):
-        """Test that loaded content is not automatically stripped (PromptsConfig
-        doesn't strip, but we can test the raw loading)."""
+        """Test that loaded content is not automatically stripped
+        (PromptsConfig doesn't strip, but we can test the raw loading)."""
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = os.path.join(tmpdir, "whitespace.txt")
             test_content = "  \n  Content with spaces  \n  "
@@ -280,7 +280,8 @@ class TestPromptLoader:
             assert len(date_part) == 19  # YYYY-MM-DD HH:MM:SS
 
     def test_load_prompt_file_falls_back_to_lib_dir(self):
-        """Test that PromptsConfig can load files from default library directory."""
+        """Test that PromptsConfig can load files from default library
+        directory."""
         # This tests that PromptsConfig can load files using default paths
         # In real scenario, it should find files in the installed package
         try:

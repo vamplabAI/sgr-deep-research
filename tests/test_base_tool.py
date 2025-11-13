@@ -1,7 +1,7 @@
 """Tests for BaseTool base class.
 
-This module contains tests for the BaseTool base class,
-covering initialization, subclassing, and tool_name generation.
+This module contains tests for the BaseTool base class, covering
+initialization, subclassing, and tool_name generation.
 """
 
 from pydantic import BaseModel
@@ -31,6 +31,7 @@ class TestBaseTool:
 
     def test_subclass_auto_generates_tool_name(self):
         """Test that subclass auto-generates tool_name from class name."""
+
         class MyCustomTool(BaseTool):
             pass
 
@@ -38,6 +39,7 @@ class TestBaseTool:
 
     def test_subclass_preserves_custom_tool_name(self):
         """Test that subclass can override tool_name."""
+
         class MyCustomTool(BaseTool):
             tool_name = "custom_name"
 
@@ -45,6 +47,7 @@ class TestBaseTool:
 
     def test_subclass_can_have_description(self):
         """Test that subclass can have description."""
+
         class MyCustomTool(BaseTool):
             description = "Custom tool description"
 

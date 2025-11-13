@@ -133,7 +133,7 @@ class TestChatCompletionEndpoint:
         mock_agent_def = Mock()
         mock_factory.get_definitions_list.return_value = [mock_agent_def]
         mock_agent_def.name = "sgr_agent"
-        
+
         # Make create method async
         mock_factory.create = AsyncMock(return_value=mock_agent)
 
