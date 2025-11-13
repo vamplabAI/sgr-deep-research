@@ -6,26 +6,29 @@ import uuid
 from datetime import datetime
 from typing import Type
 
-import httpx
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionFunctionToolParam
 
+from sgr_deep_research.core.agent_definition import ExecutionConfig, LLMConfig, PromptsConfig
 from sgr_deep_research.core.models import AgentStatesEnum, ResearchContext
-from sgr_deep_research.core.prompts import PromptLoader
+from sgr_deep_research.core.services.prompt_loader import PromptLoader
+from sgr_deep_research.core.services.registry import AgentRegistry
 from sgr_deep_research.core.stream import OpenAIStreamingGenerator
 from sgr_deep_research.core.tools import (
-    # Base
     BaseTool,
     ClarificationTool,
     ReasoningTool,
-    system_agent_tools,
 )
-from sgr_deep_research.settings import get_config
-
-config = get_config()
 
 
-class BaseAgent:
+class AgentRegistryMixin:
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if cls.__name__ not in ("BaseAgent",):
+            AgentRegistry.register(cls, name=cls.name)
+
+
+class BaseAgent(AgentRegistryMixin):
     """Base class for agents."""
 
     name: str = "base_agent"
@@ -33,32 +36,36 @@ class BaseAgent:
     def __init__(
         self,
         task: str,
+        openai_client: AsyncOpenAI,
+        llm_config: LLMConfig,
+        prompts_config: PromptsConfig,
+        execution_config: ExecutionConfig,
         toolkit: list[Type[BaseTool]] | None = None,
-        max_iterations: int = 20,
-        max_clarifications: int = 3,
+        **kwargs: dict,
     ):
         self.id = f"{self.name}_{uuid.uuid4()}"
         self.logger = logging.getLogger(f"sgr_deep_research.agents.{self.id}")
         self.creation_time = datetime.now()
         self.task = task
-        self.toolkit = [*system_agent_tools, *(toolkit or [])]
+        self.toolkit = toolkit or []
 
         self._context = ResearchContext()
         self.conversation = []
         self.log = []
-        self.max_iterations = max_iterations
-        self.max_clarifications = max_clarifications
+        self.max_iterations = execution_config.max_iterations
+        self.max_clarifications = execution_config.max_clarifications
 
-        client_kwargs = {"base_url": config.openai.base_url, "api_key": config.openai.api_key}
-        if config.openai.proxy.strip():
-            client_kwargs["http_client"] = httpx.AsyncClient(proxy=config.openai.proxy)
+        self.openai_client = openai_client
+        self.llm_config = llm_config
+        self.prompts_config = prompts_config
 
-        self.openai_client = AsyncOpenAI(**client_kwargs)
         self.streaming_generator = OpenAIStreamingGenerator(model=self.id)
 
     async def provide_clarification(self, clarifications: str):
         """Receive clarification from external source (e.g. user input)"""
-        self.conversation.append({"role": "user", "content": PromptLoader.get_clarification_template(clarifications)})
+        self.conversation.append(
+            {"role": "user", "content": PromptLoader.get_clarification_template(clarifications, self.prompts_config)}
+        )
         self._context.clarifications_used += 1
         self._context.clarification_received.set()
         self._context.state = AgentStatesEnum.RESEARCHING
@@ -112,12 +119,14 @@ class BaseAgent:
         )
 
     def _save_agent_log(self):
-        logs_dir = config.execution.logs_dir
+        from sgr_deep_research.core.agent_config import GlobalConfig
+
+        logs_dir = GlobalConfig().execution.logs_dir
         os.makedirs(logs_dir, exist_ok=True)
         filepath = os.path.join(logs_dir, f"{datetime.now().strftime('%Y%m%d-%H%M%S')}-{self.id}-log.json")
         agent_log = {
             "id": self.id,
-            "model_config": config.openai.model_dump(exclude={"api_key", "proxy"}),
+            "model_config": self.llm_config.model_dump(exclude={"api_key", "proxy"}),
             "task": self.task,
             "toolkit": [tool.tool_name for tool in self.toolkit],
             "log": self.log,
@@ -128,7 +137,7 @@ class BaseAgent:
     async def _prepare_context(self) -> list[dict]:
         """Prepare conversation context with system prompt."""
         return [
-            {"role": "system", "content": PromptLoader.get_system_prompt(self.toolkit)},
+            {"role": "system", "content": PromptLoader.get_system_prompt(self.toolkit, self.prompts_config)},
             *self.conversation,
         ]
 
@@ -162,7 +171,7 @@ class BaseAgent:
             [
                 {
                     "role": "user",
-                    "content": PromptLoader.get_initial_user_request(self.task),
+                    "content": PromptLoader.get_initial_user_request(self.task, self.prompts_config),
                 }
             ]
         )

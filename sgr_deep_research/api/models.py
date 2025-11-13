@@ -1,38 +1,9 @@
 """OpenAI-compatible models for API endpoints."""
 
 from datetime import datetime
-from enum import Enum
 from typing import Any, Dict, List, Literal
 
 from pydantic import BaseModel, Field
-
-from sgr_deep_research.core.agents import (
-    SGRAgent,
-    SGRAutoToolCallingAgent,
-    SGRSOToolCallingAgent,
-    SGRToolCallingAgent,
-    ToolCallingAgent,
-)
-
-
-class AgentModel(str, Enum):
-    """Available agent models for chat completion."""
-
-    SGR_AGENT = SGRAgent.name
-    SGR_TOOL_CALLING_AGENT = SGRToolCallingAgent.name
-    SGR_AUTO_TOOL_CALLING_AGENT = SGRAutoToolCallingAgent.name
-    SGR_SO_TOOL_CALLING_AGENT = SGRSOToolCallingAgent.name
-    TOOL_CALLING_AGENT = ToolCallingAgent.name
-
-
-# Mapping of agent types to their classes
-AGENT_MODEL_MAPPING = {
-    AgentModel.SGR_AGENT: SGRAgent,
-    AgentModel.SGR_TOOL_CALLING_AGENT: SGRToolCallingAgent,
-    AgentModel.SGR_AUTO_TOOL_CALLING_AGENT: SGRAutoToolCallingAgent,
-    AgentModel.SGR_SO_TOOL_CALLING_AGENT: SGRSOToolCallingAgent,
-    AgentModel.TOOL_CALLING_AGENT: ToolCallingAgent,
-}
 
 
 class ChatMessage(BaseModel):
@@ -46,9 +17,11 @@ class ChatCompletionRequest(BaseModel):
     """Request for creating chat completion."""
 
     model: str | None = Field(
-        default=AgentModel.SGR_AGENT,
+        default="sgr_tool_calling_agent",
         description="Agent type or existing agent identifier",
-        examples=[AgentModel.SGR_AGENT.value],
+        examples=[
+            "sgr_tool_calling_agent",
+        ],
     )
     messages: List[ChatMessage] = Field(description="List of messages")
     stream: bool = Field(default=True, description="Enable streaming mode")

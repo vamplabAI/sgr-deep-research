@@ -2,16 +2,18 @@ import logging
 
 from tavily import AsyncTavilyClient
 
+from sgr_deep_research.core.agent_config import GlobalConfig
 from sgr_deep_research.core.models import SourceData
-from sgr_deep_research.settings import get_config
 
 logger = logging.getLogger(__name__)
 
 
 class TavilySearchService:
     def __init__(self):
-        config = get_config()
-        self._client = AsyncTavilyClient(api_key=config.tavily.api_key, api_base_url=config.tavily.api_base_url)
+        config = GlobalConfig()
+        self._client = AsyncTavilyClient(
+            api_key=config.search.tavily_api_key, api_base_url=config.search.tavily_api_base_url
+        )
         self._config = config
 
     @staticmethod

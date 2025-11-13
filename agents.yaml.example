@@ -1,0 +1,130 @@
+# Example Custom Agents Configuration
+# =====================================
+# This file demonstrates how to define custom agents for SGR Deep Research
+
+# Notes:
+# ------
+# 1. Agent names must be unique or will be overridden
+# 2. All tools must be registered in the tool registry
+# 3. LLM, Search, Prompts, Execution, MCP settings are optional and inherit from global config
+# 4. Agents override global settings by providing their own values
+
+agents:
+  # Example 1: Simple custom research agent with overrides
+  custom_research_agent:
+    base_class: "sgr_deep_research.core.SGRAgent"
+    # Optional: Override LLM settings for this agent
+    llm:
+      model: "gpt-4o"
+      temperature: 0.3
+      max_tokens: 16000
+      # api_key: "your-custom-api-key"  # Optional: use different API key
+      # base_url: "https://api.openai.com/v1"  # Optional: use different endpoint
+      # proxy: "http://127.0.0.1:8080"  # Optional: use proxy
+
+    # Optional: Override search settings
+    search:
+      max_results: 15
+      max_pages: 8
+      content_limit: 2000
+
+    # Optional: Execution configuration
+    execution:
+      max_steps: 8
+      max_iterations: 15
+      max_clarifications: 5
+      max_searches: 6
+      mcp_context_limit: 20000
+      logs_dir: "logs/custom_agent"
+      reports_dir: "reports/custom_agent"
+
+    # Optional: MCP configuration
+    mcp:
+      mcpServers:
+        deepwiki:
+          url: "https://mcp.deepwiki.com/mcp"
+
+    # Tools this agent can use (must be registered in tool registry)
+    tools:
+      - "WebSearchTool"
+      - "ExtractPageContentTool"
+      - "CreateReportTool"
+      - "ClarificationTool"
+      - "GeneratePlanTool"
+      - "AdaptPlanTool"
+      - "FinalAnswerTool"
+
+  # Example 2: Minimal agent with defaults
+  simple_agent:
+    base_class: "SGRToolCallingResearchAgent"
+
+    # Only override what's needed
+    llm:
+      model: "gpt-4o-mini"
+
+    tools:
+      - "WebSearchTool"
+      - "FinalAnswerTool"
+
+  # Example 3: Fast research agent optimized for speed
+  fast_research_agent:
+    base_class: "SGRToolCallingAgent"
+
+    llm:
+      model: "gpt-4o-mini"
+      temperature: 0.1
+      max_tokens: 4000
+
+    execution:
+      max_steps: 4
+      max_iterations: 8
+      max_clarifications: 2
+      max_searches: 3
+
+    tools:
+      - "WebSearchTool"
+      - "CreateReportTool"
+      - "FinalAnswerTool"
+      - "ReasoningTool"
+
+  # Example 4: Specialized technical analyst with custom prompts
+  technical_analyst:
+    base_class: "SGRAgent"
+
+    llm:
+      model: "gpt-4o"
+      temperature: 0.2
+
+    prompts:
+      system_prompt: "You are a highly specialized technical analyst."
+
+    execution:
+      max_steps: 10
+      max_iterations: 20
+      max_clarifications: 3
+      max_searches: 8
+
+    tools:
+      - "WebSearchTool"
+      - "ExtractPageContentTool"
+      - "CreateReportTool"
+      - "ClarificationTool"
+      - "FinalAnswerTool"
+
+  # Example 5: Agent using inline prompts instead of files
+  inline_prompt_agent:
+    base_class: "SGRResearchAgent"
+
+    prompts:
+      system_prompt_str: |
+        You are a helpful research assistant.
+        Your goal is to provide accurate and concise information.
+      initial_user_request_str: |
+        User request: {user_request}
+        Please analyze and respond.
+      clarification_response_str: |
+        I need clarification on: {clarification_needed}
+
+    tools:
+      - "WebSearchTool"
+      - "FinalAnswerTool"

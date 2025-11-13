@@ -10,17 +10,19 @@ formatters:
     format: '%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(message)s'
 
 handlers:
-  console:
-    class: logging.StreamHandler
-    level: INFO
-    formatter: standard
-    stream: ext://sys.stdout
 
   console_error:
     class: logging.StreamHandler
     level: ERROR
     formatter: standard
     stream: ext://sys.stderr
+
+
+  console:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: standard
+    stream: ext://sys.stdout
 
   file:
     class: logging.handlers.RotatingFileHandler

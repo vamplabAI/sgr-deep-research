@@ -5,16 +5,15 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
 from sgr_deep_research.api.models import (
-    AGENT_MODEL_MAPPING,
     AgentListItem,
     AgentListResponse,
-    AgentModel,
     AgentStateResponse,
     ChatCompletionRequest,
     ClarificationRequest,
     HealthResponse,
 )
-from sgr_deep_research.core.agents import BaseAgent
+from sgr_deep_research.core import BaseAgent
+from sgr_deep_research.core.agent_factory import AgentFactory
 from sgr_deep_research.core.models import AgentStatesEnum
 
 logger = logging.getLogger(__name__)
@@ -63,13 +62,17 @@ async def get_agents_list():
 @router.get("/v1/models")
 async def get_available_models():
     """Get list of available agent models."""
-    return {
-        "data": [
-            {"id": model.value, "object": "model", "created": 1234567890, "owned_by": "sgr-deep-research"}
-            for model in AgentModel
-        ],
-        "object": "list",
-    }
+    models_data = [
+        {
+            "id": agent_def.name,
+            "object": "model",
+            "created": 1234567890,
+            "owned_by": "sgr-deep-research",
+        }
+        for agent_def in AgentFactory.get_definitions_list()
+    ]
+
+    return {"data": models_data, "object": "list"}
 
 
 def extract_user_content_from_messages(messages):
@@ -131,19 +134,17 @@ async def create_chat_completion(request: ChatCompletionRequest):
     try:
         task = extract_user_content_from_messages(request.messages)
 
-        try:
-            agent_model = AgentModel(request.model)
-        except ValueError:
+        agent_def = next(filter(lambda ad: ad.name == request.model, AgentFactory.get_definitions_list()), None)
+        if not agent_def:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid model '{request.model}'. Available models: {[m.value for m in AgentModel]}",
+                detail=f"Invalid model '{request.model}'. "
+                f"Available models: {[ad.name for ad in AgentFactory.get_definitions_list()]}",
             )
+        agent = await AgentFactory.create(agent_def, task)
+        logger.info(f"Created agent '{request.model}' for task: {task[:100]}...")
 
-        agent_class = AGENT_MODEL_MAPPING[agent_model]
-        agent = agent_class(task=task)
         agents_storage[agent.id] = agent
-        logger.info(f"Agent {agent.id} ({agent_model.value}) created and stored for task: {task[:100]}...")
-
         _ = asyncio.create_task(agent.execute())
         return StreamingResponse(
             agent.streaming_generator.stream(),
@@ -152,9 +153,10 @@ async def create_chat_completion(request: ChatCompletionRequest):
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
                 "X-Agent-ID": str(agent.id),
-                "X-Agent-Model": agent_model.value,
+                "X-Agent-Model": request.model,
             },
         )
 
     except ValueError as e:
+        logger.error(f"Error completion: {e}", exc_info=True)
         raise HTTPException(status_code=400, detail=str(e))

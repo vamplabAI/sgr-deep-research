@@ -29,7 +29,7 @@ class ClarificationTool(BaseTool):
     )
     questions: list[str] = Field(
         description="3 specific clarifying questions (short and direct)",
-        min_length=3,
+        min_length=1,
         max_length=3,
     )
 

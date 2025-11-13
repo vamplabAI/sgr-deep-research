@@ -1,8 +1,9 @@
 from typing import Literal, Type
 
-from openai import pydantic_function_tool
+from openai import AsyncOpenAI, pydantic_function_tool
 from openai.types.chat import ChatCompletionFunctionToolParam
 
+from sgr_deep_research.core.agent_definition import ExecutionConfig, LLMConfig, PromptsConfig
 from sgr_deep_research.core.agents.sgr_agent import SGRAgent
 from sgr_deep_research.core.models import AgentStatesEnum
 from sgr_deep_research.core.tools import (
@@ -12,42 +13,33 @@ from sgr_deep_research.core.tools import (
     FinalAnswerTool,
     ReasoningTool,
     WebSearchTool,
-    research_agent_tools,
-    system_agent_tools,
 )
-from sgr_deep_research.services import MCP2ToolConverter
-from sgr_deep_research.settings import get_config
-
-config = get_config()
 
 
 class SGRToolCallingAgent(SGRAgent):
     """Agent that uses OpenAI native function calling to select and execute
-    tools based on SGR like reasoning scheme."""
+    tools based on SGR like a reasoning scheme."""
 
     name: str = "sgr_tool_calling_agent"
 
     def __init__(
         self,
         task: str,
+        openai_client: AsyncOpenAI,
+        llm_config: LLMConfig,
+        prompts_config: PromptsConfig,
+        execution_config: ExecutionConfig,
         toolkit: list[Type[BaseTool]] | None = None,
-        max_clarifications: int = 3,
-        max_searches: int = 4,
-        max_iterations: int = 10,
     ):
         super().__init__(
             task=task,
+            openai_client=openai_client,
+            llm_config=llm_config,
+            prompts_config=prompts_config,
+            execution_config=execution_config,
             toolkit=toolkit,
-            max_clarifications=max_clarifications,
-            max_iterations=max_iterations,
-            max_searches=max_searches,
         )
-        self.toolkit = [
-            *system_agent_tools,
-            *research_agent_tools,
-            *MCP2ToolConverter().toolkit,
-            *(toolkit if toolkit else []),
-        ]
+        self.toolkit.append(ReasoningTool)
         self.tool_choice: Literal["required"] = "required"
 
     async def _prepare_tools(self) -> list[ChatCompletionFunctionToolParam]:
@@ -71,10 +63,10 @@ class SGRToolCallingAgent(SGRAgent):
 
     async def _reasoning_phase(self) -> ReasoningTool:
         async with self.openai_client.chat.completions.stream(
-            model=config.openai.model,
+            model=self.llm_config.model,
             messages=await self._prepare_context(),
-            max_tokens=config.openai.max_tokens,
-            temperature=config.openai.temperature,
+            max_tokens=self.llm_config.max_tokens,
+            temperature=self.llm_config.temperature,
             tools=await self._prepare_tools(),
             tool_choice={"type": "function", "function": {"name": ReasoningTool.tool_name}},
         ) as stream:
@@ -109,10 +101,10 @@ class SGRToolCallingAgent(SGRAgent):
 
     async def _select_action_phase(self, reasoning: ReasoningTool) -> BaseTool:
         async with self.openai_client.chat.completions.stream(
-            model=config.openai.model,
+            model=self.llm_config.model,
             messages=await self._prepare_context(),
-            max_tokens=config.openai.max_tokens,
-            temperature=config.openai.temperature,
+            max_tokens=self.llm_config.max_tokens,
+            temperature=self.llm_config.temperature,
             tools=await self._prepare_tools(),
             tool_choice=self.tool_choice,
         ) as stream:

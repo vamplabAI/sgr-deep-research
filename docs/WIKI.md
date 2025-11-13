@@ -57,7 +57,12 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ```bash
 # 1. Setup configuration
 cp config.yaml.example config.yaml
-# Edit config.yaml with your API keys
+# Edit config.yaml with your configuration
+
+#Optional:
+touch agents.yaml
+# Add your agents definitions based on config.yaml and agents.yaml.example
+
 
 # 2. Change to src directory and install dependencies
 uv sync
@@ -71,7 +76,11 @@ uv run python sgr_deep_research
 ```bash
 # 1. Setup configuration
 cp config.yaml.example config.yaml
-# Edit config.yaml with your API keys
+# Edit config.yaml with your configuration
+
+#Optional:
+touch agents.yaml
+# Add your agents definitions based on config.yaml and agents.yaml.example
 
 # 2. Go to the services folder
 cd services
@@ -511,9 +520,9 @@ execution:
 
 # Prompts Settings
 prompts:
-  prompts_dir: "prompts"               # Directory with prompts
-  tool_function_prompt_file: "tool_function_prompt.txt"  # Tool function prompt file
-  system_prompt_file: "system_prompt.txt"  # System prompt file
+  system_prompt_file: "prompts/system_prompt.txt"  # Path to system prompt file
+  initial_user_request_file: "prompts/initial_user_request.txt"  # Path to initial user request file
+  clarification_response_file: "prompts/clarification_response.txt"  # Path to clarification response file
 ```
 
 ### Server Configuration

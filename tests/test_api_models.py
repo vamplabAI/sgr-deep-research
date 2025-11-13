@@ -8,10 +8,8 @@ import pytest
 from pydantic import ValidationError
 
 from sgr_deep_research.api.models import (
-    AGENT_MODEL_MAPPING,
     AgentListItem,
     AgentListResponse,
-    AgentModel,
     AgentStateResponse,
     ChatCompletionChoice,
     ChatCompletionRequest,
@@ -19,13 +17,6 @@ from sgr_deep_research.api.models import (
     ChatMessage,
     ClarificationRequest,
     HealthResponse,
-)
-from sgr_deep_research.core.agents import (
-    SGRAgent,
-    SGRAutoToolCallingAgent,
-    SGRSOToolCallingAgent,
-    SGRToolCallingAgent,
-    ToolCallingAgent,
 )
 
 
@@ -75,7 +66,7 @@ class TestChatCompletionRequest:
         """Test default values for chat completion request."""
         messages = [ChatMessage(role="user", content="Test")]
         request = ChatCompletionRequest(messages=messages)
-        assert request.model == AgentModel.SGR_AGENT
+        assert request.model == "sgr_tool_calling_agent"
         assert request.stream is True
         assert request.max_tokens == 1500
         assert request.temperature == 0
@@ -179,97 +170,6 @@ class TestHealthResponse:
         response = HealthResponse(service="Custom Service")
         assert response.status == "healthy"
         assert response.service == "Custom Service"
-
-
-class TestAgentModel:
-    """Tests for AgentModel enum."""
-
-    def test_agent_model_values(self):
-        """Test that AgentModel has all expected values."""
-        assert AgentModel.SGR_AGENT == "sgr_agent"
-        assert AgentModel.SGR_TOOL_CALLING_AGENT == "sgr_tool_calling_agent"
-        assert AgentModel.SGR_AUTO_TOOL_CALLING_AGENT == "sgr_auto_tool_calling_agent"
-        assert AgentModel.SGR_SO_TOOL_CALLING_AGENT == "sgr_so_tool_calling_agent"
-        assert AgentModel.TOOL_CALLING_AGENT == "tool_calling_agent"
-
-    def test_agent_model_count(self):
-        """Test that AgentModel has exactly 5 agent types."""
-        assert len(AgentModel) == 5
-
-    def test_agent_model_mapping_keys(self):
-        """Test that AGENT_MODEL_MAPPING has all enum keys."""
-        for model in AgentModel:
-            assert model in AGENT_MODEL_MAPPING
-
-    def test_agent_model_mapping_values(self):
-        """Test that AGENT_MODEL_MAPPING maps to correct agent classes."""
-        assert AGENT_MODEL_MAPPING[AgentModel.SGR_AGENT] == SGRAgent
-        assert AGENT_MODEL_MAPPING[AgentModel.SGR_TOOL_CALLING_AGENT] == SGRToolCallingAgent
-        assert AGENT_MODEL_MAPPING[AgentModel.SGR_AUTO_TOOL_CALLING_AGENT] == SGRAutoToolCallingAgent
-        assert AGENT_MODEL_MAPPING[AgentModel.SGR_SO_TOOL_CALLING_AGENT] == SGRSOToolCallingAgent
-        assert AGENT_MODEL_MAPPING[AgentModel.TOOL_CALLING_AGENT] == ToolCallingAgent
-
-    def test_agent_model_mapping_completeness(self):
-        """Test that AGENT_MODEL_MAPPING has exactly 5 entries."""
-        assert len(AGENT_MODEL_MAPPING) == 5
-
-        for agent_model in AgentModel:
-            assert agent_model in AGENT_MODEL_MAPPING
-
-    def test_agent_model_mapping_agent_classes_valid(self):
-        """Test that all mapped classes are valid agent classes."""
-        from sgr_deep_research.core.base_agent import BaseAgent
-
-        for agent_model, agent_class in AGENT_MODEL_MAPPING.items():
-            # Verify it's a class
-            assert isinstance(agent_class, type)
-            # Verify it inherits from BaseAgent
-            assert issubclass(agent_class, BaseAgent)
-            # Verify class has name attribute matching enum value
-            assert agent_class.name == agent_model.value
-
-    def test_agent_model_mapping_instantiation(self):
-        """Test that agent classes can be instantiated from mapping."""
-        from unittest.mock import Mock, patch
-
-        with (
-            patch("sgr_deep_research.core.base_agent.get_config") as mock_get_config,
-            patch("sgr_deep_research.core.base_agent.AsyncOpenAI"),
-        ):
-            mock_config = Mock()
-            mock_config.openai.base_url = "https://api.openai.com/v1"
-            mock_config.openai.api_key = "test-key"
-            mock_config.openai.proxy = ""
-            mock_get_config.return_value = mock_config
-
-            # Test each agent type can be instantiated
-            for agent_model, agent_class in AGENT_MODEL_MAPPING.items():
-                agent = agent_class(task="Test task for " + agent_model.value)
-                assert agent.task == "Test task for " + agent_model.value
-                assert agent.name == agent_model.value
-
-    def test_agent_model_factory_pattern(self):
-        """Test the factory pattern for creating agents from model strings."""
-        from unittest.mock import Mock, patch
-
-        with (
-            patch("sgr_deep_research.core.base_agent.get_config") as mock_get_config,
-            patch("sgr_deep_research.core.base_agent.AsyncOpenAI"),
-        ):
-            mock_config = Mock()
-            mock_config.openai.base_url = "https://api.openai.com/v1"
-            mock_config.openai.api_key = "test-key"
-            mock_config.openai.proxy = ""
-            mock_get_config.return_value = mock_config
-
-            # Test factory pattern
-            model_name = "sgr_agent"
-            agent_model = AgentModel(model_name)
-            agent_class = AGENT_MODEL_MAPPING[agent_model]
-            agent = agent_class(task="Factory pattern test")
-
-            assert isinstance(agent, SGRAgent)
-            assert agent.name == "sgr_agent"
 
 
 class TestAgentStateResponse:
