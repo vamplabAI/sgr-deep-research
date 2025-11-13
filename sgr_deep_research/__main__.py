@@ -23,6 +23,7 @@ async def lifespan(app: FastAPI):
     await MCP2ToolConverter().build_tools_from_mcp()
     yield
 
+
 app = FastAPI(title="SGR Agent Core API", version=__version__, lifespan=lifespan)
 
 config = get_config()
