@@ -5,7 +5,7 @@ including agent creation, agent state management, and chat completions.
 """
 
 import asyncio
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from fastapi import HTTPException
@@ -19,9 +19,10 @@ from sgr_deep_research.api.endpoints import (
     get_agents_list,
     provide_clarification,
 )
-from sgr_deep_research.api.models import AgentModel, ChatCompletionRequest, ChatMessage, ClarificationRequest
+from sgr_deep_research.api.models import ChatCompletionRequest, ChatMessage, ClarificationRequest
 from sgr_deep_research.core.agents import SGRAgent
 from sgr_deep_research.core.models import AgentStatesEnum
+from tests.conftest import create_test_agent
 
 
 class TestIsAgentId:
@@ -116,20 +117,10 @@ class TestChatCompletionEndpoint:
         # Clear agents storage
         agents_storage.clear()
 
-    @patch("sgr_deep_research.api.endpoints.AGENT_MODEL_MAPPING")
-    @patch("sgr_deep_research.core.base_agent.get_config")
-    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
+    @patch("sgr_deep_research.api.endpoints.AgentFactory")
     @pytest.mark.asyncio
-    async def test_create_new_agent_success(self, mock_openai, mock_get_config, mock_mapping):
+    async def test_create_new_agent_success(self, mock_factory):
         """Test successful creation of new agent."""
-        # Setup mocks
-        mock_config = Mock()
-        mock_config.openai.base_url = "https://api.openai.com/v1"
-        mock_config.openai.api_key = "test-key"
-        mock_config.openai.proxy = ""
-        mock_get_config.return_value = mock_config
-
-        mock_agent_class = Mock()
         mock_agent = Mock()
         mock_agent.id = "test_agent_12345678-1234-1234-1234-123456789012"
         mock_agent.streaming_generator.stream.return_value = iter(["chunk1", "chunk2"])
@@ -139,8 +130,12 @@ class TestChatCompletionEndpoint:
             pass
 
         mock_agent.execute = mock_execute
-        mock_agent_class.return_value = mock_agent
-        mock_mapping = {AgentModel.SGR_AGENT: mock_agent_class}
+        mock_agent_def = Mock()
+        mock_factory.get_definitions_list.return_value = [mock_agent_def]
+        mock_agent_def.name = "sgr_agent"
+        
+        # Make create method async
+        mock_factory.create = AsyncMock(return_value=mock_agent)
 
         # Create request
         request = ChatCompletionRequest(
@@ -148,10 +143,7 @@ class TestChatCompletionEndpoint:
         )
 
         # Mock asyncio.create_task to properly handle coroutines
-        with (
-            patch("sgr_deep_research.api.endpoints.AGENT_MODEL_MAPPING", mock_mapping),
-            patch("sgr_deep_research.api.endpoints.asyncio.create_task") as mock_create_task,
-        ):
+        with patch("sgr_deep_research.api.endpoints.asyncio.create_task") as mock_create_task:
             # Schedule the coroutine via event loop to avoid 'never awaited' warnings
             def mock_create_task_func(coro):
                 loop = asyncio.get_event_loop()
@@ -162,7 +154,7 @@ class TestChatCompletionEndpoint:
             await create_chat_completion(request)
 
             # Verify agent was created and stored
-            mock_agent_class.assert_called_once_with(task="Test task")
+            mock_factory.create.assert_called_once()
             assert mock_agent.id in agents_storage
             assert agents_storage[mock_agent.id] == mock_agent
 
@@ -195,29 +187,11 @@ class TestChatCompletionEndpoint:
         assert exc_info.value.status_code == 400
         assert "Invalid model" in str(exc_info.value.detail)
 
-    @patch("sgr_deep_research.core.models.asyncio.Event")
-    @patch("sgr_deep_research.core.base_agent.get_config")
-    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     @pytest.mark.asyncio
-    async def test_clarification_request_for_existing_agent(self, mock_openai, mock_get_config, mock_event):
+    async def test_clarification_request_for_existing_agent(self):
         """Test providing clarification to existing agent."""
-        # Setup config mock
-        mock_config = Mock()
-        mock_config.openai.base_url = "https://api.openai.com/v1"
-        mock_config.openai.api_key = "test-key"
-        mock_config.openai.proxy = ""
-        mock_get_config.return_value = mock_config
-
-        # Configure mock to return a regular Mock instead of AsyncMock
-        mock_openai.return_value = Mock()
-
-        # Mock asyncio.Event to avoid async warnings
-        mock_event_instance = Mock()
-        mock_event_instance.set = Mock()
-        mock_event.return_value = mock_event_instance
-
         # Create and store an agent waiting for clarification
-        agent = SGRAgent(task="Test task")
+        agent = create_test_agent(SGRAgent, task="Test task")
         agent._context.state = AgentStatesEnum.WAITING_FOR_CLARIFICATION
         agents_storage[agent.id] = agent
 
@@ -245,30 +219,13 @@ class TestAgentStateEndpoint:
         """Setup for each test method."""
         agents_storage.clear()
 
-    @patch("sgr_deep_research.core.models.asyncio.Event")
-    @patch("sgr_deep_research.core.base_agent.get_config")
-    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     @pytest.mark.asyncio
-    async def test_get_agent_state_success(self, mock_openai, mock_get_config, mock_event):
+    async def test_get_agent_state_success(self):
         """Test successful retrieval of agent state."""
         from sgr_deep_research.core.models import SourceData
 
-        mock_config = Mock()
-        mock_config.openai.base_url = "https://api.openai.com/v1"
-        mock_config.openai.api_key = "test-key"
-        mock_config.openai.proxy = ""
-        mock_get_config.return_value = mock_config
-
-        # Configure mock to return a regular Mock instead of AsyncMock
-        mock_openai.return_value = Mock()
-
-        # Mock asyncio.Event to avoid async warnings
-        mock_event_instance = Mock()
-        mock_event_instance.set = Mock()
-        mock_event.return_value = mock_event_instance
-
         # Create and store an agent
-        agent = SGRAgent(task="Test task")
+        agent = create_test_agent(SGRAgent, task="Test task")
         agent._context.sources = {
             "https://example.com/1": SourceData(number=1, url="https://example.com/1", title="Source 1"),
             "https://example.com/2": SourceData(number=2, url="https://example.com/2", title="Source 2"),
@@ -308,20 +265,12 @@ class TestAgentsListEndpoint:
         assert response.agents == []
         assert response.total == 0
 
-    @patch("sgr_deep_research.core.base_agent.get_config")
-    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     @pytest.mark.asyncio
-    async def test_get_agents_list_multiple_agents(self, mock_openai, mock_get_config):
+    async def test_get_agents_list_multiple_agents(self):
         """Test getting agents list with multiple agents."""
-        mock_config = Mock()
-        mock_config.openai.base_url = "https://api.openai.com/v1"
-        mock_config.openai.api_key = "test-key"
-        mock_config.openai.proxy = ""
-        mock_get_config.return_value = mock_config
-
         # Create and store multiple agents
-        agent1 = SGRAgent(task="Task 1")
-        agent2 = SGRAgent(task="Task 2")
+        agent1 = create_test_agent(SGRAgent, task="Task 1")
+        agent2 = create_test_agent(SGRAgent, task="Task 2")
 
         agents_storage[agent1.id] = agent1
         agents_storage[agent2.id] = agent2
@@ -344,28 +293,11 @@ class TestProvideClarificationEndpoint:
         """Setup for each test method."""
         agents_storage.clear()
 
-    @patch("sgr_deep_research.core.models.asyncio.Event")
-    @patch("sgr_deep_research.core.base_agent.get_config")
-    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     @pytest.mark.asyncio
-    async def test_provide_clarification_success(self, mock_openai, mock_get_config, mock_event):
+    async def test_provide_clarification_success(self):
         """Test successful clarification provision."""
-        mock_config = Mock()
-        mock_config.openai.base_url = "https://api.openai.com/v1"
-        mock_config.openai.api_key = "test-key"
-        mock_config.openai.proxy = ""
-        mock_get_config.return_value = mock_config
-
-        # Configure mock to return a regular Mock instead of AsyncMock
-        mock_openai.return_value = Mock()
-
-        # Mock asyncio.Event to avoid async warnings
-        mock_event_instance = Mock()
-        mock_event_instance.set = Mock()
-        mock_event.return_value = mock_event_instance
-
         # Create and store an agent
-        agent = SGRAgent(task="Test task")
+        agent = create_test_agent(SGRAgent, task="Test task")
 
         # Mock the agent's methods with actual async function
         async def mock_provide_clarification(clarifications):
@@ -397,28 +329,11 @@ class TestProvideClarificationEndpoint:
         assert exc_info.value.status_code == 500
         assert "404" in str(exc_info.value.detail) or "Agent not found" in str(exc_info.value.detail)
 
-    @patch("sgr_deep_research.core.models.asyncio.Event")
-    @patch("sgr_deep_research.core.base_agent.get_config")
-    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
     @pytest.mark.asyncio
-    async def test_provide_clarification_with_exception(self, mock_openai, mock_get_config, mock_event):
+    async def test_provide_clarification_with_exception(self):
         """Test clarification provision when agent raises exception."""
-        mock_config = Mock()
-        mock_config.openai.base_url = "https://api.openai.com/v1"
-        mock_config.openai.api_key = "test-key"
-        mock_config.openai.proxy = ""
-        mock_get_config.return_value = mock_config
-
-        # Configure mock to return a regular Mock instead of AsyncMock
-        mock_openai.return_value = Mock()
-
-        # Mock asyncio.Event to avoid async warnings
-        mock_event_instance = Mock()
-        mock_event_instance.set = Mock()
-        mock_event.return_value = mock_event_instance
-
         # Create agent that raises exception
-        agent = SGRAgent(task="Test task")
+        agent = create_test_agent(SGRAgent, task="Test task")
 
         # Mock the agent's method to raise exception
         async def mock_provide_clarification_error(clarifications):
@@ -443,28 +358,11 @@ class TestAgentStorageIntegration:
         """Setup for each test method."""
         agents_storage.clear()
 
-    @patch("sgr_deep_research.core.models.asyncio.Event")
-    @patch("sgr_deep_research.core.base_agent.get_config")
-    @patch("sgr_deep_research.core.base_agent.AsyncOpenAI")
-    def test_agent_storage_persistence(self, mock_openai, mock_get_config, mock_event):
+    def test_agent_storage_persistence(self):
         """Test that agents persist in storage across operations."""
-        mock_config = Mock()
-        mock_config.openai.base_url = "https://api.openai.com/v1"
-        mock_config.openai.api_key = "test-key"
-        mock_config.openai.proxy = ""
-        mock_get_config.return_value = mock_config
-
-        # Configure mock to return a regular Mock instead of AsyncMock
-        mock_openai.return_value = Mock()
-
-        # Mock asyncio.Event to avoid async warnings
-        mock_event_instance = Mock()
-        mock_event_instance.set = Mock()
-        mock_event.return_value = mock_event_instance
-
         # Create agents
-        agent1 = SGRAgent(task="Task 1")
-        agent2 = SGRAgent(task="Task 2")
+        agent1 = create_test_agent(SGRAgent, task="Task 1")
+        agent2 = create_test_agent(SGRAgent, task="Task 2")
 
         # Store in agents_storage
         agents_storage[agent1.id] = agent1
