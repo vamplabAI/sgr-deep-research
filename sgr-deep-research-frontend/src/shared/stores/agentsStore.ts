@@ -36,19 +36,15 @@ export const useAgentsStore = defineStore('agents', () => {
       const response = await apiServices.models.getAvailableModels()
       console.log('✅ Received models:', response.data.length)
 
-      // Filter to show only specific agents
-      const allowedModels = ['sgr_tool_calling_agent', ]
-
-      // Map and filter models from API response
+      // Map all models from API response (no filtering)
       const models = response.data
-        .filter((model) => allowedModels.includes(model.id))
         .map((model) => ({
           id: model.id,
           name: model.id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), // Format name
           value: model.id,
         }))
 
-      console.log('✅ Filtered models:', models)
+      console.log('✅ Available models:', models)
       availableModels.value = models
 
       // Set first model as default if none selected

@@ -1,5 +1,5 @@
 <template>
-  <div class="agent-reasoning-step" v-if="step">
+  <div class="agent-reasoning-step" v-if="step && !isEmptyString">
     <!-- Streaming content -->
     <StreamingContentDisplay
       v-if="isStreaming"
@@ -76,6 +76,10 @@ const isStreaming = computed(() => {
 
 const isString = computed(() => {
   return typeof props.step === 'string'
+})
+
+const isEmptyString = computed(() => {
+  return typeof props.step === 'string' && props.step.trim() === ''
 })
 
 const getToolName = (step: any): string | null => {

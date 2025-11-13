@@ -2,7 +2,7 @@
   <div class="agent-reasoning-step agent-reasoning-step--final-answer">
     <div class="agent-reasoning-step__header" @click="toggleCollapsed">
       <div class="agent-reasoning-step__title">
-        <span class="agent-reasoning-step__reasoning">✅ {{ data.answer || data.reasoning }}</span>
+        <span class="agent-reasoning-step__reasoning">✅ Final Answer</span>
         <span class="agent-reasoning-step__tool-name">FINALANSWERTOOL</span>
       </div>
       <div class="agent-reasoning-step__toggle">

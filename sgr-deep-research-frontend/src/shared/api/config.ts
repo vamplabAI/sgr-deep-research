@@ -21,17 +21,3 @@ export const API_ENDPOINTS = {
   CHAT_HISTORY: (agentId: string) => `/v1/chats/${agentId}/history`,
   CHAT_DELETE: (agentId: string) => `/v1/chats/${agentId}`,
 } as const
-
-// Transcription API Configuration
-export const TRANSCRIPTION_API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_TRANSCRIPTION_API_URL || 'https://speechcoreai.com/api',
-  BEARER_TOKEN: import.meta.env.VITE_TRANSCRIPTION_API_TOKEN || '',
-  POLL_INTERVAL: 5000, // 5 seconds
-  MODEL: 'large-v3',
-} as const
-
-export const TRANSCRIPTION_ENDPOINTS = {
-  UPLOAD: '/upload',
-  STATUS: (taskId: string) => `/transcriptions/${taskId}/status`,
-  RESULT: (taskId: string) => `/transcriptions/${taskId}`,
-} as const

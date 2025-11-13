@@ -175,23 +175,31 @@ defineExpose({
   overflow-y: auto;
   padding: 16px 0;
   scroll-behavior: smooth;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--divider-6-1-white) transparent;
 
-  // Custom scrollbar styling
+  // Custom scrollbar styling for Webkit browsers (Chrome, Safari, Edge)
   &::-webkit-scrollbar {
-    width: 6px;
+    width: 8px;
   }
 
   &::-webkit-scrollbar-track {
     background: transparent;
+    margin: 8px 0;
   }
 
   &::-webkit-scrollbar-thumb {
-    background-color: var(--divider-6-1-white);
-    border-radius: 3px;
+    background-color: rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
 
     &:hover {
-      background-color: var(--text-3-2-dark-gray);
+      background-color: rgba(0, 0, 0, 0.25);
+    }
+
+    &:active {
+      background-color: rgba(0, 0, 0, 0.35);
     }
   }
 }

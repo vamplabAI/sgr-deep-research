@@ -30,8 +30,6 @@ cp .env.example .env.local
 Edit `.env.local` and set:
 
 - `VITE_API_BASE_URL` - your backend URL (default: `http://localhost:8010`)
-- `VITE_TRANSCRIPTION_API_URL` - transcription service URL
-- `VITE_TRANSCRIPTION_API_TOKEN` - your transcription API token
 
 ### Run
 

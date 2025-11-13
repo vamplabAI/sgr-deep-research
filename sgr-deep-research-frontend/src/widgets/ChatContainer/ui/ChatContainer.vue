@@ -19,8 +19,17 @@
       />
 
       <!-- Message when agent is completed -->
-      <div v-if="isAgentCompleted" class="chat-container__completed-message">
-        ✅ Задача выполнена. Нажмите "Новый диалог" чтобы начать новый разговор.
+      <div v-if="isAgentCompleted && showCompletedMessage" class="chat-container__completed-message">
+        <span class="chat-container__completed-message-text">
+          ✅ Задача выполнена. Нажмите "Новый диалог" чтобы начать новый разговор.
+        </span>
+        <button
+          class="chat-container__completed-message-close"
+          @click="showCompletedMessage = false"
+          aria-label="Закрыть"
+        >
+          ✕
+        </button>
       </div>
     </div>
   </div>
@@ -51,6 +60,7 @@ const agentsStore = useAgentsStore()
 
 const messageListRef = ref<InstanceType<typeof ChatMessageList> | null>(null)
 const messageSenderRef = ref<InstanceType<typeof MessageSender> | null>(null)
+const showCompletedMessage = ref(true)
 
 // Computed properties
 const currentSession = computed(() => chatStore.currentSession)
@@ -268,7 +278,7 @@ defineExpose({
   left: 50%;
   transform: translateX(-50%);
   margin-bottom: 12px;
-  padding: 12px 24px;
+  padding: 12px 24px 12px 24px;
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: #ffffff;
   font-family: 'Inter', sans-serif;
@@ -279,6 +289,40 @@ defineExpose({
   white-space: nowrap;
   animation: slideUp 0.3s ease-out;
   z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.chat-container__completed-message-text {
+  flex: 1;
+}
+
+.chat-container__completed-message-close {
+  background: none;
+  border: none;
+  color: #ffffff;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  opacity: 0.8;
+
+  &:hover {
+    opacity: 1;
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+
+  &:active {
+    transform: scale(0.9);
+  }
 }
 
 @keyframes slideUp {

@@ -35,6 +35,7 @@ export class StreamProcessor {
   private toolCalls: Map<number, ToolCall> = new Map()
   private processedToolCallIds: Set<string> = new Set()
   private isProcessing: boolean = false
+  private finishCalled: boolean = false
   private pendingChunks: Array<{
     session: ChatSession
     rawChunk: string
@@ -50,6 +51,7 @@ export class StreamProcessor {
     this.processedToolCallIds.clear()
     this.pendingChunks = []
     this.isProcessing = false
+    this.finishCalled = false
   }
 
   /**
@@ -83,14 +85,7 @@ export class StreamProcessor {
     while (this.pendingChunks.length > 0) {
       const { session, rawChunk, agentId, onFinish } = this.pendingChunks.shift()!
       console.log('📦 Processing chunk, hasOnFinish:', !!onFinish)
-      const shouldStop = await this.processRawChunkInternal(session, rawChunk, agentId, onFinish)
-
-      // If onFinish was called, stop processing queue and clear remaining chunks
-      if (shouldStop) {
-        console.log('🛑 Stopping queue processing after onFinish')
-        this.pendingChunks = []
-        break
-      }
+      await this.processRawChunkInternal(session, rawChunk, agentId, onFinish)
     }
 
     console.log('📦 processQueue finished')
@@ -99,14 +94,13 @@ export class StreamProcessor {
 
   /**
    * Internal chunk processing logic
-   * @returns true if onFinish was called (should stop processing queue)
    */
   private async processRawChunkInternal(
     session: ChatSession,
     rawChunk: string,
     agentId?: string,
     onFinish?: () => void | Promise<void>
-  ): Promise<boolean> {
+  ): Promise<void> {
     const lines = rawChunk.split('\n')
     let shouldCallFinish = false
     let lastFinishReason: string | null = null
@@ -138,26 +132,25 @@ export class StreamProcessor {
         // Process chunk
         const { shouldFinish, finishReason } = this.processChunk(session, chunk, agentId)
 
-        // Mark for finish and STOP processing remaining lines immediately
+        // Mark for finish but DON'T stop processing remaining lines
+        // (we need to process tool calls that come after finish_reason)
         if (shouldFinish) {
           console.log('🏁 Finish reason detected:', finishReason)
           shouldCallFinish = true
           lastFinishReason = finishReason
-          break // Stop processing lines immediately
+          // Don't break - continue processing remaining chunks
         }
       } catch (e) {
         console.error('❌ Error processing line:', e)
       }
     }
 
-    // Call onFinish after processing all lines
-    if (shouldCallFinish && onFinish) {
+    // Call onFinish after processing all lines (only once per session)
+    if (shouldCallFinish && onFinish && !this.finishCalled) {
       console.log('✅ Calling onFinish callback, reason:', lastFinishReason)
+      this.finishCalled = true
       await onFinish()
-      return true // Signal to stop processing queue
     }
-
-    return false // Continue processing queue
   }
 
   /**
@@ -224,97 +217,51 @@ export class StreamProcessor {
     for (const toolCall of delta.tool_calls) {
       const index = toolCall.index ?? 0
       const toolName = toolCall.function?.name
+      const args = toolCall.function?.arguments
 
-      // Debug logging
-      console.log(`🔍 Tool call chunk:`, {
+      console.log(`🔍 Tool call:`, {
         index,
         id: toolCall.id,
         name: toolName,
-        argsLength: toolCall.function?.arguments?.length || 0,
-        argsPreview: toolCall.function?.arguments?.substring(0, 50),
-        currentAccumulated: this.toolCalls.get(index)?.arguments?.length || 0,
+        argsLength: args?.length || 0,
       })
 
-      // Check if this is a duplicate (backend sends full JSON after streaming)
-      if (toolCall.id && this.processedToolCallIds.has(toolCall.id)) {
-        console.log('⏭️ Skipping duplicate tool_call with id:', toolCall.id)
-        continue
-      }
+      if (!toolName) continue
 
-      // Initialize new tool call
+      // Initialize tool call if needed, or replace if ID changed (new iteration)
       if (toolCall.id) {
-        if (!toolName) continue
+        const existing = this.toolCalls.get(index)
 
-        // Check if this is a complete tool call from backend (ID like "1-action", "2-action")
-        const isBackendComplete = toolCall.id && /^\d+-action$/.test(toolCall.id)
+        // If this is a new tool call (different ID at same index), replace the old one
+        if (!existing || existing.id !== toolCall.id) {
+          console.log(`🔧 ${existing ? 'Replacing' : 'New'} tool call [${index}]:`, toolName, 'id:', toolCall.id)
 
-        // Skip backend complete tool calls - we already have them from streaming
-        if (isBackendComplete) {
-          console.log(`⏭️ Skipping backend complete tool call: ${toolName} (${toolCall.id})`)
-          continue
+          this.toolCalls.set(index, {
+            id: toolCall.id,
+            name: toolName,
+            arguments: '',
+          })
         }
-
-        // Check if we already have a finalized version of THIS SPECIFIC tool call (by ID)
-        const alreadyFinalized = lastMessage.content.some(
-          (item: any) =>
-            !item?._streaming &&
-            item?.tool_name_discriminator === toolName &&
-            item?._tool_call_id === toolCall.id &&
-            typeof item === 'object'
-        )
-
-        if (alreadyFinalized) {
-          console.log(`⏭️ Skipping duplicate tool call (already finalized): ${toolName} (${toolCall.id})`)
-          continue
-        }
-
-        // Check if we're already accumulating this tool at this index
-        const existingToolCall = this.toolCalls.get(index)
-        if (existingToolCall && existingToolCall.name === toolName) {
-          // Already accumulating - skip duplicate
-          console.log(`⏭️ Already accumulating ${toolName}, skipping duplicate init`)
-          continue
-        }
-
-        console.log(`🔧 New tool call [${index}]:`, toolName, 'id:', toolCall.id)
-
-        this.toolCalls.set(index, {
-          id: toolCall.id,
-          name: toolName,
-          arguments: '',
-        })
-
-        // Add streaming indicator to message
-        this.updateStreamingProgress(lastMessage, index, toolName, '', toolCall.id)
       }
 
-      // Accumulate arguments (only if we have an active tool call)
-      const args = toolCall.function?.arguments
-      if (args) {
-        if (!this.toolCalls.has(index)) {
-          console.log(`⏭️ Skipping args for index ${index} - no active tool call (likely stale chunks)`)
-          continue
-        }
-
+      // Accumulate arguments
+      if (args && this.toolCalls.has(index)) {
         const current = this.toolCalls.get(index)!
 
-        // If toolName is provided, verify it matches the current tool call
-        if (toolName && current.name !== toolName) {
-          console.warn(`⚠️ Tool name mismatch at index ${index}: expected ${current.name}, got ${toolName}`)
-          continue
+        // Only accumulate if this is the same tool call (same ID)
+        if (current.id === toolCall.id) {
+          const wasEmpty = current.arguments === ''
+          current.arguments += args
+          console.log(`➕ Accumulating args [${index}] for ${current.name}: ${args.length} chars`)
+
+          // Add streaming placeholder on first chunk of arguments
+          if (wasEmpty) {
+            this.updateStreamingProgress(lastMessage, index, current.name, current.arguments, current.id)
+          } else {
+            // Update existing streaming progress
+            this.updateStreamingProgress(lastMessage, index, current.name, current.arguments, current.id)
+          }
         }
-
-        // Check if this is a complete JSON (duplicate from backend)
-        if (this.isCompleteJson(args) && current.arguments.length > 0) {
-          console.log(`⏭️ Skipping complete JSON duplicate, already have ${current.arguments.length} chars`)
-          continue
-        }
-
-        current.arguments += args
-        console.log(`➕ Accumulating args [${index}] for ${current.name}:`, args.substring(0, 30))
-
-        // Update streaming progress with accumulated args
-        this.updateStreamingProgress(lastMessage, index, current.name, current.arguments, current.id)
       }
     }
   }
@@ -325,24 +272,44 @@ export class StreamProcessor {
   private processContent(content: string, lastMessage: any): void {
     if (!content) return
 
-    // Skip content that looks like JSON object (backend sends tool calls as content)
+    console.log('📝 Processing content:', content.substring(0, 100))
+
+    // Check if content looks like a complete JSON
     const trimmed = content.trim()
-    // Check if it's a JSON object with typical tool call fields
-    if (trimmed.startsWith('{') && (
-      trimmed.includes('"reasoning"') ||
-      trimmed.includes('"answer"') ||
-      trimmed.includes('"completed_steps"')
-    )) {
-      console.log('⏭️ Skipping JSON tool call in content:', trimmed.substring(0, 50))
-      return
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      try {
+        const json = JSON.parse(trimmed)
+
+        // If we have any tool calls being accumulated, this JSON is likely a duplicate
+        // (result of tool execution that returns the same JSON as tool arguments)
+        if (this.toolCalls.size > 0) {
+          console.log('⏭️ Skipping JSON from content - tool calls are being processed')
+          return
+        }
+
+        // If it has tool_name_discriminator, add it as a tool object
+        if (json.tool_name_discriminator) {
+          console.log('🔧 Found JSON tool in content:', json.tool_name_discriminator)
+          lastMessage.content.push(json)
+          console.log('✅ Added JSON tool from content')
+          return
+        }
+
+        // Otherwise, treat as regular JSON text
+        console.log('📄 Found JSON without discriminator, treating as text')
+      } catch (e) {
+        // Not valid JSON, continue as text
+      }
     }
 
     // Find last string content or add new
     const lastContentItem = lastMessage.content[lastMessage.content.length - 1]
     if (typeof lastContentItem === 'string') {
       lastMessage.content[lastMessage.content.length - 1] = lastContentItem + content
+      console.log('✅ Appended to existing content, total length:', lastMessage.content[lastMessage.content.length - 1].length)
     } else {
       lastMessage.content.push(content)
+      console.log('✅ Added new content item, total items:', lastMessage.content.length)
     }
   }
 
@@ -401,6 +368,12 @@ export class StreamProcessor {
       console.log(`📋 Finalizing tool [${index}]:`, toolCall.name)
       console.log(`📝 Arguments (${toolCall.arguments.length} chars)`)
 
+      // Skip if arguments are empty
+      if (!toolCall.arguments || toolCall.arguments.trim() === '') {
+        console.log(`⏭️ Skipping ${toolCall.name} - empty arguments`)
+        continue
+      }
+
       try {
         const json = JSON.parse(toolCall.arguments)
         json.tool_name_discriminator = toolCall.name
@@ -428,11 +401,10 @@ export class StreamProcessor {
         console.log('🔍 Found streaming index:', streamingIndex)
 
         if (streamingIndex >= 0) {
-          // Keep streaming block, add finalized JSON after it
-          // Preserve tool call ID to prevent duplicates
+          // Replace streaming placeholder with finalized JSON
           json._tool_call_id = toolCall.id
-          lastMessage.content.splice(streamingIndex + 1, 0, json)
-          console.log(`✅ Added finalized JSON after streaming block at index ${streamingIndex}`)
+          lastMessage.content[streamingIndex] = json
+          console.log(`✅ Replaced streaming placeholder at index ${streamingIndex} with finalized JSON`)
         } else {
           // No streaming placeholder, add to end (shouldn't happen but just in case)
           console.warn('⚠️ No streaming placeholder found, adding to end')
