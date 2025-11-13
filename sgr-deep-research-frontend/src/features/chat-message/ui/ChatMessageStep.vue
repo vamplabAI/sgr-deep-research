@@ -101,13 +101,13 @@ const isClarificationTool = computed(() => {
 const isWebSearchTool = computed(() => {
   if (typeof props.step === 'string') return false
   const toolName = getToolName(props.step)
-  return toolName === 'websearchtool'
+  return toolName?.toLowerCase() === 'websearchtool'
 })
 
 const isExtractPageContentTool = computed(() => {
   if (typeof props.step === 'string') return false
   const toolName = getToolName(props.step)
-  return toolName === 'extractpagecontenttool'
+  return toolName?.toLowerCase() === 'extractpagecontenttool'
 })
 
 const isFinalAnswerTool = computed(() => {

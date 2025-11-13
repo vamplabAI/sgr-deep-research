@@ -54,6 +54,17 @@ watch(
   { flush: 'post' },
 )
 
+// Watch for changes in message content (e.g., new steps added during streaming)
+watch(
+  () => props.messages,
+  () => {
+    if (props.autoScroll && props.isStreaming) {
+      scrollToBottom()
+    }
+  },
+  { deep: true, flush: 'post' },
+)
+
 watch(
   () => props.isStreaming,
   (isStreaming) => {

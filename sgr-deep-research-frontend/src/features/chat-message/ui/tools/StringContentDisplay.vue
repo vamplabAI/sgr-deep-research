@@ -17,6 +17,24 @@
       </div>
     </div>
   </div>
+  <!-- Check if this is search results (should be collapsible) -->
+  <div v-else-if="isSearchResults" class="agent-reasoning-step">
+    <div class="agent-reasoning-step__header" @click="toggleCollapsed">
+      <div class="agent-reasoning-step__title">
+        <span class="agent-reasoning-step__reasoning">Search Results:</span>
+      </div>
+      <div class="agent-reasoning-step__toggle">
+        <AppIconChevronDown24
+          :class="{ 'agent-reasoning-step__chevron--rotated': !isCollapsed }"
+        />
+      </div>
+    </div>
+    <div v-if="!isCollapsed" class="agent-reasoning-step__content">
+      <div class="agent-reasoning-step__string-content">
+        <MarkdownRenderer :content="content" />
+      </div>
+    </div>
+  </div>
   <!-- Regular string content -->
   <div v-else class="agent-reasoning-step__string-content">
     <MarkdownRenderer :content="content" />
@@ -42,6 +60,10 @@ const toggleCollapsed = () => {
 
 const isExtractedPageContent = computed(() => {
   return props.content.includes('Extracted Page Content:')
+})
+
+const isSearchResults = computed(() => {
+  return props.content.includes('Search Query:') && props.content.includes('Search Results')
 })
 
 const formattedContent = computed(() => {

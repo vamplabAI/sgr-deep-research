@@ -70,7 +70,10 @@ const messageInputRef = ref<InstanceType<typeof MessageInput> | null>(null)
 
 const isDisabled = computed(() => {
   const hasContent = message.value?.trim()
-  return !hasContent || chatStore.isStreaming || !props.currentAssistant || isSending.value
+  // Allow input when clarification is needed, even if streaming
+  const isWaitingForClarification = chatStore.needsClarification
+  const isActuallyStreaming = chatStore.isStreaming && !isWaitingForClarification
+  return !hasContent || isActuallyStreaming || !props.currentAssistant || isSending.value
 })
 
 // Watch for initial message from parent (e.g., from EmptyState suggestions)

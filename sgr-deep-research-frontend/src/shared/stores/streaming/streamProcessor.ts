@@ -236,6 +236,60 @@ export class StreamProcessor {
         if (!existing || existing.id !== toolCall.id) {
           console.log(`🔧 ${existing ? 'Replacing' : 'New'} tool call [${index}]:`, toolName, 'id:', toolCall.id)
 
+          // If replacing, finalize the old tool call first (if it has arguments)
+          if (existing && existing.arguments && existing.arguments.trim() !== '') {
+            console.log(`🔨 Finalizing old tool call before replacement: ${existing.name}`)
+            try {
+              const oldJson = JSON.parse(existing.arguments)
+              oldJson.tool_name_discriminator = existing.name
+
+              // Find and replace streaming placeholder with finalized JSON
+              const oldPlaceholderIndex = lastMessage.content.findIndex(
+                (item: any) =>
+                  item?._streaming &&
+                  item?.tool_name_discriminator === existing.name &&
+                  item?._tool_call_id === existing.id
+              )
+
+              if (oldPlaceholderIndex !== -1) {
+                oldJson._tool_call_id = existing.id
+                lastMessage.content[oldPlaceholderIndex] = oldJson
+                console.log(`✅ Finalized and replaced old tool call at index ${oldPlaceholderIndex}`)
+              } else {
+                // No streaming placeholder, add finalized JSON
+                lastMessage.content.push(oldJson)
+                console.log(`✅ Added finalized old tool call to end`)
+              }
+
+              // Mark as processed to prevent duplicate finalization
+              this.processedToolCallIds.add(existing.id)
+            } catch (e) {
+              console.warn(`⚠️ Failed to finalize old tool call ${existing.name}:`, e)
+              // Remove streaming placeholder anyway
+              const oldPlaceholderIndex = lastMessage.content.findIndex(
+                (item: any) =>
+                  item?._streaming &&
+                  item?.tool_name_discriminator === existing.name &&
+                  item?._tool_call_id === existing.id
+              )
+              if (oldPlaceholderIndex !== -1) {
+                lastMessage.content.splice(oldPlaceholderIndex, 1)
+              }
+            }
+          } else if (existing) {
+            // Old tool call has no arguments, just remove streaming placeholder
+            const oldPlaceholderIndex = lastMessage.content.findIndex(
+              (item: any) =>
+                item?._streaming &&
+                item?.tool_name_discriminator === existing.name &&
+                item?._tool_call_id === existing.id
+            )
+            if (oldPlaceholderIndex !== -1) {
+              console.log(`🗑️ Removing old streaming placeholder for ${existing.name} (id: ${existing.id})`)
+              lastMessage.content.splice(oldPlaceholderIndex, 1)
+            }
+          }
+
           this.toolCalls.set(index, {
             id: toolCall.id,
             name: toolName,
@@ -365,12 +419,33 @@ export class StreamProcessor {
     console.log('🏁 Finalizing', this.toolCalls.size, 'tool call(s)')
 
     for (const [index, toolCall] of this.toolCalls) {
+      // Skip if already processed (finalized during replacement)
+      if (this.processedToolCallIds.has(toolCall.id)) {
+        console.log(`⏭️ Skipping ${toolCall.name} (id: ${toolCall.id}) - already processed`)
+        continue
+      }
+
       console.log(`📋 Finalizing tool [${index}]:`, toolCall.name)
       console.log(`📝 Arguments (${toolCall.arguments.length} chars)`)
 
       // Skip if arguments are empty
       if (!toolCall.arguments || toolCall.arguments.trim() === '') {
         console.log(`⏭️ Skipping ${toolCall.name} - empty arguments`)
+
+        // For clarificationtool, we still need to remove the streaming placeholder
+        if (toolCall.name.toLowerCase() === 'clarificationtool') {
+          console.log('🔍 Removing streaming placeholder for clarificationtool with empty args')
+          const streamingIndex = lastMessage.content.findIndex(
+            (item: any) =>
+              item?._streaming &&
+              item?.tool_name_discriminator === toolCall.name &&
+              item?._tool_call_id === toolCall.id
+          )
+          if (streamingIndex >= 0) {
+            lastMessage.content.splice(streamingIndex, 1)
+            console.log(`✅ Removed streaming placeholder at index ${streamingIndex}`)
+          }
+        }
         continue
       }
 

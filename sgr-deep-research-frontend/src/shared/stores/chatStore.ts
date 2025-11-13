@@ -145,6 +145,22 @@ export const useChatStore = defineStore('chat', () => {
     console.log('🏁 finishStreaming called')
 
     if (streamingState.value.isStreaming && streamingState.value.currentMessageId) {
+      // Find the message and remove _streaming flags from content
+      const message = currentSession.value?.messages.find(
+        (m) => m.id === streamingState.value.currentMessageId
+      )
+
+      if (message && Array.isArray(message.content)) {
+        // Remove _streaming flag from all content items
+        message.content.forEach((item: any) => {
+          if (typeof item === 'object' && item !== null && '_streaming' in item) {
+            delete item._streaming
+            delete item._raw_content
+            console.log('🧹 Removed _streaming flag from content item:', item.tool_name_discriminator)
+          }
+        })
+      }
+
       updateMessage(streamingState.value.currentMessageId, {
         isStreaming: false,
       })

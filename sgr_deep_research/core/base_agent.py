@@ -179,6 +179,7 @@ class BaseAgent:
                 if isinstance(action_tool, ClarificationTool):
                     self.logger.info("\n⏸️  Research paused - please answer questions")
                     self._context.state = AgentStatesEnum.WAITING_FOR_CLARIFICATION
+                    self.streaming_generator.finish()
                     self._context.clarification_received.clear()
                     await self._context.clarification_received.wait()
                     continue
