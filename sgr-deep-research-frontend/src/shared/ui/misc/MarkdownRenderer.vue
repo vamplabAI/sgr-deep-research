@@ -3,7 +3,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import { marked } from 'marked'
 import hljs from 'highlight.js/lib/core'
 import 'highlight.js/styles/github-dark.css'
@@ -43,20 +43,31 @@ const props = defineProps<Props>()
 marked.setOptions({
   breaks: true, // Convert \n to <br>
   gfm: true, // GitHub Flavored Markdown
-  highlight: (code: string, lang: string) => {
-    if (lang && hljs.getLanguage(lang)) {
-      try {
-        return hljs.highlight(code, { language: lang }).value
-      } catch (err) {
-        console.error('Highlight error:', err)
+})
+
+// Use custom renderer for code blocks with syntax highlighting
+marked.use({
+  renderer: {
+    code(token) {
+      const code = token.text
+      const lang = token.lang
+      let highlighted = code
+      if (lang && hljs.getLanguage(lang)) {
+        try {
+          highlighted = hljs.highlight(code, { language: lang }).value
+        } catch (err) {
+          console.error('Highlight error:', err)
+        }
+      } else {
+        try {
+          highlighted = hljs.highlightAuto(code).value
+        } catch (err) {
+          console.error('Auto-highlight error:', err)
+        }
       }
-    }
-    try {
-      return hljs.highlightAuto(code).value
-    } catch (err) {
-      console.error('Auto-highlight error:', err)
-    }
-    return code
+      const langClass = lang ? ` class="language-${lang}"` : ''
+      return `<pre><code${langClass}>${highlighted}</code></pre>`
+    },
   },
 })
 
