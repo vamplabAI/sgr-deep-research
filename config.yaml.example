@@ -24,7 +24,7 @@ search:
 scraping:
   enabled: false                       # Enable full text scraping of found pages
   max_pages: 5                         # Maximum pages to scrape per search
-  content_limit: 1500                  # Character limit for full content per source
+  content_limit: 3500                  # Character limit for full content per source
 
 # Execution Settings
 execution:

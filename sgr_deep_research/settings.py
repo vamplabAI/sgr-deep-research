@@ -43,7 +43,7 @@ class ScrapingConfig(BaseModel):
 
     enabled: bool = Field(default=False, description="Enable full text scraping")
     max_pages: int = Field(default=5, gt=0, description="Maximum pages to scrape")
-    content_limit: int = Field(default=1500, gt=0, description="Content character limit per source")
+    content_limit: int = Field(default=3500, gt=0, description="Content character limit per source")
 
 
 class PromptsConfig(BaseModel):
