@@ -67,6 +67,7 @@ sgr = "sgr_deep_research.__main__:main"
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
+    "pytest-asyncio>=0.21.0",
     "black>=23.0.0",
     "isort>=5.12.0",
     "flake8>=6.0.0",
@@ -75,6 +76,7 @@ dev = [
 tests = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
+    "pytest-asyncio>=0.21.0",
 ]
 
 [tool.setuptools.packages.find]
@@ -92,3 +94,6 @@ version = {attr = "sgr_deep_research.__version__"}
 
 [tool.setuptools.package-data]
 "sgr_deep_research" = ["**/*.yaml", "**/*.yml", "**/*.json", "**/*.txt"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
