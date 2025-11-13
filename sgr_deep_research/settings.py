@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 class ServerConfig(BaseSettings):
     model_config = SettingsConfigDict(cli_parse_args=True)
-
     logging_file: str = Field(default="logging_config.yaml", description="Logging configuration file path")
     config_file: str = Field(default="config.yaml", description="sgr core configuration file path")
     agents_file: str = Field(default="agents.yaml", description="Agents definitions file path")

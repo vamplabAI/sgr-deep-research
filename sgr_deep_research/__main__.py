@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from sgr_deep_research import AgentFactory, __version__
 from sgr_deep_research.api.endpoints import router
@@ -35,6 +36,16 @@ def main():
     config.agents.update(get_default_agents_definitions())
     config.definitions_from_yaml(args.agents_file)
     app = FastAPI(title="SGR Deep Research API", version=__version__, lifespan=lifespan)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[
+            "http://127.0.0.1:5173",
+            "http://localhost:5173",
+        ],
+        allow_credentials=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     app.include_router(router)
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
 

@@ -1,0 +1,75 @@
+// Typography mixins only (no @font-face here to avoid duplication)
+// Font faces are loaded in fonts.scss which is imported once in main.scss
+
+@mixin header-h1 {
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 48px;
+}
+
+@mixin header-h2 {
+  line-height: 32px;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+@mixin header-h3 {
+  line-height: 24px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+@mixin content-a1 {
+  line-height: 26px;
+  font-size: 18px;
+  font-weight: 400;
+}
+
+@mixin message-a2 {
+  line-height: 24px;
+  font-size: 16px;
+  font-weight: 400;
+}
+
+@mixin message-bold-a2 {
+  line-height: 24px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+@mixin but-a3 {
+  line-height: 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+@mixin content-a4 {
+  line-height: 20px;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+@mixin field-a4 {
+  line-height: 16px;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+@mixin subscript-a5 {
+  line-height: 16px;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+@mixin subscript-bold-a5 {
+  line-height: 16px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+@mixin link-l7 {
+  line-height: 16px;
+  font-size: 12px;
+  font-weight: 400;
+  text-decoration: underline;
+}

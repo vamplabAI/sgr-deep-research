@@ -1,5 +1,11 @@
 # SGR Agent Core — the first SGR open-source agentic framework for Schema-Guided Reasoning
 
+# UI For Testing
+
+https://github.com/user-attachments/assets/aa85b4d9-b2cb-454c-97d0-ad1443ac9a59
+
+[How run UI](https://github.com/vamplabAI/sgr-agent-core/blob/feature/frontend-integration/sgr-deep-research-frontend/README.md)
+
 ## Description
 
 ![SGR Concept Architecture](docs/sgr_concept.png)

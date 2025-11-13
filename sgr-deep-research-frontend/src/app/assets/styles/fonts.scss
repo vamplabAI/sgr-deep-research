@@ -1,0 +1,32 @@
+// Font faces - import this file ONLY ONCE in main.scss
+@font-face {
+  font-display: swap;
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  src: url('@app/assets/fonts/Inter-24pt-Regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  src: url('@app/assets/fonts/Inter-24pt-Medium.woff2') format('woff2');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  src: url('@app/assets/fonts/Inter-24pt-SemiBold.woff2') format('woff2');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  src: url('@app/assets/fonts/Inter-24pt-Bold.woff2') format('woff2');
+}

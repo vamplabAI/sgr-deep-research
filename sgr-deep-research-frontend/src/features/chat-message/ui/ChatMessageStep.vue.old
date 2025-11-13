@@ -1,0 +1,1094 @@
+<template>
+  <div class="agent-reasoning-step" v-if="step">
+    <!-- Streaming content (raw text) -->
+    <div v-if="step._streaming" class="agent-reasoning-step__streaming">
+      <div class="agent-reasoning-step__header">
+        <div class="agent-reasoning-step__title">
+          <span class="agent-reasoning-step__reasoning">🔄 Streaming...</span>
+          <span class="agent-reasoning-step__tool-name">{{ step.tool_name_discriminator?.toUpperCase() }}</span>
+        </div>
+      </div>
+      <div class="agent-reasoning-step__content">
+        <pre class="agent-reasoning-step__raw-content">{{ step._raw_content }}</pre>
+      </div>
+    </div>
+
+    <!-- String content -->
+    <template v-else-if="typeof step === 'string'">
+      <template v-if="!!step">
+        <!-- Check if this is extracted page content (should be collapsible) -->
+        <div v-if="isExtractedPageContent(step)" class="agent-reasoning-step">
+          <div class="agent-reasoning-step__header" @click="toggleExtractedContentCollapsed">
+            <div class="agent-reasoning-step__title">
+              <span class="agent-reasoning-step__reasoning">Extracted Page Content:</span>
+            </div>
+            <div class="agent-reasoning-step__toggle">
+              <AppIconChevronDown24
+                :class="{ 'agent-reasoning-step__chevron--rotated': !isExtractedContentCollapsed }"
+              />
+            </div>
+          </div>
+          <div v-if="!isExtractedContentCollapsed" class="agent-reasoning-step__content">
+            <div class="agent-reasoning-step__string-content" v-html="formatTextWithLinks(step)"></div>
+          </div>
+        </div>
+        <!-- Regular string content -->
+        <div v-else class="agent-reasoning-step__string-content" v-html="formatTextWithLinks(step)"></div>
+      </template>
+    </template>
+
+    <!-- Reasoning Tool content -->
+    <template
+      v-else-if="
+        step.tool_name_discriminator === 'reasoningtool' ||
+        (step.function && step.function.tool_name_discriminator === 'reasoningtool')
+      "
+    >
+      <div class="agent-reasoning-step__header" @click="toggleCollapsed">
+        <div class="agent-reasoning-step__title">
+          <span class="agent-reasoning-step__reasoning">Agent Analysis & Planning</span>
+          <span class="agent-reasoning-step__tool-name">REASONING TOOL</span>
+        </div>
+        <div class="agent-reasoning-step__toggle">
+          <AppIconChevronDown24
+            :class="{ 'agent-reasoning-step__chevron--rotated': !isCollapsed }"
+          />
+        </div>
+      </div>
+
+      <div v-if="!isCollapsed" class="agent-reasoning-step__content">
+        <div class="agent-reasoning-step__details">
+          <!-- Current Situation -->
+          <div v-if="step.current_situation" class="agent-reasoning-step__field">
+            <span class="agent-reasoning-step__field-label">Current Situation:</span>
+            <div class="agent-reasoning-step__situation-text">{{ step.current_situation }}</div>
+          </div>
+
+          <!-- Plan Status -->
+          <div v-if="step.plan_status" class="agent-reasoning-step__field">
+            <span class="agent-reasoning-step__field-label">Plan Status:</span>
+            <div class="agent-reasoning-step__status-text">{{ step.plan_status }}</div>
+          </div>
+
+          <!-- Reasoning Steps -->
+          <div
+            v-if="step.reasoning_steps && step.reasoning_steps.length"
+            class="agent-reasoning-step__field"
+          >
+            <span class="agent-reasoning-step__field-label">Analysis Steps:</span>
+            <ul class="agent-reasoning-step__reasoning-list">
+              <li
+                v-for="(reasoningStep, index) in step.reasoning_steps"
+                :key="index"
+                class="agent-reasoning-step__reasoning-item"
+              >
+                {{ reasoningStep }}
+              </li>
+            </ul>
+          </div>
+
+          <!-- Remaining Steps -->
+          <div
+            v-if="step.remaining_steps && step.remaining_steps.length"
+            class="agent-reasoning-step__field"
+          >
+            <span class="agent-reasoning-step__field-label">Next Steps:</span>
+            <ul class="agent-reasoning-step__remaining-list">
+              <li
+                v-for="(remainingStep, index) in step.remaining_steps"
+                :key="index"
+                class="agent-reasoning-step__remaining-item"
+              >
+                {{ remainingStep }}
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- ReasoningStep content -->
+    <template v-else>
+      <div class="agent-reasoning-step__header" @click="toggleCollapsed">
+        <div class="agent-reasoning-step__title">
+          <span class="agent-reasoning-step__reasoning">{{
+            step.reasoning || (step.function && step.function.reasoning)
+          }}</span>
+          <span class="agent-reasoning-step__tool-name">{{
+            step.tool_name_discriminator || (step.function && step.function.tool_name_discriminator)
+          }}</span>
+        </div>
+        <div class="agent-reasoning-step__toggle">
+          <AppIconChevronDown24
+            :class="{ 'agent-reasoning-step__chevron--rotated': !isCollapsed }"
+          />
+        </div>
+      </div>
+
+      <div v-if="!isCollapsed" class="agent-reasoning-step__content">
+        <!-- Clarification Tool -->
+        <div
+          v-if="
+            step.tool_name_discriminator === 'clarificationtool' ||
+            (step.function && step.function.tool_name_discriminator === 'clarificationtool')
+          "
+          class="agent-reasoning-step__details"
+        >
+          <div
+            v-if="step.questions || (step.function && step.function.questions)"
+            class="agent-reasoning-step__field"
+          >
+            <span class="agent-reasoning-step__field-label">Questions:</span>
+            <ul class="agent-reasoning-step__questions-list">
+              <li
+                v-for="(question, index) in step.questions || step.function?.questions || []"
+                :key="index"
+                class="agent-reasoning-step__question-item"
+              >
+                {{ question }}
+              </li>
+            </ul>
+          </div>
+          <div
+            v-if="step.unclear_terms || (step.function && step.function.unclear_terms)"
+            class="agent-reasoning-step__field"
+          >
+            <span class="agent-reasoning-step__field-label">Unclear Terms:</span>
+            <ul class="agent-reasoning-step__terms-list">
+              <li
+                v-for="(term, index) in step.unclear_terms || step.function?.unclear_terms || []"
+                :key="index"
+                class="agent-reasoning-step__term-item"
+              >
+                {{ term }}
+              </li>
+            </ul>
+          </div>
+          <div
+            v-if="step.assumptions || (step.function && step.function.assumptions)"
+            class="agent-reasoning-step__field"
+          >
+            <span class="agent-reasoning-step__field-label">Assumptions:</span>
+            <ul class="agent-reasoning-step__assumptions-list">
+              <li
+                v-for="(assumption, index) in step.assumptions || step.function?.assumptions || []"
+                :key="index"
+                class="agent-reasoning-step__assumption-item"
+              >
+                {{ assumption }}
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Web Search Tool -->
+        <div
+          v-if="
+            step.tool_name_discriminator === 'websearchtool' ||
+            (step.function && step.function.tool_name_discriminator === 'websearchtool')
+          "
+          class="agent-reasoning-step__details"
+        >
+          <div
+            v-if="step.query || (step.function && step.function.query)"
+            class="agent-reasoning-step__field"
+          >
+            <span class="agent-reasoning-step__field-label">Query:</span>
+            <span class="agent-reasoning-step__field-value">{{
+              step.query || step.function?.query
+            }}</span>
+          </div>
+          <div
+            v-if="step.function && step.function.max_results"
+            class="agent-reasoning-step__field"
+          >
+            <span class="agent-reasoning-step__field-label">Max Results:</span>
+            <span class="agent-reasoning-step__field-value">{{ step.function.max_results }}</span>
+          </div>
+          <div
+            v-if="step.function && step.function.scrape_content"
+            class="agent-reasoning-step__field"
+          >
+            <span class="agent-reasoning-step__field-label">Scrape Content:</span>
+            <span class="agent-reasoning-step__field-value">{{
+              step.function.scrape_content ? 'Yes' : 'No'
+            }}</span>
+          </div>
+
+          <!-- Search Results -->
+          <div
+            v-if="step.results || (step.function && step.function.results)"
+            class="agent-reasoning-step__field"
+          >
+            <span class="agent-reasoning-step__field-label">Search Results:</span>
+            <div class="agent-reasoning-step__search-results">
+              <div
+                v-for="(result, index) in step.results || step.function?.results || []"
+                :key="index"
+                class="search-result-item"
+              >
+                <div class="search-result-title">
+                  [{{ index + 1 }}]
+                  <a
+                    v-if="result.link"
+                    :href="result.link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {{ result.title }}
+                  </a>
+                  <span v-else>{{ result.title }}</span>
+                </div>
+                <div v-if="result.snippet" class="search-result-snippet">
+                  {{ result.snippet }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Remaining Steps -->
+          <div
+            v-if="step.remaining_steps && step.remaining_steps.length"
+            class="agent-reasoning-step__field"
+          >
+            <span class="agent-reasoning-step__field-label">Next Steps:</span>
+            <ul class="agent-reasoning-step__remaining-list">
+              <li
+                v-for="(remainingStep, index) in step.remaining_steps"
+                :key="index"
+                class="agent-reasoning-step__remaining-item"
+              >
+                {{ remainingStep }}
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Extract Page Content Tool -->
+        <div
+          v-else-if="
+            step.tool_name_discriminator === 'extractpagecontenttool' ||
+            (step.function && step.function.tool_name_discriminator === 'extractpagecontenttool')
+          "
+          class="agent-reasoning-step__details"
+        >
+          <div
+            v-if="
+              (step.urls && step.urls.length) ||
+              (step.function && step.function.urls && step.function.urls.length)
+            "
+            class="agent-reasoning-step__field"
+          >
+            <span class="agent-reasoning-step__field-label">URLs:</span>
+            <div class="agent-reasoning-step__urls">
+              <a
+                v-for="(url, index) in step.urls || step.function?.urls || []"
+                :key="index"
+                :href="url"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="agent-reasoning-step__url"
+              >
+                {{ url }}
+              </a>
+            </div>
+          </div>
+
+          <!-- Remaining Steps -->
+          <div
+            v-if="step.remaining_steps && step.remaining_steps.length"
+            class="agent-reasoning-step__field"
+          >
+            <span class="agent-reasoning-step__field-label">Next Steps:</span>
+            <ul class="agent-reasoning-step__remaining-list">
+              <li
+                v-for="(remainingStep, index) in step.remaining_steps"
+                :key="index"
+                class="agent-reasoning-step__remaining-item"
+              >
+                {{ remainingStep }}
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Create Report Tool -->
+        <div
+          v-else-if="
+            step.tool_name_discriminator === 'createreporttool' ||
+            (step.function && step.function.tool_name_discriminator === 'createreporttool')
+          "
+          class="agent-reasoning-step__details"
+        >
+          <div
+            v-if="step.title || (step.function && step.function.title)"
+            class="agent-reasoning-step__field"
+          >
+            <span class="agent-reasoning-step__field-label">Title:</span>
+            <span class="agent-reasoning-step__field-value">{{
+              step.title || step.function?.title
+            }}</span>
+          </div>
+          <div
+            v-if="
+              step.user_request_language_reference ||
+              (step.function && step.function.user_request_language_reference)
+            "
+            class="agent-reasoning-step__field"
+          >
+            <span class="agent-reasoning-step__field-label">User Request:</span>
+            <span class="agent-reasoning-step__field-value">{{
+              step.user_request_language_reference || step.function?.user_request_language_reference
+            }}</span>
+          </div>
+          <div
+            v-if="step.content || (step.function && step.function.content)"
+            class="agent-reasoning-step__field"
+          >
+            <span class="agent-reasoning-step__field-label">Content:</span>
+            <div class="agent-reasoning-step__content-text">
+              {{ step.content || step.function?.content }}
+            </div>
+          </div>
+          <div v-if="step.function && step.function.confidence" class="agent-reasoning-step__field">
+            <span class="agent-reasoning-step__field-label">Confidence:</span>
+            <span class="agent-reasoning-step__field-value">{{ step.function.confidence }}</span>
+          </div>
+
+          <!-- Remaining Steps -->
+          <div
+            v-if="step.remaining_steps && step.remaining_steps.length"
+            class="agent-reasoning-step__field"
+          >
+            <span class="agent-reasoning-step__field-label">Next Steps:</span>
+            <ul class="agent-reasoning-step__remaining-list">
+              <li
+                v-for="(remainingStep, index) in step.remaining_steps"
+                :key="index"
+                class="agent-reasoning-step__remaining-item"
+              >
+                {{ remainingStep }}
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Agent Completion Tool -->
+        <div
+          v-else-if="
+            step.tool_name_discriminator === 'agentcompletiontool' ||
+            (step.function && step.function.tool_name_discriminator === 'agentcompletiontool')
+          "
+          class="agent-reasoning-step__details"
+        >
+          <div
+            v-if="
+              (step.completed_steps && step.completed_steps.length) ||
+              (step.function &&
+                step.function.completed_steps &&
+                step.function.completed_steps.length)
+            "
+            class="agent-reasoning-step__field"
+          >
+            <span class="agent-reasoning-step__field-label">Completed Steps:</span>
+            <ul class="agent-reasoning-step__steps-list">
+              <li
+                v-for="(completedStep, index) in step.completed_steps ||
+                step.function?.completed_steps ||
+                []"
+                :key="index"
+              >
+                {{ completedStep }}
+              </li>
+            </ul>
+          </div>
+          <div
+            v-if="step.status || (step.function && step.function.status)"
+            class="agent-reasoning-step__field"
+          >
+            <span class="agent-reasoning-step__field-label">Status:</span>
+            <span
+              class="agent-reasoning-step__field-value agent-reasoning-step__status--completed"
+              >{{ step.status || step.function?.status }}</span
+            >
+          </div>
+
+          <!-- Remaining Steps -->
+          <div
+            v-if="step.remaining_steps && step.remaining_steps.length"
+            class="agent-reasoning-step__field"
+          >
+            <span class="agent-reasoning-step__field-label">Next Steps:</span>
+            <ul class="agent-reasoning-step__remaining-list">
+              <li
+                v-for="(remainingStep, index) in step.remaining_steps"
+                :key="index"
+                class="agent-reasoning-step__remaining-item"
+              >
+                {{ remainingStep }}
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Final Answer Tool -->
+        <div
+          v-else-if="
+            step.tool_name_discriminator === 'finalanswertool' ||
+            (step.function && step.function.tool_name_discriminator === 'finalanswertool')
+          "
+          class="agent-reasoning-step__details"
+        >
+          <div
+            v-if="
+              (step.completed_steps && step.completed_steps.length) ||
+              (step.function &&
+                step.function.completed_steps &&
+                step.function.completed_steps.length)
+            "
+            class="agent-reasoning-step__field"
+          >
+            <span class="agent-reasoning-step__field-label">Completed Steps:</span>
+            <ul class="agent-reasoning-step__steps-list">
+              <li
+                v-for="(completedStep, index) in step.completed_steps ||
+                step.function?.completed_steps ||
+                []"
+                :key="index"
+              >
+                {{ completedStep }}
+              </li>
+            </ul>
+          </div>
+          <div
+            v-if="step.answer || (step.function && step.function.answer)"
+            class="agent-reasoning-step__field"
+          >
+            <span class="agent-reasoning-step__field-label">Final Answer:</span>
+            <div class="agent-reasoning-step__answer-text">
+              {{ step.answer || step.function?.answer }}
+            </div>
+          </div>
+          <div
+            v-if="step.status || (step.function && step.function.status)"
+            class="agent-reasoning-step__field"
+          >
+            <span class="agent-reasoning-step__field-label">Status:</span>
+            <span
+              class="agent-reasoning-step__field-value agent-reasoning-step__status--completed"
+              >{{ step.status || step.function?.status }}</span
+            >
+          </div>
+        </div>
+
+        <!-- Generate Plan Tool -->
+        <div
+          v-else-if="
+            step.tool_name_discriminator === 'generateplantool' ||
+            (step.function && step.function.tool_name_discriminator === 'generateplantool')
+          "
+          class="agent-reasoning-step__details"
+        >
+          <!-- Research Goal -->
+          <div
+            v-if="step.function && step.function.research_goal"
+            class="agent-reasoning-step__field"
+          >
+            <span class="agent-reasoning-step__field-label">Research Goal:</span>
+            <div class="agent-reasoning-step__goal-text">
+              {{ step.function.research_goal }}
+            </div>
+          </div>
+
+          <!-- Planned Steps -->
+          <div
+            v-if="
+              (step.function &&
+                step.function.planned_steps &&
+                step.function.planned_steps.length) ||
+              (step.remaining_steps && step.remaining_steps.length)
+            "
+            class="agent-reasoning-step__field"
+          >
+            <span class="agent-reasoning-step__field-label">Planned Steps:</span>
+            <ul class="agent-reasoning-step__planned-list">
+              <li
+                v-for="(plannedStep, index) in step.function?.planned_steps ||
+                step.remaining_steps ||
+                []"
+                :key="index"
+                class="agent-reasoning-step__planned-item"
+              >
+                {{ plannedStep }}
+              </li>
+            </ul>
+          </div>
+
+          <!-- Search Strategies -->
+          <div
+            v-if="
+              step.function &&
+              step.function.search_strategies &&
+              step.function.search_strategies.length
+            "
+            class="agent-reasoning-step__field"
+          >
+            <span class="agent-reasoning-step__field-label">Search Strategies:</span>
+            <ul class="agent-reasoning-step__strategies-list">
+              <li
+                v-for="(strategy, index) in step.function.search_strategies"
+                :key="index"
+                class="agent-reasoning-step__strategy-item"
+              >
+                {{ strategy }}
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Generic fallback for unknown tools -->
+        <div v-else class="agent-reasoning-step__details">
+          <div class="agent-reasoning-step__field">
+            <span class="agent-reasoning-step__field-label">Tool Data:</span>
+            <pre class="agent-reasoning-step__json">{{ JSON.stringify(step, null, 2) }}</pre>
+          </div>
+
+          <!-- Remaining Steps -->
+          <div
+            v-if="step.remaining_steps && step.remaining_steps.length"
+            class="agent-reasoning-step__field"
+          >
+            <span class="agent-reasoning-step__field-label">Next Steps:</span>
+            <ul class="agent-reasoning-step__remaining-list">
+              <li
+                v-for="(remainingStep, index) in step.remaining_steps"
+                :key="index"
+                class="agent-reasoning-step__remaining-item"
+              >
+                {{ remainingStep }}
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+import AppIconChevronDown24 from '@/shared/ui/icons/AppIconChevronDown24.vue'
+import type { ReasoningStep } from '@/shared/api/types'
+
+defineProps<{
+  step: ReasoningStep | string
+}>()
+
+const isCollapsed = ref(true)
+const isExtractedContentCollapsed = ref(true)
+
+const toggleCollapsed = () => {
+  isCollapsed.value = !isCollapsed.value
+}
+
+const toggleExtractedContentCollapsed = () => {
+  isExtractedContentCollapsed.value = !isExtractedContentCollapsed.value
+}
+
+const isExtractedPageContent = (text: string): boolean => {
+  return text.includes('Extracted Page Content:')
+}
+
+/**
+ * Convert URLs and Markdown links in text to clickable links
+ * Uses a placeholder-based approach to avoid double-processing URLs
+ */
+const formatTextWithLinks = (text: string): string => {
+  if (!text) return ''
+
+  console.log('🔗 formatTextWithLinks input:', text.substring(0, 200))
+
+  // Массив для хранения уже обработанных ссылок
+  const processedLinks: string[] = []
+  const PLACEHOLDER_PREFIX = '___LINK_PLACEHOLDER_'
+
+  let result = text
+
+  // 1. Обрабатываем markdown-ссылки: [text](url)
+  // Заменяем их на плейсхолдеры, чтобы избежать повторной обработки
+  result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, linkText, url) => {
+    const trimmedUrl = url.trim()
+    const href = trimmedUrl.startsWith('www.') ? `https://${trimmedUrl}` : trimmedUrl
+    const linkHtml = `<a href="${href}" target="_blank" rel="noopener noreferrer" class="message-link">${linkText}</a>`
+    const placeholder = `${PLACEHOLDER_PREFIX}${processedLinks.length}___`
+    processedLinks.push(linkHtml)
+    console.log(`  ✅ Markdown link found: [${linkText}](${url})`)
+    return placeholder
+  })
+
+  // 2. Обрабатываем обычные URL (https:// или http://)
+  // Используем negative lookbehind чтобы не матчить URL внутри href=""
+  result = result.replace(/(?<!href=")(https?:\/\/[^\s<>"]+)/g, (url) => {
+    // Проверяем, что это не плейсхолдер
+    if (url.includes(PLACEHOLDER_PREFIX)) return url
+
+    const linkHtml = `<a href="${url}" target="_blank" rel="noopener noreferrer" class="message-link">${url}</a>`
+    const placeholder = `${PLACEHOLDER_PREFIX}${processedLinks.length}___`
+    processedLinks.push(linkHtml)
+    console.log(`  🌐 Plain URL found: ${url}`)
+    return placeholder
+  })
+
+  // 3. Обрабатываем www. ссылки (только если они не внутри href="")
+  result = result.replace(/(?<!href=")(www\.[^\s<>"]+)/g, (url) => {
+    // Проверяем, что это не плейсхолдер
+    if (url.includes(PLACEHOLDER_PREFIX)) return url
+
+    const linkHtml = `<a href="https://${url}" target="_blank" rel="noopener noreferrer" class="message-link">${url}</a>`
+    const placeholder = `${PLACEHOLDER_PREFIX}${processedLinks.length}___`
+    processedLinks.push(linkHtml)
+    console.log(`  🌐 www URL found: ${url}`)
+    return placeholder
+  })
+
+  // 4. Заменяем все плейсхолдеры обратно на HTML ссылки
+  processedLinks.forEach((linkHtml, index) => {
+    const placeholder = `${PLACEHOLDER_PREFIX}${index}___`
+    result = result.replace(placeholder, linkHtml)
+  })
+
+  console.log('🔗 formatTextWithLinks output:', result.substring(0, 200))
+
+  return result
+}
+</script>
+
+<style scoped>
+.agent-reasoning-step {
+  width: 100%;
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  margin-bottom: 20px; /* ← Увеличили отступ для лучшего разделения! */
+  background: #fafbfc;
+  overflow: hidden;
+}
+
+.agent-reasoning-step__string-content {
+  font-size: 14px;
+  padding: 4px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.agent-reasoning-step__string-content :deep(.message-link) {
+  color: #2563eb;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.agent-reasoning-step__string-content :deep(.message-link:hover) {
+  color: #1d4ed8;
+  border-bottom-color: #1d4ed8;
+  background-color: rgba(37, 99, 235, 0.05);
+}
+
+.agent-reasoning-step__string-content :deep(.message-link:visited) {
+  color: #7c3aed;
+}
+
+.agent-reasoning-step__string-content :deep(.message-link:active) {
+  color: #1e40af;
+}
+
+.agent-reasoning-step__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.agent-reasoning-step__header:hover {
+  background-color: #f1f3f4;
+}
+
+.agent-reasoning-step__title {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.agent-reasoning-step__reasoning {
+  font-size: 13px;
+  line-height: 1.4;
+  color: #1a1a1a;
+  font-weight: 500;
+}
+
+.agent-reasoning-step__tool-name {
+  font-size: 9px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.agent-reasoning-step__toggle {
+  margin-left: 12px;
+  transition: transform 0.2s ease;
+}
+
+.agent-reasoning-step__chevron--rotated {
+  transform: rotate(180deg);
+}
+
+.agent-reasoning-step__content {
+  border-top: 1px solid #e1e5e9;
+  background: #ffffff;
+}
+
+.agent-reasoning-step__details {
+  padding: 10px 12px;
+}
+
+.agent-reasoning-step__field {
+  margin-bottom: 12px;
+}
+
+.agent-reasoning-step__field:last-child {
+  margin-bottom: 0;
+}
+
+.agent-reasoning-step__field-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.agent-reasoning-step__field-value {
+  font-size: 12px;
+  color: #1a1a1a;
+  line-height: 1;
+}
+
+.agent-reasoning-step__urls {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.agent-reasoning-step__url {
+  font-size: 13px;
+  color: #2563eb;
+  text-decoration: none;
+  word-break: break-all;
+  line-height: 1.3;
+}
+
+.agent-reasoning-step__url:hover {
+  text-decoration: underline;
+}
+
+.agent-reasoning-step__content-text {
+  font-size: 14px;
+  color: #1a1a1a;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.agent-reasoning-step__steps-list {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 14px;
+  color: #1a1a1a;
+  line-height: 1.4;
+}
+
+.agent-reasoning-step__steps-list li {
+  margin-bottom: 4px;
+}
+
+.agent-reasoning-step__status--completed {
+  color: #059669;
+  font-weight: 600;
+}
+
+.agent-reasoning-step__json {
+  font-size: 12px;
+  color: #6b7280;
+  background: #f8f9fa;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #e1e5e9;
+  overflow-x: auto;
+  margin: 0;
+}
+
+/* AgentReasoning specific styles */
+.agent-reasoning-step__situation-text {
+  font-size: 14px;
+  color: #1a1a1a;
+  line-height: 1.5;
+  background: #f0f9ff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border-left: 3px solid #0ea5e9;
+  margin-top: 4px;
+}
+
+.agent-reasoning-step__status-text {
+  font-size: 14px;
+  color: #1a1a1a;
+  line-height: 1.5;
+  background: #f0fdf4;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border-left: 3px solid #22c55e;
+  margin-top: 4px;
+}
+
+.agent-reasoning-step__reasoning-list {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 14px;
+  color: #1a1a1a;
+  line-height: 1.4;
+}
+
+.agent-reasoning-step__reasoning-item {
+  margin-bottom: 6px;
+  position: relative;
+}
+
+.agent-reasoning-step__remaining-list {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 14px;
+  color: #1a1a1a;
+  line-height: 1.4;
+}
+
+.agent-reasoning-step__remaining-item {
+  margin-bottom: 6px;
+  position: relative;
+}
+
+/* Final Answer - displayed prominently without collapsible */
+.agent-reasoning-step__final-answer {
+  margin: 16px 0;
+}
+
+.agent-reasoning-step__answer-text {
+  font-size: 16px;
+  color: #1a1a1a;
+  line-height: 1.6;
+  background: #f0f9ff;
+  padding: 16px 20px;
+  border-radius: 12px;
+  border-left: 4px solid #2563eb;
+  font-weight: 400;
+  white-space: pre-wrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Generate Plan Tool specific styles */
+.agent-reasoning-step__goal-text {
+  font-size: 14px;
+  color: #1a1a1a;
+  line-height: 1.5;
+  background: #fef3c7;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border-left: 3px solid #f59e0b;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.agent-reasoning-step__planned-list {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 14px;
+  color: #1a1a1a;
+  line-height: 1.4;
+}
+
+.agent-reasoning-step__planned-item {
+  margin-bottom: 6px;
+  position: relative;
+}
+
+.agent-reasoning-step__strategies-list {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 14px;
+  color: #1a1a1a;
+  line-height: 1.4;
+}
+
+.agent-reasoning-step__strategy-item {
+  margin-bottom: 6px;
+  position: relative;
+}
+
+/* Search Results styles */
+.agent-reasoning-step__search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.search-result-item {
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border-left: 3px solid #3b82f6;
+}
+
+.search-result-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 6px;
+  line-height: 1.4;
+
+  a {
+    color: #3b82f6;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.search-result-snippet {
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+/* Clarification Tool styles */
+.agent-reasoning-step__questions-list,
+.agent-reasoning-step__terms-list,
+.agent-reasoning-step__assumptions-list {
+  margin: 8px 0 0 0;
+  padding-left: 20px;
+  font-size: 14px;
+  color: #1a1a1a;
+  line-height: 1.6;
+}
+
+.agent-reasoning-step__question-item {
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background: #fef3c7;
+  border-radius: 6px;
+  border-left: 3px solid #f59e0b;
+  list-style: none;
+  font-weight: 500;
+}
+
+.agent-reasoning-step__term-item {
+  margin-bottom: 6px;
+  padding: 6px 10px;
+  background: #fee2e2;
+  border-radius: 6px;
+  border-left: 3px solid #ef4444;
+  list-style: none;
+}
+
+.agent-reasoning-step__assumption-item {
+  margin-bottom: 6px;
+  padding: 6px 10px;
+  background: #e0e7ff;
+  border-radius: 6px;
+  border-left: 3px solid #6366f1;
+  list-style: none;
+}
+
+.agent-reasoning-step__status-container {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.agent-reasoning-step__status-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.agent-reasoning-step__status--in-progress {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.agent-reasoning-step__status--completed {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+/* Streaming styles */
+.agent-reasoning-step__streaming {
+  margin-bottom: 16px;
+  border: 2px solid #3b82f6;
+  border-radius: 8px;
+  overflow: hidden;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    border-color: #3b82f6;
+  }
+  50% {
+    border-color: #60a5fa;
+  }
+}
+
+.agent-reasoning-step__raw-content {
+  padding: 12px;
+  margin: 0;
+  background: #f0f9ff;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: #1e40af;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.agent-reasoning-step__data-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.agent-reasoning-step__data--sufficient {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.agent-reasoning-step__data--insufficient {
+  background: #fee2e2;
+  color: #991b1b;
+}
+</style>
