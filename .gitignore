@@ -6,6 +6,7 @@ agents.yaml
 *.env
 .env*
 venv/
+.vite/
 secrets.yaml
 secrets.json
 config.yaml.bak
