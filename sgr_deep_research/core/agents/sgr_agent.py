@@ -1,5 +1,8 @@
 from typing import Type
 
+from openai import AsyncOpenAI
+
+from sgr_deep_research.core.agent_definition import ExecutionConfig, LLMConfig, PromptsConfig
 from sgr_deep_research.core.base_agent import BaseAgent
 from sgr_deep_research.core.tools import (
     BaseTool,
@@ -8,15 +11,8 @@ from sgr_deep_research.core.tools import (
     FinalAnswerTool,
     NextStepToolsBuilder,
     NextStepToolStub,
-    ReasoningTool,
     WebSearchTool,
-    research_agent_tools,
-    system_agent_tools,
 )
-from sgr_deep_research.services import MCP2ToolConverter
-from sgr_deep_research.settings import get_config
-
-config = get_config()
 
 
 class SGRAgent(BaseAgent):
@@ -27,26 +23,21 @@ class SGRAgent(BaseAgent):
     def __init__(
         self,
         task: str,
+        openai_client: AsyncOpenAI,
+        llm_config: LLMConfig,
+        prompts_config: PromptsConfig,
+        execution_config: ExecutionConfig,
         toolkit: list[Type[BaseTool]] | None = None,
-        max_clarifications: int = 3,
-        max_iterations: int = 10,
-        max_searches: int = 4,
     ):
         super().__init__(
             task=task,
+            openai_client=openai_client,
+            llm_config=llm_config,
+            prompts_config=prompts_config,
+            execution_config=execution_config,
             toolkit=toolkit,
-            max_clarifications=max_clarifications,
-            max_iterations=max_iterations,
         )
-
-        self.toolkit = [
-            *system_agent_tools,
-            *research_agent_tools,
-            *MCP2ToolConverter().toolkit,
-            *(toolkit or []),
-        ]
-        self.toolkit.remove(ReasoningTool)  # we use our own reasoning scheme
-        self.max_searches = max_searches
+        self.max_searches = execution_config.max_searches
 
     async def _prepare_tools(self) -> Type[NextStepToolStub]:
         """Prepare tool classes with current context limits."""
@@ -68,11 +59,11 @@ class SGRAgent(BaseAgent):
 
     async def _reasoning_phase(self) -> NextStepToolStub:
         async with self.openai_client.chat.completions.stream(
-            model=config.openai.model,
+            model=self.llm_config.model,
             response_format=await self._prepare_tools(),
             messages=await self._prepare_context(),
-            max_tokens=config.openai.max_tokens,
-            temperature=config.openai.temperature,
+            max_tokens=self.llm_config.max_tokens,
+            temperature=self.llm_config.temperature,
         ) as stream:
             async for event in stream:
                 if event.type == "chunk":
@@ -116,20 +107,3 @@ class SGRAgent(BaseAgent):
         self.streaming_generator.add_chunk_from_str(f"{result}\n")
         self._log_tool_execution(tool, result)
         return result
-
-
-if __name__ == "__main__":
-    import asyncio
-
-    async def main():
-        await MCP2ToolConverter().build_tools_from_mcp()
-        agent = SGRAgent(
-            task="найди информацию о репозитории на гитхаб sgr-deep-research и ответь на вопрос, "
-            "какая основная концепция этого репозитория?",
-            max_iterations=5,
-            max_clarifications=2,
-            max_searches=3,
-        )
-        await agent.execute()
-
-    asyncio.run(main())

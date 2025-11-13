@@ -62,7 +62,6 @@ class ResearchContext(BaseModel):
         default_factory=asyncio.Event, description="Event for clarification synchronization"
     )
 
-    # ToDO: rename, my creativity finished now
     def agent_state(self) -> dict:
         return self.model_dump(exclude={"searches", "sources", "clarification_received"})
 

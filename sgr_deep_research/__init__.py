@@ -6,9 +6,8 @@ A powerful research assistant that combines structured reasoning with deep analy
 
 from sgr_deep_research.api import *  # noqa: F403
 from sgr_deep_research.core import *  # noqa: F403
-from sgr_deep_research.services import *  # noqa: F403
 
-__version__ = "0.2.5"
+__version__ = "0.4.0"
 __author__ = "sgr-deep-research-team"
 
 

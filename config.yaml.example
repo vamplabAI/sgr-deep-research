@@ -1,58 +1,62 @@
-# SGR Research Agent - Configuration Template
-# Production-ready configuration for Schema-Guided Reasoning
-# Copy this file to config.yaml and fill in your API keys
+# SGR Deep Research Agent - Configuration Template
+# Copy this file to config.yaml and fill in your data
 
-# OpenAI API Configuration
-openai:
-  api_key: "your-openai-api-key-here"  # Required: Your OpenAI API key
-  base_url: "https://api.openai.com/v1"  # Optional: Alternative URL (e.g., for proxy LiteLLM/vLLM)
-  model: "gpt-4o-mini"                 # Model to use
-  max_tokens: 8000                     # Maximum number of tokens
-  temperature: 0.4                     # Generation temperature (0.0-1.0)
-  proxy: ""                            # Example: "socks5://127.0.0.1:1081" or "http://127.0.0.1:8080" or leave empty for no proxy
+# LLM Configuration
+llm:
+  api_key: "your-openai-api-key-here"  # Your OpenAI API key
+  base_url: "https://api.openai.com/v1"  # API base URL
+  model: "gpt-4o-mini"  # Model name
+  max_tokens: 8000  # Max output tokens
+  temperature: 0.4  # Temperature (0.0-1.0)
+  # proxy: "socks5://127.0.0.1:1081"  # Optional proxy (socks5:// or http://)
 
-# Tavily Search Configuration
-tavily:
-  api_key: "your-tavily-api-key-here"  # Required: Your Tavily API key
-  api_base_url: "https://api.tavily.com"  # Tavily API base URL
-
-# Search Settings
+# Search Configuration (Tavily)
 search:
-  max_results: 10                      # Maximum number of search results
-
-# Scraping Settings
-scraping:
-  enabled: false                       # Enable full text scraping of found pages
-  max_pages: 5                         # Maximum pages to scrape per search
-  content_limit: 1500                  # Character limit for full content per source
+  tavily_api_key: "your-tavily-api-key-here"  # Tavily API key (get at tavily.com)
+  tavily_api_base_url: "https://api.tavily.com"  # Tavily API URL
+  max_results: 10  # Max search results
+  max_pages: 5  # Max pages to scrape
+  content_limit: 1500  # Content char limit per source
 
 # Execution Settings
 execution:
-  max_steps: 6                         # Maximum number of execution steps
-  reports_dir: "reports"               # Directory for saving reports
-  logs_dir: "logs"                     # Directory for saving reports
+  max_steps: 6  # Max execution steps
+  max_clarifications: 3  # Max clarification requests
+  max_iterations: 10  # Max iterations per step
+  max_searches: 4  # Max search operations
+  mcp_context_limit: 15000  # Max context length from MCP server response
+  logs_dir: "logs"  # Directory for saving agent execution logs
+  reports_dir: "reports"  # Directory for saving agent reports
 
-# Prompts Settings
-prompts:
-  prompts_dir: "prompts"               # Directory with prompts
-  system_prompt_file: "system_prompt.txt"  # System prompt file
+# Prompts Configuration
+# prompts:
+#   # Option 1: Use file paths (absolute or relative to project root)
+#   system_prompt_file: "path/to/your/system_prompt.txt"
+#   initial_user_request_file: "path/to/your/initial_user_request.txt"
+#   clarification_response_file: "path/to/your/clarification_response.txt"
 
-# Logging Settings
-logging:
-  config_file: "logging_config.yaml"  # Logging configuration file path
+#  # Option 2: Provide prompts directly as strings
+#   system_prompt_str: "Your custom system prompt here..."
+#   initial_user_request_str: "Your custom initial request template..."
+#   clarification_response_str: "Your custom clarification template..."
 
+  # Note: If both file and string are provided, string takes precedence
+
+# MCP (Model Context Protocol) Configuration
 mcp:
+  mcpServers:
+    deepwiki:
+      url: "https://mcp.deepwiki.com/mcp"
 
-  # Limit on the result of MCP tool invocation.
-  # A balanced constant value: not too large to avoid filling the entire context window with potentially unimportant data,
-  # yet not too small to ensure critical information from a single MCP fits through
-  context_limit: 15000
+    # Add more MCP servers here:
+    # your_server:
+    #   url: "https://your-mcp-server.com/mcp"
+    #   headers:
+    #     Authorization: "Bearer your-token"
 
-  # https://gofastmcp.com/clients/transports#mcp-json-configuration-transport
-  transport_config:
-    mcpServers:
-      deepwiki:
-        url: "https://mcp.deepwiki.com/mcp"
 
-      context7:
-        url: "https://mcp.context7.com/mcp"
+# Note: The 'agents' field is optional and can be loaded from either:
+# - This config.yaml file
+# - Any separate file by GlobalConfig.definitions_from_yaml method
+# See examples in agents.yaml.example for agent configuration options
+agents: {}

@@ -5,16 +5,15 @@ from typing import TYPE_CHECKING
 
 from pydantic import Field
 
+from sgr_deep_research.core.agent_config import GlobalConfig
 from sgr_deep_research.core.base_tool import BaseTool
-from sgr_deep_research.services.tavily_search import TavilySearchService
-from sgr_deep_research.settings import get_config
+from sgr_deep_research.core.services.tavily_search import TavilySearchService
 
 if TYPE_CHECKING:
     from sgr_deep_research.core.models import ResearchContext
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-config = get_config()
 
 
 class ExtractPageContentTool(BaseTool):
@@ -66,7 +65,7 @@ class ExtractPageContentTool(BaseTool):
             if url in context.sources:
                 source = context.sources[url]
                 if source.full_content:
-                    content_preview = source.full_content[: config.scraping.content_limit]
+                    content_preview = source.full_content[: GlobalConfig().search.content_limit]
                     formatted_result += (
                         f"{str(source)}\n\n**Full Content:**\n"
                         f"{content_preview}\n\n"

@@ -1,0 +1,10 @@
+# Test configuration for custom agents
+agents:
+  - name: "test_simple_agent"
+    display_name: "Test Simple Agent"
+    description: "Simple test agent for validation"
+    base_class: "SGRToolCallingAgent"
+    tools:
+      - "WebSearchTool"
+      - "FinalAnswerTool"
+      - "ClarificationTool"
