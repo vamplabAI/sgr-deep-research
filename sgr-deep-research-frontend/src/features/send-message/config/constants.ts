@@ -1,2 +1,2 @@
-// Максимальная длина текстового сообщения (90,000 символов)
+// Maximum text message length (90,000 characters)
 export const INPUT_MAX_LENGTH = 90000

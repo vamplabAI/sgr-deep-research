@@ -1,4 +1,4 @@
-"""Основная точка входа для SGR Agent Core API сервера."""
+"""Main entry point for SGR Agent Core API server."""
 
 import logging
 from contextlib import asynccontextmanager
@@ -30,18 +30,16 @@ async def lifespan(app: FastAPI):
 
 
 def main():
-    """Запуск FastAPI сервера."""
+    """Start FastAPI server."""
     args = ServerConfig()
     config = GlobalConfig.from_yaml(args.config_file)
     config.agents.update(get_default_agents_definitions())
     config.definitions_from_yaml(args.agents_file)
     app = FastAPI(title="SGR Deep Research API", version=__version__, lifespan=lifespan)
+    # Don't use this CORS setting in production!
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://127.0.0.1:5173",
-            "http://localhost:5173",
-        ],
+        allow_origins=["*"],
         allow_credentials=["*"],
         allow_methods=["*"],
         allow_headers=["*"],

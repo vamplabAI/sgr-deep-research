@@ -1,5 +1,5 @@
 services:
-  sgr-backend:
+  backend:
     build:
       context: ./api_service
       dockerfile: Dockerfile
@@ -12,8 +12,8 @@ services:
       - ../config.yaml:/app/config.yaml:ro
       - ../agents.yaml:/app/agents.yaml:ro
       - ../logging_config.yaml:/app/logging_config.yaml:ro
-      - ./logs:/app/logs
-      - ./reports:/app/reports
+      - ../logs:/app/logs
+      - ../reports:/app/reports
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8010/health"]
       interval: 30s
@@ -23,21 +23,19 @@ services:
     networks:
       - sgr-network
 
-  sgr-frontend:
+  frontend:
     build:
       context: ../sgr-deep-research-frontend
       dockerfile: Dockerfile
       args:
         - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:8010}
         - VITE_APP_ENV=${VITE_APP_ENV:-production}
-        - VITE_TRANSCRIPTION_API_URL=${VITE_TRANSCRIPTION_API_URL:-https://speechcoreai.com/api}
-        - VITE_TRANSCRIPTION_API_TOKEN=${VITE_TRANSCRIPTION_API_TOKEN:-}
     container_name: sgr-deep-research-frontend
     restart: unless-stopped
     ports:
       - "${FRONTEND_PORT:-5173}:80"
     depends_on:
-      sgr-backend:
+      backend:
         condition: service_healthy
     networks:
       - sgr-network

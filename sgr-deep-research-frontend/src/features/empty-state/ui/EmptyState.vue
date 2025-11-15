@@ -1,11 +1,11 @@
 <template>
   <div class="empty-state">
     <div class="empty-state__content">
-      <h2 class="empty-state__title">Добро пожаловать в SGR Memory Agent</h2>
-      <p class="empty-state__subtitle">Персональный AI-ассистент с долговременной памятью</p>
+      <h2 class="empty-state__title">Welcome to SGR Memory Agent</h2>
+      <p class="empty-state__subtitle">Personal AI assistant with long-term memory</p>
 
       <div class="empty-state__suggestions">
-        <h3 class="suggestions__title">С чего начать?</h3>
+        <h3 class="suggestions__title">Where to start?</h3>
 
         <div class="suggestions__grid">
           <button
@@ -25,26 +25,26 @@
           <div class="footer__agent-info">
             <h4 class="agent-info__title">SGR Memory Agent</h4>
             <p class="agent-info__description">
-              AI-ассистент с долговременной памятью, который запоминает всё о вас и использует эти знания для более персонализированной помощи.
+              AI assistant with long-term memory that remembers everything about you and uses this knowledge for more personalized assistance.
             </p>
             <div class="agent-info__capabilities">
-              <span class="capability">Бесконечная память</span>
-              <span class="capability">Глубокий поиск</span>
-              <span class="capability">Контекстное понимание</span>
-              <span class="capability">Персонализация</span>
+              <span class="capability">Infinite memory</span>
+              <span class="capability">Deep search</span>
+              <span class="capability">Contextual understanding</span>
+              <span class="capability">Personalization</span>
             </div>
           </div>
           <p class="footer__tip">
-            <strong>Совет:</strong> Чем больше вы мне рассказываете, тем лучше я смогу помочь
+            <strong>Tip:</strong> The more you tell me, the better I can help
           </p>
         </div>
 
         <div class="suggestions__divider">
-          <span class="divider__text">или</span>
+          <span class="divider__text">or</span>
         </div>
 
         <button class="new-chat-button" @click="handleNewChatClick">
-          <span class="new-chat-button__text">Начать с чистого листа</span>
+          <span class="new-chat-button__text">Start from scratch</span>
         </button>
       </div>
     </div>
@@ -71,44 +71,44 @@ const suggestions = ref<Suggestion[]>([
   {
     id: 'about-me',
     icon: '',
-    title: 'Расскажу о себе',
-    description: 'Познакомимся! Расскажите о себе, своих интересах и целях',
-    prompt: 'Привет! Меня зовут [Ваше имя]. Я работаю [должность/сфера]. Интересуюсь [интересы]. Хочу, чтобы ты помогал мне с [задачи].'
+    title: 'Tell me about yourself',
+    description: 'Let\'s get acquainted! Tell me about yourself, your interests and goals',
+    prompt: 'Hello! My name is [Your name]. I work as [position/field]. I\'m interested in [interests]. I want you to help me with [tasks].'
   },
   {
     id: 'research',
     icon: '',
-    title: 'Найти информацию',
-    description: 'Глубокий поиск и анализ информации в интернете',
-    prompt: 'Найди и проанализируй последние новости и тренды по теме: [ваша тема]'
+    title: 'Find information',
+    description: 'Deep search and analysis of information on the internet',
+    prompt: 'Find and analyze the latest news and trends on the topic: [your topic]'
   },
   {
     id: 'productivity',
     icon: '',
-    title: 'Повысить продуктивность',
-    description: 'Советы по тайм-менеджменту, планированию и эффективности',
-    prompt: 'Помоги мне составить план на день/неделю с учетом моих целей и приоритетов'
+    title: 'Increase productivity',
+    description: 'Tips on time management, planning and efficiency',
+    prompt: 'Help me create a plan for the day/week taking into account my goals and priorities'
   },
   {
     id: 'learning',
     icon: '',
-    title: 'Изучить новое',
-    description: 'Создам план обучения и помогу разобраться в сложных темах',
-    prompt: 'Хочу изучить [тема/навык]. Составь для меня план обучения с ресурсами'
+    title: 'Learn something new',
+    description: 'I\'ll create a learning plan and help you understand complex topics',
+    prompt: 'I want to learn [topic/skill]. Create a learning plan with resources for me'
   },
   {
     id: 'brainstorm',
     icon: '',
-    title: 'Генерация идей',
-    description: 'Мозговой штурм для проектов, бизнеса или творчества',
-    prompt: 'Давай проведем мозговой штурм на тему: [ваша идея/проект]'
+    title: 'Generate ideas',
+    description: 'Brainstorming for projects, business or creativity',
+    prompt: 'Let\'s brainstorm on the topic: [your idea/project]'
   },
   {
     id: 'analyze',
     icon: '',
-    title: 'Анализ и выводы',
-    description: 'Помогу проанализировать данные и сделать выводы',
-    prompt: 'Помоги проанализировать [данные/ситуацию] и дай рекомендации'
+    title: 'Analysis and conclusions',
+    description: 'I\'ll help analyze data and draw conclusions',
+    prompt: 'Help me analyze [data/situation] and give recommendations'
   }
 ])
 
@@ -134,7 +134,7 @@ const handleNewChatClick = () => {
 }
 
 .empty-state__content {
-  max-width: 1100px; // Увеличено для лучшего размещения карточек
+  max-width: 1100px; // Increased for better card placement
   width: 100%;
   text-align: center;
 }
@@ -167,12 +167,12 @@ const handleNewChatClick = () => {
 
 .suggestions__grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr); // 3 колонки на десктопе
+  grid-template-columns: repeat(3, 1fr); // 3 columns on desktop
   gap: 20px;
   margin-bottom: 32px;
 
   @media (max-width: 1024px) {
-    grid-template-columns: repeat(2, 1fr); // 2 колонки на планшетах
+    grid-template-columns: repeat(2, 1fr); // 2 columns on tablets
   }
 }
 

@@ -62,7 +62,7 @@ class SGRSOToolCallingAgent(SGRToolCallingAgent):
         ) as stream:
             async for event in stream:
                 if event.type == "chunk":
-                    self.streaming_generator.add_chunk(event)
+                    self.streaming_generator.add_chunk(event.chunk)
         reasoning: ReasoningTool = (await stream.get_final_completion()).choices[0].message.parsed
         tool_call_result = await reasoning(self._context)
         self.conversation.append(

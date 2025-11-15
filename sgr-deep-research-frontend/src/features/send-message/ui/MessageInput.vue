@@ -18,7 +18,7 @@
       v-if="modelValue && modelValue.trim()"
       class="clear-button"
       type="button"
-      title="Очистить текст"
+      title="Clear text"
       @click="clearInput"
     >
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -137,7 +137,7 @@ function clearInput() {
     }
   }
 
-  // Стили для скроллбара
+  // Scrollbar styles
   &::-webkit-scrollbar {
     width: 6px;
   }

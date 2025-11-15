@@ -1,5 +1,6 @@
 import logging
 import logging.config
+import os
 from pathlib import Path
 
 import yaml
@@ -10,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class ServerConfig(BaseSettings):
-    model_config = SettingsConfigDict(cli_parse_args=True)
+    model_config = SettingsConfigDict(cli_parse_args=True, cli_kebab_case=True)
     logging_file: str = Field(default="logging_config.yaml", description="Logging configuration file path")
     config_file: str = Field(default="config.yaml", description="sgr core configuration file path")
     agents_file: str = Field(default="agents.yaml", description="Agents definitions file path")
@@ -26,5 +27,6 @@ def setup_logging() -> None:
 
     with open(logging_config_path, "r", encoding="utf-8") as f:
         logging_config = yaml.safe_load(f)
+        os.makedirs("logs", exist_ok=True)
 
     logging.config.dictConfig(logging_config)

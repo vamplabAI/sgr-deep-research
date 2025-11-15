@@ -23,7 +23,7 @@
       </div>
     </div>
 
-    <!-- Copy Button и Timestamp (снизу справа) -->
+    <!-- Copy Button and Timestamp (bottom right) -->
     <div class="chat-message__footer">
       <div v-if="!message.isStreaming && !message.error" class="chat-message__copy-button">
         <CopyButton @copy="$emit('copy')" />
@@ -59,31 +59,31 @@ const formattedTimestamp = computed(() => {
   const now = new Date()
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
 
-  // Если меньше минуты - "только что"
+  // If less than a minute - "just now"
   if (diffInSeconds < 60) {
-    return 'только что'
+    return 'just now'
   }
 
-  // Если меньше часа - "N минут назад"
+  // If less than an hour - "N minutes ago"
   if (diffInSeconds < 3600) {
     const minutes = Math.floor(diffInSeconds / 60)
-    return `${minutes} мин назад`
+    return `${minutes} min ago`
   }
 
-  // Если сегодня - показываем время
+  // If today - show time
   if (date.toDateString() === now.toDateString()) {
-    return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
   }
 
-  // Если вчера
+  // If yesterday
   const yesterday = new Date(now)
   yesterday.setDate(yesterday.getDate() - 1)
   if (date.toDateString() === yesterday.toDateString()) {
-    return `вчера в ${date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`
+    return `yesterday at ${date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`
   }
 
-  // Иначе полная дата
-  return date.toLocaleString('ru-RU', {
+  // Otherwise full date
+  return date.toLocaleString('en-US', {
     day: 'numeric',
     month: 'short',
     hour: '2-digit',
@@ -103,7 +103,7 @@ const formattedTimestamp = computed(() => {
 .chat-message__footer {
   display: flex;
   align-items: center;
-  justify-content: flex-end; // Справа
+  justify-content: flex-end; // Right
   gap: 12px;
   padding-right: 8px;
   margin-top: 4px;
@@ -117,7 +117,7 @@ const formattedTimestamp = computed(() => {
 
 .chat-message__timestamp {
   font-size: 11px;
-  color: var(--text-3-2-dark-gray); // Серый цвет (как у assistant)
+  color: var(--text-3-2-dark-gray); // Gray color (same as assistant)
   opacity: 0.7;
   user-select: none;
 }
@@ -130,8 +130,8 @@ const formattedTimestamp = computed(() => {
   padding: 12px 16px;
   min-width: 0;
   word-wrap: break-word;
-  background-color: var(--core-1-1-core); // Синий фон
-  color: var(--text-3-4-white); // Белый текст
+  background-color: var(--core-1-1-core); // Blue background
+  color: var(--text-3-4-white); // White text
   border-radius: 18px;
 }
 
@@ -209,7 +209,7 @@ const formattedTimestamp = computed(() => {
     }
 
     .chat-message__copy-button {
-      opacity: 1; // Всегда показывать на мобильных
+      opacity: 1; // Always show on mobile
     }
   }
 }
