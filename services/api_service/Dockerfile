@@ -27,8 +27,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN groupadd --gid 10001 appgroup && \
-    useradd --no-create-home --shell /bin/false --uid 10000 --gid 10001 --system appuser
+RUN groupadd --gid 1000 appgroup && \
+    useradd --no-create-home --shell /bin/false --uid 1000 --gid 1000 --system appuser
 
 COPY --from=builder --chown=appuser:appgroup /opt/venv /opt/venv
 
