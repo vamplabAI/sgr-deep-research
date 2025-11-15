@@ -21,12 +21,12 @@
       <!-- Message when agent is completed -->
       <div v-if="isAgentCompleted && showCompletedMessage" class="chat-container__completed-message">
         <span class="chat-container__completed-message-text">
-          ✅ Задача выполнена. Нажмите "Новый диалог" чтобы начать новый разговор.
+          ✅ Task completed. Click "New Chat" to start a new conversation.
         </span>
         <button
           class="chat-container__completed-message-close"
           @click="showCompletedMessage = false"
-          aria-label="Закрыть"
+          aria-label="Close"
         >
           ✕
         </button>

@@ -56,7 +56,7 @@ class CreateReportTool(BaseTool):
         # Add sources reference section
         if context.sources:
             full_content += "---\n\n"
-            full_content += "## Источники / Sources\n\n"
+            full_content += "## Sources\n\n"
             full_content += "\n".join([str(source) for source in context.sources.values()])
 
         with open(filepath, "w", encoding="utf-8") as f:

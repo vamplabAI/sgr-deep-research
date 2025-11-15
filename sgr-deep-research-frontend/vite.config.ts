@@ -8,12 +8,12 @@ import vueJsx from '@vitejs/plugin-vue-jsx'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-// Создаем массив плагинов
+// Create plugins array
 const plugins = [vue(), vueJsx()]
 
-// Vue DevTools только в режиме разработки
-// Временно отключен из-за проблем с localStorage в Node.js окружении
-// Раскомментируйте и настройте при необходимости:
+// Vue DevTools only in development mode
+// Temporarily disabled due to localStorage issues in Node.js environment
+// Uncomment and configure if needed:
 // if (process.env.NODE_ENV === 'development' || process.env.DEV) {
 //   const vueDevTools = (await import('vite-plugin-vue-devtools')).default
 //   plugins.push(vueDevTools())

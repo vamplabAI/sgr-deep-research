@@ -41,7 +41,7 @@ const handleCopy = () => {
 
   isCopied.value = true
 
-  // Сбросить состояние через 2 секунды
+  // Reset state after 2 seconds
   if (timeoutId) {
     clearTimeout(timeoutId)
   }

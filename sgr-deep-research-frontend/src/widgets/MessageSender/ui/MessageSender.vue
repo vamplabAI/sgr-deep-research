@@ -28,7 +28,7 @@
 
     <!-- Disclaimer -->
     <div class="message-sender__disclaimer">
-      ⚠️ AI может допускать ошибки. Проверяйте важную информацию.
+      ⚠️ AI may make mistakes. Verify important information.
     </div>
   </div>
 </template>

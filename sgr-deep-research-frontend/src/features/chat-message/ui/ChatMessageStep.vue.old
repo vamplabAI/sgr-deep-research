@@ -608,14 +608,14 @@ const formatTextWithLinks = (text: string): string => {
 
   console.log('🔗 formatTextWithLinks input:', text.substring(0, 200))
 
-  // Массив для хранения уже обработанных ссылок
+  // Array to store already processed links
   const processedLinks: string[] = []
   const PLACEHOLDER_PREFIX = '___LINK_PLACEHOLDER_'
 
   let result = text
 
-  // 1. Обрабатываем markdown-ссылки: [text](url)
-  // Заменяем их на плейсхолдеры, чтобы избежать повторной обработки
+  // 1. Process markdown links: [text](url)
+  // Replace them with placeholders to avoid reprocessing
   result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, linkText, url) => {
     const trimmedUrl = url.trim()
     const href = trimmedUrl.startsWith('www.') ? `https://${trimmedUrl}` : trimmedUrl
@@ -626,10 +626,10 @@ const formatTextWithLinks = (text: string): string => {
     return placeholder
   })
 
-  // 2. Обрабатываем обычные URL (https:// или http://)
-  // Используем negative lookbehind чтобы не матчить URL внутри href=""
+  // 2. Process plain URLs (https:// or http://)
+  // Use negative lookbehind to avoid matching URLs inside href=""
   result = result.replace(/(?<!href=")(https?:\/\/[^\s<>"]+)/g, (url) => {
-    // Проверяем, что это не плейсхолдер
+    // Check that this is not a placeholder
     if (url.includes(PLACEHOLDER_PREFIX)) return url
 
     const linkHtml = `<a href="${url}" target="_blank" rel="noopener noreferrer" class="message-link">${url}</a>`
@@ -639,9 +639,9 @@ const formatTextWithLinks = (text: string): string => {
     return placeholder
   })
 
-  // 3. Обрабатываем www. ссылки (только если они не внутри href="")
+  // 3. Process www. links (only if they are not inside href="")
   result = result.replace(/(?<!href=")(www\.[^\s<>"]+)/g, (url) => {
-    // Проверяем, что это не плейсхолдер
+    // Check that this is not a placeholder
     if (url.includes(PLACEHOLDER_PREFIX)) return url
 
     const linkHtml = `<a href="https://${url}" target="_blank" rel="noopener noreferrer" class="message-link">${url}</a>`
@@ -651,7 +651,7 @@ const formatTextWithLinks = (text: string): string => {
     return placeholder
   })
 
-  // 4. Заменяем все плейсхолдеры обратно на HTML ссылки
+  // 4. Replace all placeholders back with HTML links
   processedLinks.forEach((linkHtml, index) => {
     const placeholder = `${PLACEHOLDER_PREFIX}${index}___`
     result = result.replace(placeholder, linkHtml)
@@ -668,7 +668,7 @@ const formatTextWithLinks = (text: string): string => {
   width: 100%;
   border: 1px solid #e1e5e9;
   border-radius: 8px;
-  margin-bottom: 20px; /* ← Увеличили отступ для лучшего разделения! */
+  margin-bottom: 20px; /* ← Increased margin for better separation! */
   background: #fafbfc;
   overflow: hidden;
 }

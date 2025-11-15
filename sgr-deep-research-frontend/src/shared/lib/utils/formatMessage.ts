@@ -1,12 +1,12 @@
 import type { ChatMessageExtended } from '@/shared/types/store'
 
 /**
- * Форматирует сообщение в markdown формат для копирования
+ * Formats message to markdown format for copying
  */
 export function formatMessageToMarkdown(message: ChatMessageExtended): string {
   const lines: string[] = []
 
-  // Заголовок сообщения
+  // Message header
   if (message.role === 'user') {
     lines.push('## 👤 User\n')
   } else if (message.role === 'assistant') {
@@ -15,20 +15,20 @@ export function formatMessageToMarkdown(message: ChatMessageExtended): string {
     lines.push('## System\n')
   }
 
-  // Основной контент
+  // Main content
   if (message.content && message.content.length > 0) {
     message.content.forEach((content) => {
-      // content может быть строкой или объектом ReasoningStep
+      // content can be a string or ReasoningStep object
       if (typeof content === 'string') {
         lines.push(content)
       } else if (content && typeof content === 'object') {
-        // Если это объект (ReasoningStep), преобразуем в строку
+        // If it's an object (ReasoningStep), convert to string
         lines.push(JSON.stringify(content, null, 2))
       }
     })
   }
 
-  // Agent Reasoning (если есть)
+  // Agent Reasoning (if present)
   if (message.agentReasoning) {
     lines.push('\n### 🧠 Reasoning\n')
 
@@ -53,7 +53,7 @@ export function formatMessageToMarkdown(message: ChatMessageExtended): string {
     }
   }
 
-  // Tool History (если есть)
+  // Tool History (if present)
   if (message.toolHistory && message.toolHistory.length > 0) {
     lines.push('\n### 🔧 Tool History\n')
     message.toolHistory.forEach((tool, index) => {
@@ -80,17 +80,17 @@ export function formatMessageToMarkdown(message: ChatMessageExtended): string {
 }
 
 /**
- * Копирует текст в буфер обмена
+ * Copies text to clipboard
  */
 export async function copyToClipboard(text: string): Promise<boolean> {
   try {
-    // Современный API
+    // Modern API
     if (navigator.clipboard && navigator.clipboard.writeText) {
       await navigator.clipboard.writeText(text)
       return true
     }
 
-    // Fallback для старых браузеров
+    // Fallback for older browsers
     const textArea = document.createElement('textarea')
     textArea.value = text
     textArea.style.position = 'fixed'
