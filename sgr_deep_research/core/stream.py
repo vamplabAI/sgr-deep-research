@@ -13,12 +13,12 @@ class StreamingGenerator:
         self.queue.put_nowait(data)
 
     def finish(self):
-        self.queue.put_nowait(None)  # Завершающий сигнал
+        self.queue.put_nowait(None)  # Termination signal
 
     async def stream(self):
         while True:
             data = await self.queue.get()
-            if data is None:  # Завершающий символ
+            if data is None:  # Termination signal
                 break
             yield data
 
@@ -56,7 +56,7 @@ class OpenAIStreamingGenerator(StreamingGenerator):
         super().add(f"data: {json.dumps(response)}\n\n")
 
     def add_tool_call(self, tool_call_id: str, function_name: str, arguments: str):
-        """Добавляет tool call chunk."""
+        """Adds tool call chunk."""
         response = {
             "id": self.id,
             "object": "chat.completion.chunk",
@@ -85,7 +85,7 @@ class OpenAIStreamingGenerator(StreamingGenerator):
         super().add(f"data: {json.dumps(response)}\n\n")
 
     def finish(self, finish_reason: str = "stop"):
-        """Завершает stream с финальным chunk и usage."""
+        """Finishes stream with final chunk and usage."""
         final_response = {
             "id": self.id,
             "object": "chat.completion.chunk",

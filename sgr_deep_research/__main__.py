@@ -1,4 +1,4 @@
-"""Основная точка входа для SGR Agent Core API сервера."""
+"""Main entry point for SGR Agent Core API server."""
 
 import logging
 from contextlib import asynccontextmanager
@@ -30,7 +30,7 @@ async def lifespan(app: FastAPI):
 
 
 def main():
-    """Запуск FastAPI сервера."""
+    """Start FastAPI server."""
     args = ServerConfig()
     config = GlobalConfig.from_yaml(args.config_file)
     config.agents.update(get_default_agents_definitions())

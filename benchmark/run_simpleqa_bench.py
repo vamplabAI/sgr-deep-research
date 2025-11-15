@@ -93,7 +93,9 @@ async def main(
     for batch_idx, i in enumerate(range(0, len(problems), batch_size), start=1):
         batch_tasks = problems[i : i + batch_size], answers[i : i + batch_size]
 
-        logger.info(f"Начался батч {batch_idx}/{total_batches} (вопросы {i + 1}-{min(i + batch_size, len(problems))})")
+        logger.info(
+            f"Started batch {batch_idx}/{total_batches} (questions {i + 1}-{min(i + batch_size, len(problems))})"
+        )
         logger.debug(f"Batch tasks: {batch_tasks}")
 
         batch_results = await asyncio.gather(
@@ -105,8 +107,8 @@ async def main(
         save_result(results, output_path)
 
         logger.info(
-            f"Завершен батч {batch_idx}/{total_batches}."
-            f"Обработано вопросов: {len(results)}/{len(problems) + len(results_task if results_task else [])}"
+            f"Completed batch {batch_idx}/{total_batches}."
+            f"Processed questions: {len(results)}/{len(problems) + len(results_task if results_task else [])}"
         )
 
     logger.info("Benchmark completed!")
@@ -124,18 +126,18 @@ async def main(
     with open(metrics_path, "w", encoding="utf-8") as f:
         f.write(f"F1 score: {metric_f1}\n")
         f.write(f"Accuracy: {accuracy}\n")
-        f.write(f"Количество правильных: {num_correct}\n")
-        f.write(f"Количество неправильных: {num_incorrect}\n")
-        f.write(f"Количество неполных: {num_not_attempted}\n")
-        f.write(f"Количество failed_search: {num_failed_search}\n")
+        f.write(f"Number of correct: {num_correct}\n")
+        f.write(f"Number of incorrect: {num_incorrect}\n")
+        f.write(f"Number of incomplete: {num_not_attempted}\n")
+        f.write(f"Number of failed_search: {num_failed_search}\n")
 
     logger.info("Calculating F1...")
     logger.info(f"F1 score: {metric_f1}")
     logger.info(f"Accuracy: {accuracy}")
-    logger.info(f"Количество правильных: {num_correct}")
-    logger.info(f"Количество неправильных: {num_incorrect}")
-    logger.info(f"Количество неполных: {num_not_attempted}")
-    logger.info(f"Количество failed_search: {num_failed_search}")
+    logger.info(f"Number of correct: {num_correct}")
+    logger.info(f"Number of incorrect: {num_incorrect}")
+    logger.info(f"Number of incomplete: {num_not_attempted}")
+    logger.info(f"Number of failed_search: {num_failed_search}")
 
 
 if __name__ == "__main__":
@@ -189,7 +191,7 @@ if __name__ == "__main__":
 
     df = pd.read_csv(simpleqa_path)
 
-    # По необходимости выбираем не все вопросы
+    # Select only a subset of questions if needed
     if n_samples:
         df = df.head(n_samples)
 

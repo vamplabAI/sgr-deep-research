@@ -10,7 +10,7 @@
         @click="handleNewChat"
         :disabled="isStreaming"
       >
-        Новый диалог
+        New Chat
       </button>
 
       <h1 class="workspace-page__title">SGR Agent Core</h1>
