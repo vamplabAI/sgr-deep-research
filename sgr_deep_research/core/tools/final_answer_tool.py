@@ -24,7 +24,7 @@ class FinalAnswerTool(BaseTool):
 
     reasoning: str = Field(description="Why task is now complete and how answer was verified")
     completed_steps: list[str] = Field(
-        description="Summary of completed steps including verification", min_length=1, max_length=5
+        description="Summary of completed steps including verification", min_length=1
     )
     answer: str = Field(description="Comprehensive final answer with EXACT factual details (dates, numbers, names)")
     status: Literal[AgentStatesEnum.COMPLETED, AgentStatesEnum.FAILED] = Field(description="Task completion status")
