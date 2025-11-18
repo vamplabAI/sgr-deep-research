@@ -7,7 +7,6 @@ from sgr_deep_research.core.agents.sgr_tool_calling_agent import SGRToolCallingA
 from sgr_deep_research.core.agents.tool_calling_agent import ToolCallingAgent
 
 DEFAULT_TOOLKIT = [
-    tools.ClarificationTool,
     tools.GeneratePlanTool,
     tools.AdaptPlanTool,
     tools.FinalAnswerTool,

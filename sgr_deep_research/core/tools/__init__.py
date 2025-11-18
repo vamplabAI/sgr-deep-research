@@ -7,7 +7,6 @@ from sgr_deep_research.core.next_step_tool import (
     NextStepToolStub,
 )
 from sgr_deep_research.core.tools.adapt_plan_tool import AdaptPlanTool
-from sgr_deep_research.core.tools.clarification_tool import ClarificationTool
 from sgr_deep_research.core.tools.create_report_tool import CreateReportTool
 from sgr_deep_research.core.tools.extract_page_content_tool import ExtractPageContentTool
 from sgr_deep_research.core.tools.final_answer_tool import FinalAnswerTool
@@ -17,7 +16,6 @@ from sgr_deep_research.core.tools.web_search_tool import WebSearchTool
 
 # Tool lists for backward compatibility
 system_agent_tools = [
-    ClarificationTool,
     GeneratePlanTool,
     AdaptPlanTool,
     FinalAnswerTool,
@@ -37,7 +35,6 @@ __all__ = [
     "NextStepToolStub",
     "NextStepToolsBuilder",
     # Individual tools
-    "ClarificationTool",
     "GeneratePlanTool",
     "WebSearchTool",
     "ExtractPageContentTool",

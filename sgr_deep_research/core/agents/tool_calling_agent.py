@@ -7,7 +7,6 @@ from sgr_deep_research.core.agent_definition import ExecutionConfig, LLMConfig, 
 from sgr_deep_research.core.base_agent import BaseAgent
 from sgr_deep_research.core.tools import (
     BaseTool,
-    ClarificationTool,
     CreateReportTool,
     FinalAnswerTool,
     WebSearchTool,
@@ -47,10 +46,6 @@ class ToolCallingAgent(BaseAgent):
             tools = {
                 CreateReportTool,
                 FinalAnswerTool,
-            }
-        if self._context.clarifications_used >= self.max_clarifications:
-            tools -= {
-                ClarificationTool,
             }
         if self._context.searches_used >= self.max_searches:
             tools -= {
