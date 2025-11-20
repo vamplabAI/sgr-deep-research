@@ -93,7 +93,12 @@ class OpenAIStreamingGenerator(StreamingGenerator):
             "model": self.model,
             "system_fingerprint": f"fp_{hex(hash(self.model))[-8:]}",
             "choices": [
-                {"index": self.choice_index, "delta": content, "logprobs": None, "finish_reason": finish_reason}
+                {
+                    "index": self.choice_index,
+                    "delta": {"content": content, "role": "assistant", "tool_calls": None},
+                    "logprobs": None,
+                    "finish_reason": finish_reason,
+                }
             ],
             "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
         }
