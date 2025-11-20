@@ -193,5 +193,5 @@ class BaseAgent(AgentRegistryMixin):
             traceback.print_exc()
         finally:
             if self.streaming_generator is not None:
-                self.streaming_generator.finish()
+                self.streaming_generator.finish(self._context.execution_result)
             self._save_agent_log()

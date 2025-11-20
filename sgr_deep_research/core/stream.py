@@ -85,7 +85,7 @@ class OpenAIStreamingGenerator(StreamingGenerator):
         super().add(f"data: {json.dumps(response)}\n\n")
 
     def finish(self, content: str | None = None, finish_reason: str = "stop"):
-        """Finishes stream with final chunk and usage."""
+        """Finishes stream with the final chunk and usage."""
         final_response = {
             "id": self.id,
             "object": "chat.completion.chunk",
