@@ -52,14 +52,11 @@ class WebSearchTool(BaseTool):
         le=10,
     )
 
-    def __init__(self, **data):
-        super().__init__(**data)
-        self._search_service = TavilySearchService()
-
     async def __call__(self, context: ResearchContext, config: AgentConfig, **_) -> str:
         """Execute web search using TavilySearchService."""
 
         logger.info(f"🔍 Search query: '{self.query}'")
+        self._search_service = TavilySearchService(config.search)
 
         sources = await self._search_service.search(
             query=self.query,

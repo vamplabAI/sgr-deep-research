@@ -10,7 +10,7 @@ class ReasoningTool(BaseTool):
     planning by schema-guided-reasoning capabilities. Keep all text fields
     concise and focused.
 
-    Usage: Required tool. Use this tool before any other tool
+    Usage: Required tool. Use this tool before any other tool execution
     """
 
     # Reasoning chain - step-by-step thinking process (helps stabilize model)
