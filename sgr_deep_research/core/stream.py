@@ -84,7 +84,7 @@ class OpenAIStreamingGenerator(StreamingGenerator):
         }
         super().add(f"data: {json.dumps(response)}\n\n")
 
-    def finish(self, finish_reason: str = "stop"):
+    def finish(self, content: str | None = None, finish_reason: str = "stop"):
         """Finishes stream with final chunk and usage."""
         final_response = {
             "id": self.id,
@@ -92,7 +92,9 @@ class OpenAIStreamingGenerator(StreamingGenerator):
             "created": self.created,
             "model": self.model,
             "system_fingerprint": f"fp_{hex(hash(self.model))[-8:]}",
-            "choices": [{"index": self.choice_index, "delta": {}, "logprobs": None, "finish_reason": finish_reason}],
+            "choices": [
+                {"index": self.choice_index, "delta": content, "logprobs": None, "finish_reason": finish_reason}
+            ],
             "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
         }
         super().add(f"data: {json.dumps(final_response)}\n\n")

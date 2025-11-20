@@ -9,7 +9,7 @@ from typing import Type
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionFunctionToolParam
 
-from sgr_deep_research.core.agent_definition import ExecutionConfig, LLMConfig, PromptsConfig
+from sgr_deep_research.core.agent_definition import AgentConfig
 from sgr_deep_research.core.models import AgentStatesEnum, ResearchContext
 from sgr_deep_research.core.services.prompt_loader import PromptLoader
 from sgr_deep_research.core.services.registry import AgentRegistry
@@ -37,34 +37,29 @@ class BaseAgent(AgentRegistryMixin):
         self,
         task: str,
         openai_client: AsyncOpenAI,
-        llm_config: LLMConfig,
-        prompts_config: PromptsConfig,
-        execution_config: ExecutionConfig,
-        toolkit: list[Type[BaseTool]] | None = None,
+        agent_config: AgentConfig,
+        toolkit: list[Type[BaseTool]],
+        def_name: str | None = None,
         **kwargs: dict,
     ):
-        self.id = f"{self.name}_{uuid.uuid4()}"
-        self.logger = logging.getLogger(f"sgr_deep_research.agents.{self.id}")
+        self.id = f"{def_name or self.name}_{uuid.uuid4()}"
+        self.openai_client = openai_client
+        self.config = agent_config
         self.creation_time = datetime.now()
         self.task = task
-        self.toolkit = toolkit or []
+        self.toolkit = toolkit
 
         self._context = ResearchContext()
         self.conversation = []
-        self.log = []
-        self.max_iterations = execution_config.max_iterations
-        self.max_clarifications = execution_config.max_clarifications
-
-        self.openai_client = openai_client
-        self.llm_config = llm_config
-        self.prompts_config = prompts_config
 
         self.streaming_generator = OpenAIStreamingGenerator(model=self.id)
+        self.logger = logging.getLogger(f"sgr_deep_research.agents.{self.id}")
+        self.log = []
 
     async def provide_clarification(self, clarifications: str):
-        """Receive clarification from external source (e.g. user input)"""
+        """Receive clarification from an external source (e.g. user input)"""
         self.conversation.append(
-            {"role": "user", "content": PromptLoader.get_clarification_template(clarifications, self.prompts_config)}
+            {"role": "user", "content": PromptLoader.get_clarification_template(clarifications, self.config.prompts)}
         )
         self._context.clarifications_used += 1
         self._context.clarification_received.set()
@@ -126,7 +121,9 @@ class BaseAgent(AgentRegistryMixin):
         filepath = os.path.join(logs_dir, f"{datetime.now().strftime('%Y%m%d-%H%M%S')}-{self.id}-log.json")
         agent_log = {
             "id": self.id,
-            "model_config": self.llm_config.model_dump(exclude={"api_key", "proxy"}),
+            "model_config": self.config.llm.model_dump(
+                exclude={"api_key", "proxy"}
+            ),  # Sensitive data excluded by default
             "task": self.task,
             "toolkit": [tool.tool_name for tool in self.toolkit],
             "log": self.log,
@@ -137,12 +134,16 @@ class BaseAgent(AgentRegistryMixin):
     async def _prepare_context(self) -> list[dict]:
         """Prepare conversation context with system prompt."""
         return [
-            {"role": "system", "content": PromptLoader.get_system_prompt(self.toolkit, self.prompts_config)},
+            {"role": "system", "content": PromptLoader.get_system_prompt(self.toolkit, self.config.prompts)},
+            {
+                "role": "user",
+                "content": PromptLoader.get_initial_user_request(self.task, self.config.prompts),
+            },
             *self.conversation,
         ]
 
     async def _prepare_tools(self) -> list[ChatCompletionFunctionToolParam]:
-        """Prepare available tools for current agent state and progress."""
+        """Prepare available tools for the current agent state and progress."""
         raise NotImplementedError("_prepare_tools must be implemented by subclass")
 
     async def _reasoning_phase(self) -> ReasoningTool:
@@ -150,16 +151,17 @@ class BaseAgent(AgentRegistryMixin):
         raise NotImplementedError("_reasoning_phase must be implemented by subclass")
 
     async def _select_action_phase(self, reasoning: ReasoningTool) -> BaseTool:
-        """Select most suitable tool for the action decided in reasoning phase.
+        """Select the most suitable tool for the action decided in the
+        reasoning phase.
 
         Returns the tool suitable for the action.
         """
         raise NotImplementedError("_select_action_phase must be implemented by subclass")
 
     async def _action_phase(self, tool: BaseTool) -> str:
-        """Call Tool for the action decided in select_action phase.
+        """Call Tool for the action decided in the select_action phase.
 
-        Returns string or dumped json result of the tool execution.
+        Returns string or dumped JSON result of the tool execution.
         """
         raise NotImplementedError("_action_phase must be implemented by subclass")
 
@@ -167,14 +169,6 @@ class BaseAgent(AgentRegistryMixin):
         self,
     ):
         self.logger.info(f"🚀 Starting for task: '{self.task}'")
-        self.conversation.extend(
-            [
-                {
-                    "role": "user",
-                    "content": PromptLoader.get_initial_user_request(self.task, self.prompts_config),
-                }
-            ]
-        )
         try:
             while self._context.state not in AgentStatesEnum.FINISH_STATES.value:
                 self._context.iteration += 1

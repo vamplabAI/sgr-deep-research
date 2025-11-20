@@ -27,9 +27,9 @@ class SearchConfig(BaseModel):
     tavily_api_key: str | None = Field(default=None, description="Tavily API key")
     tavily_api_base_url: str = Field(default="https://api.tavily.com", description="Tavily API base URL")
 
+    max_searches: int = Field(default=4, ge=0, description="Maximum number of searches")
     max_results: int = Field(default=10, ge=1, description="Maximum number of search results")
-    max_pages: int = Field(default=5, gt=0, description="Maximum pages to scrape")
-    content_limit: int = Field(default=1500, gt=0, description="Content character limit per source")
+    content_limit: int = Field(default=3500, gt=0, description="Content character limit per source")
 
 
 class PromptsConfig(BaseModel):
@@ -99,10 +99,8 @@ class ExecutionConfig(BaseModel, extra="allow"):
     You can add any additional fields as needed.
     """
 
-    max_steps: int = Field(default=6, gt=0, description="Maximum number of execution steps")
     max_clarifications: int = Field(default=3, ge=0, description="Maximum number of clarifications")
     max_iterations: int = Field(default=10, gt=0, description="Maximum number of iterations")
-    max_searches: int = Field(default=4, ge=0, description="Maximum number of searches")
     mcp_context_limit: int = Field(default=15000, gt=0, description="Maximum context length from MCP server response")
 
     logs_dir: str = Field(default="logs", description="Directory for saving bot logs")

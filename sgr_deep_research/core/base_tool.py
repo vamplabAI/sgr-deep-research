@@ -11,6 +11,7 @@ from sgr_deep_research.core.agent_config import GlobalConfig
 from sgr_deep_research.core.services.registry import ToolRegistry
 
 if TYPE_CHECKING:
+    from sgr_deep_research.core.agent_definition import AgentConfig
     from sgr_deep_research.core.models import ResearchContext
 
 
@@ -30,8 +31,8 @@ class BaseTool(BaseModel, ToolRegistryMixin):
     tool_name: ClassVar[str] = None
     description: ClassVar[str] = None
 
-    async def __call__(self, context: ResearchContext) -> str:
-        """Result should be a string or dumped json."""
+    async def __call__(self, context: ResearchContext, config: AgentConfig, **kwargs) -> str:
+        """The result should be a string or dumped JSON."""
         raise NotImplementedError("Execute method must be implemented by subclass")
 
     def __init_subclass__(cls, **kwargs) -> None:
@@ -45,7 +46,7 @@ class MCPBaseTool(BaseTool):
 
     _client: ClassVar[Client | None] = None
 
-    async def __call__(self, _context) -> str:
+    async def __call__(self, context: ResearchContext, config: AgentConfig, **kwargs) -> str:
         config = GlobalConfig()
         payload = self.model_dump()
         try:

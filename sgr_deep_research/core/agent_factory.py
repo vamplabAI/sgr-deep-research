@@ -67,7 +67,7 @@ class AgentFactory:
             )
             logger.error(error_msg)
             raise ValueError(error_msg)
-        mcp_tools = await MCP2ToolConverter.build_tools_from_mcp(agent_def.mcp)
+        mcp_tools: list = await MCP2ToolConverter.build_tools_from_mcp(agent_def.mcp)
 
         tools = [*mcp_tools]
         for tool in agent_def.tools:
@@ -89,11 +89,10 @@ class AgentFactory:
         try:
             agent = BaseClass(
                 task=task,
+                def_name=agent_def.name,
                 toolkit=tools,
                 openai_client=cls._create_client(agent_def.llm),
-                llm_config=agent_def.llm,
-                execution_config=agent_def.execution,
-                prompts_config=agent_def.prompts,
+                agent_config=agent_def,
             )
             logger.info(
                 f"Created agent '{agent_def.name}' "

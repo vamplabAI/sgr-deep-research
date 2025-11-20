@@ -61,7 +61,7 @@ async def get_agents_list():
 
 @router.get("/v1/models")
 async def get_available_models():
-    """Get list of available agent models."""
+    """Get a list of available agent models."""
     models_data = [
         {
             "id": agent_def.name,
@@ -94,7 +94,7 @@ async def provide_clarification(agent_id: str, request: ClarificationRequest):
         await agent.provide_clarification(request.clarifications)
         return StreamingResponse(
             agent.streaming_generator.stream(),
-            media_type="text/plain",
+            media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
@@ -108,8 +108,8 @@ async def provide_clarification(agent_id: str, request: ClarificationRequest):
 
 
 def _is_agent_id(model_str: str) -> bool:
-    """Check if model string is an agent ID (contains underscore and UUID-like
-    format)."""
+    """Check if the model string is an agent ID (contains underscore and UUID-
+    like format)."""
     return "_" in model_str and len(model_str) > 20
 
 
@@ -148,7 +148,7 @@ async def create_chat_completion(request: ChatCompletionRequest):
         _ = asyncio.create_task(agent.execute())
         return StreamingResponse(
             agent.streaming_generator.stream(),
-            media_type="text/plain",
+            media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",

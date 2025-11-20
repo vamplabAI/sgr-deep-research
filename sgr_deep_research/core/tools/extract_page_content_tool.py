@@ -5,11 +5,11 @@ from typing import TYPE_CHECKING
 
 from pydantic import Field
 
-from sgr_deep_research.core.agent_config import GlobalConfig
 from sgr_deep_research.core.base_tool import BaseTool
 from sgr_deep_research.core.services.tavily_search import TavilySearchService
 
 if TYPE_CHECKING:
+    from sgr_deep_research.core.agent_definition import AgentConfig
     from sgr_deep_research.core.models import ResearchContext
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ class ExtractPageContentTool(BaseTool):
         super().__init__(**data)
         self._search_service = TavilySearchService()
 
-    async def __call__(self, context: ResearchContext) -> str:
+    async def __call__(self, context: ResearchContext, config: AgentConfig, **_) -> str:
         """Extract full content from specified URLs."""
 
         logger.info(f"📄 Extracting content from {len(self.urls)} URLs")
@@ -49,7 +49,7 @@ class ExtractPageContentTool(BaseTool):
         # Update existing sources instead of overwriting
         for source in sources:
             if source.url in context.sources:
-                # URL already exists, update with full content but keep original number
+                # URL already exists, update with full content but keep the original number
                 existing = context.sources[source.url]
                 existing.full_content = source.full_content
                 existing.char_count = source.char_count
@@ -65,7 +65,7 @@ class ExtractPageContentTool(BaseTool):
             if url in context.sources:
                 source = context.sources[url]
                 if source.full_content:
-                    content_preview = source.full_content[: GlobalConfig().search.content_limit]
+                    content_preview = source.full_content[: config.search.content_limit]
                     formatted_result += (
                         f"{str(source)}\n\n**Full Content:**\n"
                         f"{content_preview}\n\n"

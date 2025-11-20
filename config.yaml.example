@@ -14,16 +14,14 @@ llm:
 search:
   tavily_api_key: "your-tavily-api-key-here"  # Tavily API key (get at tavily.com)
   tavily_api_base_url: "https://api.tavily.com"  # Tavily API URL
-  max_results: 10  # Max search results
-  max_pages: 5  # Max pages to scrape
+  max_searches: 4  # Max search operations
+  max_results: 10  # Max  results in search query
   content_limit: 1500  # Content char limit per source
 
 # Execution Settings
 execution:
-  max_steps: 6  # Max execution steps
   max_clarifications: 3  # Max clarification requests
-  max_iterations: 10  # Max iterations per step
-  max_searches: 4  # Max search operations
+  max_iterations: 10  # Max agent iterations
   mcp_context_limit: 15000  # Max context length from MCP server response
   logs_dir: "logs"  # Directory for saving agent execution logs
   reports_dir: "reports"  # Directory for saving agent reports
