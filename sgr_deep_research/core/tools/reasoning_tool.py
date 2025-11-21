@@ -6,11 +6,11 @@ from sgr_deep_research.core.base_tool import BaseTool
 
 
 class ReasoningTool(BaseTool):
-    """Agent core logic, determines next reasoning step with adaptive planning
-    by schema-guided-reasoning capabilities Keep all text fields concise and
-    focused.
+    """Agent core logic determines the next reasoning step with adaptive
+    planning by schema-guided-reasoning capabilities. Keep all text fields
+    concise and focused.
 
-    Usage: Requiared tool use this tool before execution tool, and after execution
+    Usage: Required tool. Use this tool before any other tool execution
     """
 
     # Reasoning chain - step-by-step thinking process (helps stabilize model)

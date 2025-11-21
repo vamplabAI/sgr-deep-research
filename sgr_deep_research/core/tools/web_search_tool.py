@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING
 
 from pydantic import Field
 
-from sgr_deep_research.core.agent_config import GlobalConfig
 from sgr_deep_research.core.base_tool import BaseTool
 from sgr_deep_research.core.models import SearchResult
 from sgr_deep_research.core.services.tavily_search import TavilySearchService
 
 if TYPE_CHECKING:
+    from sgr_deep_research.core.agent_definition import AgentConfig
     from sgr_deep_research.core.models import ResearchContext
 
 logger = logging.getLogger(__name__)
@@ -40,30 +40,27 @@ class WebSearchTool(BaseTool):
     IMPORTANT FOR FACTUAL QUESTIONS:
         - Search snippets often contain direct answers - check them carefully
         - For questions with specific dates/numbers, snippets may be more accurate than full pages
-        - If snippet directly answers the question, you may not need to extract full page
+        - If the snippet directly answers the question, you may not need to extract the full page
     """
 
     reasoning: str = Field(description="Why this search is needed and what to expect")
     query: str = Field(description="Search query in same language as user request")
     max_results: int = Field(
-        default_factory=lambda: min(GlobalConfig().search.max_results, 10),
-        description="Maximum results",
+        description="Maximum results. How much of the web results selection you want to retrieve",
+        default=5,
         ge=1,
         le=10,
     )
 
-    def __init__(self, **data):
-        super().__init__(**data)
-        self._search_service = TavilySearchService()
-
-    async def __call__(self, context: ResearchContext) -> str:
+    async def __call__(self, context: ResearchContext, config: AgentConfig, **_) -> str:
         """Execute web search using TavilySearchService."""
 
         logger.info(f"🔍 Search query: '{self.query}'")
+        self._search_service = TavilySearchService(config.search)
 
         sources = await self._search_service.search(
             query=self.query,
-            max_results=self.max_results,
+            max_results=min(self.max_results, config.search.max_results),
             include_raw_content=False,
         )
 

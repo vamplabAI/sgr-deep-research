@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING, Literal
 
 from pydantic import Field
 
-from sgr_deep_research.core.agent_config import GlobalConfig
 from sgr_deep_research.core.base_tool import BaseTool
 
 if TYPE_CHECKING:
+    from sgr_deep_research.core.agent_definition import AgentConfig
     from sgr_deep_research.core.models import ResearchContext
 
 logger = logging.getLogger(__name__)
@@ -19,7 +19,7 @@ logger.setLevel(logging.INFO)
 
 
 class CreateReportTool(BaseTool):
-    """Create comprehensive detailed report with citations as a final step of
+    """Create a comprehensive detailed report with citations as a final step of
     research.
 
     CRITICAL: Every factual claim in content MUST have inline citations [1], [2], [3].
@@ -39,21 +39,21 @@ class CreateReportTool(BaseTool):
     )
     confidence: Literal["high", "medium", "low"] = Field(description="Confidence in findings")
 
-    async def __call__(self, context: ResearchContext) -> str:
+    async def __call__(self, context: ResearchContext, config: AgentConfig, **_) -> str:
         # Save report
-        reports_dir = GlobalConfig().execution.reports_dir
+        reports_dir = config.execution.reports_dir
         os.makedirs(reports_dir, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         safe_title = "".join(c for c in self.title if c.isalnum() or c in (" ", "-", "_"))[:50]
         filename = f"{timestamp}_{safe_title}.md"
         filepath = os.path.join(reports_dir, filename)
 
-        # Format full report with sources
+        # Format a full report with sources
         full_content = f"# {self.title}\n\n"
         full_content += f"*Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*\n\n"
         full_content += self.content + "\n\n"
 
-        # Add sources reference section
+        # Add a sources reference section
         if context.sources:
             full_content += "---\n\n"
             full_content += "## Sources\n\n"

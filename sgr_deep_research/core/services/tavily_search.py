@@ -2,19 +2,18 @@ import logging
 
 from tavily import AsyncTavilyClient
 
-from sgr_deep_research.core.agent_config import GlobalConfig
+from sgr_deep_research.core.agent_definition import SearchConfig
 from sgr_deep_research.core.models import SourceData
 
 logger = logging.getLogger(__name__)
 
 
 class TavilySearchService:
-    def __init__(self):
-        config = GlobalConfig()
+    def __init__(self, search_config: SearchConfig):
         self._client = AsyncTavilyClient(
-            api_key=config.search.tavily_api_key, api_base_url=config.search.tavily_api_base_url
+            api_key=search_config.tavily_api_key, api_base_url=search_config.tavily_api_base_url
         )
-        self._config = config
+        self._config = search_config
 
     @staticmethod
     def rearrange_sources(sources: list[SourceData], starting_number=1) -> list[SourceData]:
@@ -39,7 +38,7 @@ class TavilySearchService:
         Returns:
             Tuple with tavily answer and list of SourceData
         """
-        max_results = max_results or self._config.search.max_results
+        max_results = max_results or self._config.max_results
         logger.info(f"🔍 Tavily search: '{query}' (max_results={max_results})")
 
         # Execute search through Tavily
