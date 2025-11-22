@@ -1,6 +1,6 @@
 from typing import Type
 
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, pydantic_function_tool
 
 from sgr_deep_research.core.agent_definition import ExecutionConfig, LLMConfig, PromptsConfig
 from sgr_deep_research.core.base_agent import BaseAgent
@@ -58,19 +58,46 @@ class SGRAgent(BaseAgent):
         return NextStepToolsBuilder.build_NextStepTools(list(tools))
 
     async def _reasoning_phase(self) -> NextStepToolStub:
-        async with self.openai_client.chat.completions.stream(
+        # GigaChat/Legacy path using functions to simulate Structured Outputs
+        next_step_cls = await self._prepare_tools()
+        # Create a function definition from the model
+        tool_def = pydantic_function_tool(next_step_cls, name="plan_next_step", description="Plan the next step and select a tool")
+        functions = [tool_def["function"]]
+        
+        reasoning = None
+        
+        messages = await self._prepare_context()
+            
+        completion = await self.openai_client.chat.completions.create(
             model=self.llm_config.model,
-            response_format=await self._prepare_tools(),
-            messages=await self._prepare_context(),
+            messages=messages,
             max_tokens=self.llm_config.max_tokens,
             temperature=self.llm_config.temperature,
-        ) as stream:
-            async for event in stream:
-                if event.type == "chunk":
-                    self.streaming_generator.add_chunk(event.chunk)
-        reasoning: NextStepToolStub = (await stream.get_final_completion()).choices[0].message.parsed  # type: ignore
-        # we are not fully sure if it should be in conversation or not. Looks like not necessary data
-        # self.conversation.append({"role": "assistant", "content": reasoning.model_dump_json(exclude={"function"})})
+            functions=functions,
+            function_call={"name": "plan_next_step"},
+            stream=False
+        )
+        
+        message = completion.choices[0].message
+        tool_args_str = None
+        
+        if message.function_call and message.function_call.name == "plan_next_step":
+            tool_args_str = message.function_call.arguments
+        elif message.tool_calls:
+                for tc in message.tool_calls:
+                    if tc.function.name == "plan_next_step":
+                        tool_args_str = tc.function.arguments
+                        break
+                        
+        if tool_args_str:
+            reasoning = next_step_cls.model_validate_json(tool_args_str)
+        else:
+            error_msg = f"Model did not call plan_next_step. Content: {message.content}"
+            raise ValueError(f"Model failed to generate structured output. Error: {error_msg}")
+
+        # We do NOT append reasoning to conversation for SGRAgent as it is an internal thought process 
+        # that resolves to a tool call in the next step, or it might be appended if desired.
+        # The original SGRAgent didn't seem to append it.
         self._log_reasoning(reasoning)
         return reasoning
 
@@ -78,20 +105,16 @@ class SGRAgent(BaseAgent):
         tool = reasoning.function
         if not isinstance(tool, BaseTool):
             raise ValueError("Selected tool is not a valid BaseTool instance")
+        
+        # Use legacy function_call format for history
         self.conversation.append(
             {
                 "role": "assistant",
                 "content": reasoning.remaining_steps[0] if reasoning.remaining_steps else "Completing",
-                "tool_calls": [
-                    {
-                        "type": "function",
-                        "id": f"{self._context.iteration}-action",
-                        "function": {
-                            "name": tool.tool_name,
-                            "arguments": tool.model_dump_json(),
-                        },
-                    }
-                ],
+                "function_call": {
+                    "name": tool.tool_name,
+                    "arguments": tool.model_dump(),
+                }
             }
         )
         self.streaming_generator.add_tool_call(
@@ -101,8 +124,13 @@ class SGRAgent(BaseAgent):
 
     async def _action_phase(self, tool: BaseTool) -> str:
         result = await tool(self._context)
+        # Use legacy function role for history
         self.conversation.append(
-            {"role": "tool", "content": result, "tool_call_id": f"{self._context.iteration}-action"}
+            {
+                "role": "function",
+                "name": tool.tool_name,
+                "content": result
+            }
         )
         self.streaming_generator.add_chunk_from_str(f"{result}\n")
         self._log_tool_execution(tool, result)

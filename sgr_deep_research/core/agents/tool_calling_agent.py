@@ -1,7 +1,7 @@
 from typing import Literal, Type
 
 from openai import AsyncOpenAI, pydantic_function_tool
-from openai.types.chat import ChatCompletionFunctionToolParam
+from openai.types.chat import ChatCompletionToolParam
 
 from sgr_deep_research.core.agent_definition import ExecutionConfig, LLMConfig, PromptsConfig
 from sgr_deep_research.core.base_agent import BaseAgent
@@ -40,7 +40,7 @@ class ToolCallingAgent(BaseAgent):
         self.max_searches = execution_config.max_searches
         self.tool_choice: Literal["required"] = "required"
 
-    async def _prepare_tools(self) -> list[ChatCompletionFunctionToolParam]:
+    async def _prepare_tools(self) -> list[ChatCompletionToolParam]:
         """Prepare tool classes with current context limits."""
         tools = set(self.toolkit)
         if self._context.iteration >= self.max_iterations:
@@ -63,35 +63,70 @@ class ToolCallingAgent(BaseAgent):
         return None
 
     async def _select_action_phase(self, reasoning=None) -> BaseTool:
-        async with self.openai_client.chat.completions.stream(
+        # GigaChat specific: Use legacy 'functions' parameter instead of 'tools'
+        # This often works better for models with older OpenAI API compatibility
+        tools_params = await self._prepare_tools()
+        
+        # Extract 'function' definitions from the tools parameters
+        functions = []
+        for t in tools_params:
+            # t is a ChatCompletionToolParam (dict) with keys 'type' and 'function'
+            if "function" in t:
+                functions.append(t["function"])
+        
+        messages = await self._prepare_context()
+        # print(f"{messages=}")
+        completion = await self.openai_client.chat.completions.create(
             model=self.llm_config.model,
-            messages=await self._prepare_context(),
+            messages=messages,
             max_tokens=self.llm_config.max_tokens,
             temperature=self.llm_config.temperature,
-            tools=await self._prepare_tools(),
-            tool_choice=self.tool_choice,
-        ) as stream:
-            async for event in stream:
-                if event.type == "chunk":
-                    self.streaming_generator.add_chunk(event.chunk)
-        tool = (await stream.get_final_completion()).choices[0].message.tool_calls[0].function.parsed_arguments
+            functions=functions,
+            function_call="auto", # Use 'auto' for function calling
+            stream=False
+        )
+        
+        message = completion.choices[0].message
+        
+        # Check for legacy function_call response
+        tool_name = None
+        tool_args_str = None
+
+        if message.function_call:
+                tool_name = message.function_call.name
+                tool_args_str = message.function_call.arguments
+        # Fallback check for tool_calls (just in case)
+        elif message.tool_calls:
+            tool_call = message.tool_calls[0]
+            tool_name = tool_call.function.name
+            tool_args_str = tool_call.function.arguments
+        else:
+            error_msg = f"Model returned no function call. Content: {message.content}"
+            raise ValueError(f"Model failed to select a tool. Error: {error_msg}")
+
+        # Find the tool class
+        candidate_tools = set(self.toolkit)
+        candidate_tools.update({ClarificationTool, CreateReportTool, FinalAnswerTool, WebSearchTool})
+        
+        tool_cls = next((t for t in candidate_tools if t.tool_name == tool_name), None)
+        
+        if not tool_cls:
+            raise ValueError(f"Tool {tool_name} not found in toolkit")
+        # print(f"{tool_args_str=}")
+
+        tool = tool_cls.model_validate(tool_args_str)
 
         if not isinstance(tool, BaseTool):
+
             raise ValueError("Selected tool is not a valid BaseTool instance")
         self.conversation.append(
             {
                 "role": "assistant",
-                "content": None,
-                "tool_calls": [
-                    {
-                        "type": "function",
-                        "id": f"{self._context.iteration}-action",
-                        "function": {
-                            "name": tool.tool_name,
-                            "arguments": tool.model_dump_json(),
-                        },
-                    }
-                ],
+                "content": "",
+                "function_call": {
+                    "name": tool.tool_name,
+                    "arguments": tool.model_dump(),
+                }
             }
         )
         self.streaming_generator.add_tool_call(
@@ -102,7 +137,11 @@ class ToolCallingAgent(BaseAgent):
     async def _action_phase(self, tool: BaseTool) -> str:
         result = await tool(self._context)
         self.conversation.append(
-            {"role": "tool", "content": result, "tool_call_id": f"{self._context.iteration}-action"}
+            {
+                "role": "function",
+                "name": tool.tool_name,
+                "content": result
+            }
         )
         self.streaming_generator.add_chunk_from_str(f"{result}\n")
         self._log_tool_execution(tool, result)
