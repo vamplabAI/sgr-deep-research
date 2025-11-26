@@ -85,6 +85,7 @@ class ToolCallingAgent(BaseAgent):
             function_call="auto", # Use 'auto' for function calling
             stream=False
         )
+        self._accumulate_tokens(getattr(completion, "usage", None))
         
         message = completion.choices[0].message
         

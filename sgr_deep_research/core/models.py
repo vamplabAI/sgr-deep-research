@@ -48,6 +48,7 @@ class ResearchContext(BaseModel):
 
     current_step_reasoning: Any = None
     execution_result: str | None = None
+    tokens_used: int = Field(default=0, description="Total tokens consumed by the agent")
 
     state: AgentStatesEnum = Field(default=AgentStatesEnum.INITED, description="Current research state")
     iteration: int = Field(default=0, description="Current iteration number")

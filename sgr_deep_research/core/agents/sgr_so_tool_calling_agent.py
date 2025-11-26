@@ -59,6 +59,7 @@ class SGRSOToolCallingAgent(SGRToolCallingAgent):
             function_call={"name": ReasoningTool.tool_name}, # Force specific function
             stream=False
         )
+        self._accumulate_tokens(getattr(completion, "usage", None))
         
         message = completion.choices[0].message
         tool_args_str = None

@@ -71,6 +71,17 @@ class BaseAgent(AgentRegistryMixin):
         self._context.state = AgentStatesEnum.RESEARCHING
         self.logger.info(f"✅ Clarification received: {clarifications[:2000]}...")
 
+    def _accumulate_tokens(self, usage) -> None:
+        """Store token usage reported by the LLM response."""
+        if usage is None:
+            return
+        total_tokens = getattr(usage, "total_tokens", None)
+        if total_tokens is None and isinstance(usage, dict):
+            total_tokens = usage.get("total_tokens")
+        if total_tokens is None:
+            return
+        self._context.tokens_used += total_tokens
+
     def _log_reasoning(self, result: ReasoningTool) -> None:
         next_step = result.remaining_steps[0] if result.remaining_steps else "Completing"
         self.logger.info(
@@ -86,6 +97,7 @@ class BaseAgent(AgentRegistryMixin):
        📝 Remaining Steps: {result.remaining_steps}
        🏁 Task Completed: {result.task_completed}
        ➡️ Next Step: {next_step}
+       🔢 Tokens Used Total: {self._context.tokens_used}
     ###############################################"""
         )
         self.log.append(
@@ -94,6 +106,7 @@ class BaseAgent(AgentRegistryMixin):
                 "timestamp": datetime.now().isoformat(),
                 "step_type": "reasoning",
                 "agent_reasoning": result.model_dump(),
+                "tokens_used": self._context.tokens_used,
             }
         )
 
@@ -105,6 +118,7 @@ class BaseAgent(AgentRegistryMixin):
     🔧 Tool Name: {tool.tool_name}
     📋 Tool Model: {tool.model_dump_json(indent=2)}
     🔍 Result: '{result[:400]}...'
+    🔢 Tokens Used Total: {self._context.tokens_used}
 ###############################################"""
         )
         self.log.append(
@@ -115,6 +129,7 @@ class BaseAgent(AgentRegistryMixin):
                 "tool_name": tool.tool_name,
                 "agent_tool_context": tool.model_dump(),
                 "agent_tool_execution_result": result,
+                "tokens_used": self._context.tokens_used,
             }
         )
 
@@ -166,6 +181,7 @@ class BaseAgent(AgentRegistryMixin):
     async def execute(
         self,
     ):
+        self._context.tokens_used = 0
         self.logger.info(f"🚀 Starting for task: '{self.task}'")
         self.conversation.extend(
             [

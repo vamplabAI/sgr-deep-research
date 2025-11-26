@@ -77,6 +77,7 @@ class SGRAgent(BaseAgent):
             function_call={"name": "plan_next_step"},
             stream=False
         )
+        self._accumulate_tokens(getattr(completion, "usage", None))
         
         message = completion.choices[0].message
         tool_args_str = None

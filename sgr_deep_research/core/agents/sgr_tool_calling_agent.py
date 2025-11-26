@@ -79,6 +79,7 @@ class SGRToolCallingAgent(SGRAgent):
             function_call={"name": ReasoningTool.tool_name},
             stream=False
         )
+        self._accumulate_tokens(getattr(completion, "usage", None))
 
         message = completion.choices[0].message
 
@@ -138,6 +139,7 @@ class SGRToolCallingAgent(SGRAgent):
             function_call="auto",
             stream=False
         )
+        self._accumulate_tokens(getattr(completion, "usage", None))
 
         message = completion.choices[0].message
         tool_name = None
