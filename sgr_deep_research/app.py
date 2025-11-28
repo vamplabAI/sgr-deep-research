@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_: FastAPI):
     for tool in ToolRegistry.list_items():
         logger.info(f"Tool registered: {tool.__name__}")
     for agent in AgentRegistry.list_items():
