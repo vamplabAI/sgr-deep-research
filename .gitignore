@@ -338,5 +338,10 @@ notes.txt
 todo.txt
 personal_notes.md
 
+# Exclusion zone
+
 # ВАЖНО: config.yaml.example должен быть в репозитории как шаблон
 !config.yaml.example
+
+# Commiting lock files should be blocked, but we should allow adding UV's lock files
+!uv.lock
