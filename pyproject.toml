@@ -63,7 +63,7 @@ Issues = "https://github.com/vakovalskii/sgr-deep-research/issues"
 [project.scripts]
 sgr = "sgr_deep_research.__main__:main"
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
