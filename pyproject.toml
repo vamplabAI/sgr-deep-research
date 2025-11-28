@@ -95,5 +95,19 @@ version = {attr = "sgr_deep_research.__version__"}
 [tool.setuptools.package-data]
 "sgr_deep_research" = ["**/*.yaml", "**/*.yml", "**/*.json", "**/*.txt"]
 
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+# Add the `line-too-long` rule to the enforced rule set. By default, Ruff omits rules that
+# overlap with the use of a formatter, like Black, but we can override this behavior by
+# explicitly adding the rule.
+extend-select = ["E501", "I"]
+
+[tool.ruff.format]
+docstring-code-format = true
+line-ending = "lf"
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
