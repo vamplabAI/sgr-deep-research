@@ -15,6 +15,21 @@ from sgr_deep_research.core.tools.generate_plan_tool import GeneratePlanTool
 from sgr_deep_research.core.tools.reasoning_tool import ReasoningTool
 from sgr_deep_research.core.tools.web_search_tool import WebSearchTool
 
+# Memory tools import
+from sgr_deep_research.core.tools.mem_tools import (
+    CheckIfDirExistsTool,
+    CheckIfFileExistsTool,
+    CreateDirTool,
+    CreateFileTool,
+    DeleteFileTool,
+    GetListFilesTool,
+    GetSizeTool,
+    GoToLinkTool,
+    ReadFileTool,
+    UpdateFileTool,
+    mem_agent_tools,
+)
+
 # Tool lists for backward compatibility
 system_agent_tools = [
     ClarificationTool,
@@ -45,10 +60,22 @@ __all__ = [
     "CreateReportTool",
     "FinalAnswerTool",
     "ReasoningTool",
+    # Memory tools
+    "CreateFileTool",
+    "ReadFileTool",
+    "UpdateFileTool",
+    "DeleteFileTool",
+    "CheckIfFileExistsTool",
+    "CreateDirTool",
+    "CheckIfDirExistsTool",
+    "GetSizeTool",
+    "GetListFilesTool",
+    "GoToLinkTool",
     # Tool lists
     "NextStepToolStub",
     "NextStepToolsBuilder",
     # Tool Collections
     "system_agent_tools",
     "research_agent_tools",
+    "mem_agent_tools",
 ]

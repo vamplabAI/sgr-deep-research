@@ -69,40 +69,60 @@ class ToolCallingAgent(BaseAgent):
             temperature=self.config.llm.temperature,
             tools=await self._prepare_tools(),
             tool_choice=self.tool_choice,
+            parallel_tool_calls=True,
         ) as stream:
             async for event in stream:
                 if event.type == "chunk":
                     self.streaming_generator.add_chunk(event.chunk)
-        tool = (await stream.get_final_completion()).choices[0].message.tool_calls[0].function.parsed_arguments
+        
+        completion = await stream.get_final_completion()
+        tool_calls = completion.choices[0].message.tool_calls
+        
+        # Handle multiple parallel tool calls
+        tools = []
+        tool_calls_data = []
+        
+        for idx, tool_call in enumerate(tool_calls):
+            tool = tool_call.function.parsed_arguments
+            if not isinstance(tool, BaseTool):
+                raise ValueError("Selected tool is not a valid BaseTool instance")
+            
+            tools.append(tool)
+            tool_calls_data.append({
+                "type": "function",
+                "id": f"{self._context.iteration}-action-{idx}",
+                "function": {
+                    "name": tool.tool_name,
+                    "arguments": tool.model_dump_json(),
+                },
+            })
+            self.streaming_generator.add_tool_call(
+                f"{self._context.iteration}-action-{idx}", tool.tool_name, tool.model_dump_json()
+            )
+        
+        self.conversation.append({
+            "role": "assistant",
+            "content": None,
+            "tool_calls": tool_calls_data,
+        })
+        
+        return tools if len(tools) > 1 else tools[0]
 
-        if not isinstance(tool, BaseTool):
-            raise ValueError("Selected tool is not a valid BaseTool instance")
-        self.conversation.append(
-            {
-                "role": "assistant",
-                "content": None,
-                "tool_calls": [
-                    {
-                        "type": "function",
-                        "id": f"{self._context.iteration}-action",
-                        "function": {
-                            "name": tool.tool_name,
-                            "arguments": tool.model_dump_json(),
-                        },
-                    }
-                ],
-            }
-        )
-        self.streaming_generator.add_tool_call(
-            f"{self._context.iteration}-action", tool.tool_name, tool.model_dump_json()
-        )
-        return tool
-
-    async def _action_phase(self, tool: BaseTool) -> str:
-        result = await tool(self._context, self.config)
-        self.conversation.append(
-            {"role": "tool", "content": result, "tool_call_id": f"{self._context.iteration}-action"}
-        )
-        self.streaming_generator.add_chunk_from_str(f"{result}\n")
-        self._log_tool_execution(tool, result)
-        return result
+    async def _action_phase(self, tool: BaseTool | list[BaseTool]) -> str:
+        # Handle both single tool and multiple parallel tools
+        tools = tool if isinstance(tool, list) else [tool]
+        results = []
+        
+        for idx, t in enumerate(tools):
+            result = await t(self._context, self.config)
+            self.conversation.append({
+                "role": "tool",
+                "content": result,
+                "tool_call_id": f"{self._context.iteration}-action-{idx}"
+            })
+            self.streaming_generator.add_chunk_from_str(f"{result}\n")
+            self._log_tool_execution(t, result)
+            results.append(result)
+        
+        # Return combined results if multiple tools, single result otherwise
+        return "\n\n".join(results) if len(results) > 1 else results[0]

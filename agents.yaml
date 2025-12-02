@@ -1,0 +1,28 @@
+agents:
+  memory_agent:
+    base_class: "SGRToolCallingAgent"
+
+    # Only override what's needed
+    llm:
+      model: "gpt-4.1-mini"
+
+    tools:
+      - "WebSearchTool"
+      # Memory tools - file operations
+      - "CreateFileTool"
+      - "ReadFileTool"
+      - "UpdateFileTool"
+      - "DeleteFileTool"
+      - "CheckIfFileExistsTool"
+      # Memory tools - directory operations
+      - "CreateDirTool"
+      - "CheckIfDirExistsTool"
+      # Memory tools - utilities
+      - "GetSizeTool"
+      - "GetListFilesTool"
+      - "GoToLinkTool"
+      # REQUIRED for task completion
+      - "FinalAnswerTool"
+
+    prompts:
+      system_prompt_file: "prompts/memory_agent_system_prompt.txt"
