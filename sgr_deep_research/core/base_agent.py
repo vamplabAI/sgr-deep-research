@@ -131,9 +131,25 @@ class BaseAgent(AgentRegistryMixin):
 
         json.dump(agent_log, open(filepath, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
 
+    @staticmethod
+    def _normalize_messages(messages: list[dict]) -> list[dict]:
+        """Ensure messages use OpenAI content parts when needed (supports
+        images)."""
+        normalized = []
+        for msg in messages:
+            content = msg.get("content")
+            if isinstance(content, str):
+                msg = {**msg, "content": [{"type": "text", "text": content}]}
+            elif isinstance(content, list):
+                msg = {**msg, "content": content}
+            elif content is None:
+                msg = {**msg, "content": [{"type": "text", "text": ""}]}
+            normalized.append(msg)
+        return normalized
+
     async def _prepare_context(self) -> list[dict]:
         """Prepare conversation context with system prompt."""
-        return [
+        messages = [
             {"role": "system", "content": PromptLoader.get_system_prompt(self.toolkit, self.config.prompts)},
             {
                 "role": "user",
@@ -141,6 +157,7 @@ class BaseAgent(AgentRegistryMixin):
             },
             *self.conversation,
         ]
+        return self._normalize_messages(messages)
 
     async def _prepare_tools(self) -> list[ChatCompletionFunctionToolParam]:
         """Prepare available tools for the current agent state and progress."""
