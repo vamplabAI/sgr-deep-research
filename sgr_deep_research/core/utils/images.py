@@ -1,7 +1,8 @@
 import base64
-import httpx
 import mimetypes
 from pathlib import Path
+
+import httpx
 
 MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5MB safety limit
 
@@ -48,9 +49,11 @@ def _download_image(url: str) -> tuple[bytes, str]:
 
 
 def to_image_part(path_or_url: str) -> dict:
-    """
-    Convert a local image path or remote/base64 input to OpenAI-compatible image_url part.
-    LM Studio vision models often expect base64 in the url field — we enforce that by encoding downloaded/loaded data.
+    """Convert a local image path or remote/base64 input to OpenAI-compatible
+    image_url part.
+
+    LM Studio vision models often expect base64 in the url field — we
+    enforce that by encoding downloaded/loaded data.
     """
     path = Path(path_or_url)
     if path.exists() and path.is_file():
@@ -78,4 +81,3 @@ def to_image_part(path_or_url: str) -> dict:
             )
 
     return {"type": "image_url", "image_url": {"url": url, "detail": "auto"}}
-
