@@ -7,10 +7,16 @@ from pydantic import BaseModel, Field
 
 
 class ChatMessage(BaseModel):
-    """Chat message."""
+    """Chat message with optional multimodal parts."""
 
     role: Literal["system", "user", "assistant", "tool"] = Field(default="user", description="Sender role")
-    content: str = Field(description="Message content")
+    content: str | List[Dict[str, Any]] = Field(
+        description="Message content (text or OpenAI content parts)"
+    )  # Compatible with OpenAI Multipart
+    images: List[str] | None = Field(
+        default=None,
+        description="Optional list of image paths/URLs (converted to image_url parts)",
+    )
 
 
 class ChatCompletionRequest(BaseModel):
