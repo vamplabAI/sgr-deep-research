@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
@@ -15,6 +16,7 @@ from sgr_deep_research.api.models import (
 from sgr_deep_research.core import BaseAgent
 from sgr_deep_research.core.agent_factory import AgentFactory
 from sgr_deep_research.core.models import AgentStatesEnum
+from sgr_deep_research.core.utils.images import to_image_part
 
 logger = logging.getLogger(__name__)
 
@@ -75,10 +77,41 @@ async def get_available_models():
     return {"data": models_data, "object": "list"}
 
 
+def _preprocess_message_content(content: Any, images: list[str] | None = None):
+    """Convert content to OpenAI-compatible format and attach images if
+    provided."""
+    # Normalize base content
+    if isinstance(content, str):
+        normalized = content
+    elif isinstance(content, list):
+        normalized = []
+        for part in content:
+            if isinstance(part, dict) and part.get("type") == "image_url":
+                normalized.append(to_image_part(part.get("image_url", {}).get("url") or part.get("url", "")))
+            else:
+                normalized.append(part)
+    else:
+        normalized = ""
+
+    # Attach images passed separately
+    if images:
+        if isinstance(normalized, str):
+            normalized = [{"type": "text", "text": normalized}] if normalized else []
+        for img in images:
+            normalized.append(to_image_part(img))
+
+    return normalized
+
+
 def extract_user_content_from_messages(messages):
     for message in reversed(messages):
         if message.role == "user":
-            return message.content
+            # Combine text parts into a single string for task extraction
+            if isinstance(message.content, str):
+                return message.content
+            if isinstance(message.content, list):
+                text_parts = [p.get("text") for p in message.content if isinstance(p, dict) and p.get("type") == "text"]
+                return " ".join(filter(None, text_parts)) or "Image-only request"
     raise ValueError("User message not found in messages")
 
 
@@ -113,6 +146,13 @@ def _is_agent_id(model_str: str) -> bool:
     return "_" in model_str and len(model_str) > 20
 
 
+def _get_last_user_message(messages):
+    for message in reversed(messages):
+        if message.role == "user":
+            return message
+    raise ValueError("User message not found in messages")
+
+
 @router.post("/v1/chat/completions")
 async def create_chat_completion(request: ChatCompletionRequest):
     if not request.stream:
@@ -133,6 +173,8 @@ async def create_chat_completion(request: ChatCompletionRequest):
 
     try:
         task = extract_user_content_from_messages(request.messages)
+        user_message = _get_last_user_message(request.messages)
+        user_content = _preprocess_message_content(user_message.content, user_message.images)
 
         agent_def = next(filter(lambda ad: ad.name == request.model, AgentFactory.get_definitions_list()), None)
         if not agent_def:
@@ -143,6 +185,7 @@ async def create_chat_completion(request: ChatCompletionRequest):
             )
         agent = await AgentFactory.create(agent_def, task)
         logger.info(f"Created agent '{request.model}' for task: {task[:100]}...")
+        agent.conversation.append({"role": "user", "content": user_content})
 
         agents_storage[agent.id] = agent
         _ = asyncio.create_task(agent.execute())
