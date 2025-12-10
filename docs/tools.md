@@ -7,6 +7,7 @@ This document describes all available tools in the SGR Deep Research framework, 
 Tools are divided into two categories:
 
 **System Tools** - Essential tools required for deep research functionality. Without these, the research agent cannot function properly:
+
 - ReasoningTool
 - FinalAnswerTool
 - CreateReportTool
@@ -15,6 +16,7 @@ Tools are divided into two categories:
 - AdaptPlanTool
 
 **Auxiliary Tools** - Optional tools that extend agent capabilities but are not strictly required:
+
 - WebSearchTool
 - ExtractPageContentTool
 
@@ -30,8 +32,10 @@ All tools inherit from `BaseTool`, which provides the foundation for tool functi
 class BaseTool(BaseModel, ToolRegistryMixin):
     tool_name: ClassVar[str] = None
     description: ClassVar[str] = None
-    
-    async def __call__(self, context: ResearchContext, config: AgentConfig, **kwargs) -> str:
+
+    async def __call__(
+        self, context: ResearchContext, config: AgentConfig, **kwargs
+    ) -> str:
         raise NotImplementedError("Execute method must be implemented by subclass")
 ```
 
@@ -62,14 +66,15 @@ if TYPE_CHECKING:
     from sgr_deep_research.core.agent_definition import AgentConfig
     from sgr_deep_research.core.models import ResearchContext
 
+
 class CustomTool(BaseTool):
     """Description of what this tool does."""
-    
+
     tool_name = "customtool"  # Optional, auto-generated from class name if not set
-    
+
     reasoning: str = Field(description="Why this tool is needed")
     parameter: str = Field(description="Tool parameter")
-    
+
     async def __call__(self, context: ResearchContext, config: AgentConfig, **_) -> str:
         # Tool implementation
         result = f"Processed: {self.parameter}"
@@ -82,17 +87,18 @@ The tool will be automatically registered and available for use in agent configu
 
 ### ReasoningTool
 
-**Type:** System Tool  
+**Type:** System Tool
 **Source:** [sgr_deep_research/core/tools/reasoning_tool.py](../sgr_deep_research/core/tools/reasoning_tool.py)
 
 Core tool for Schema-Guided Reasoning agents. Determines the next reasoning step with adaptive planning capabilities.
 
 **Parameters:**
-- `reasoning_steps` (list[str], 2-3 items): Step-by-step reasoning process
+
+- `reasoning_steps` (list\[str\], 2-3 items): Step-by-step reasoning process
 - `current_situation` (str, max 300 chars): Current research situation assessment
 - `plan_status` (str, max 150 chars): Status of current plan
 - `enough_data` (bool, default=False): Whether sufficient data is collected
-- `remaining_steps` (list[str], 1-3 items): Remaining action steps
+- `remaining_steps` (list\[str\], 1-3 items): Remaining action steps
 - `task_completed` (bool): Whether the research task is finished
 
 **Behavior:**
@@ -106,18 +112,20 @@ No specific configuration required. Tool behavior is controlled by agent prompts
 
 ### FinalAnswerTool
 
-**Type:** System Tool  
+**Type:** System Tool
 **Source:** [sgr_deep_research/core/tools/final_answer_tool.py](../sgr_deep_research/core/tools/final_answer_tool.py)
 
 Finalizes research task and completes agent execution.
 
 **Parameters:**
+
 - `reasoning` (str): Why task is complete and how answer was verified
-- `completed_steps` (list[str], 1-5 items): Summary of completed steps including verification
+- `completed_steps` (list\[str\], 1-5 items): Summary of completed steps including verification
 - `answer` (str): Comprehensive final answer with exact factual details
-- `status` (Literal["completed", "failed"]): Task completion status
+- `status` (Literal\["completed", "failed"\]): Task completion status
 
 **Behavior:**
+
 - Sets `context.state` to the specified status
 - Stores `answer` in `context.execution_result`
 - Returns JSON representation of the final answer
@@ -129,6 +137,7 @@ Call after completing a research task to finalize execution.
 No specific configuration required.
 
 **Example:**
+
 ```yaml
 execution:
   max_iterations: 10  # After this limit, only FinalAnswerTool and CreateReportTool are available
@@ -136,19 +145,21 @@ execution:
 
 ### CreateReportTool
 
-**Type:** System Tool  
+**Type:** System Tool
 **Source:** [sgr_deep_research/core/tools/create_report_tool.py](../sgr_deep_research/core/tools/create_report_tool.py)
 
 Creates a comprehensive detailed report with citations as the final step of research.
 
 **Parameters:**
+
 - `reasoning` (str): Why ready to create report now
 - `title` (str): Report title
 - `user_request_language_reference` (str): Copy of original user request for language consistency
-- `content` (str): Comprehensive research report with inline citations [1], [2], [3]
-- `confidence` (Literal["high", "medium", "low"]): Confidence level in findings
+- `content` (str): Comprehensive research report with inline citations \[1\], \[2\], \[3\]
+- `confidence` (Literal\["high", "medium", "low"\]): Confidence level in findings
 
 **Behavior:**
+
 - Saves report to file in `config.execution.reports_dir`
 - Filename format: `{timestamp}_{safe_title}.md`
 - Includes full content with sources section
@@ -158,30 +169,34 @@ Creates a comprehensive detailed report with citations as the final step of rese
 Final step after collecting sufficient research data.
 
 **Configuration:**
+
 ```yaml
 execution:
   reports_dir: "reports"  # Directory for saving reports
 ```
 
 **Important:**
-- Every factual claim in content MUST have inline citations [1], [2], [3]
+
+- Every factual claim in content MUST have inline citations \[1\], \[2\], \[3\]
 - Citations must be integrated directly into sentences
 - Content must use the same language as `user_request_language_reference`
 
 ### ClarificationTool
 
-**Type:** System Tool  
+**Type:** System Tool
 **Source:** [sgr_deep_research/core/tools/clarification_tool.py](../sgr_deep_research/core/tools/clarification_tool.py)
 
 Asks clarifying questions when facing an ambiguous request.
 
 **Parameters:**
+
 - `reasoning` (str, max 200 chars): Why clarification is needed (1-2 sentences MAX)
-- `unclear_terms` (list[str], 1-3 items): List of unclear terms (brief, 1-3 words each)
-- `assumptions` (list[str], 2-3 items): Possible interpretations (short, 1 sentence each)
-- `questions` (list[str], 1-3 items): Specific clarifying questions (short and direct)
+- `unclear_terms` (list\[str\], 1-3 items): List of unclear terms (brief, 1-3 words each)
+- `assumptions` (list\[str\], 2-3 items): Possible interpretations (short, 1 sentence each)
+- `questions` (list\[str\], 1-3 items): Specific clarifying questions (short and direct)
 
 **Behavior:**
+
 - Returns questions as newline-separated string
 - Pauses agent execution until clarification is received
 - Sets agent state to `WAITING_FOR_CLARIFICATION`
@@ -191,6 +206,7 @@ Asks clarifying questions when facing an ambiguous request.
 Use when user request is ambiguous or requires additional information.
 
 **Configuration:**
+
 ```yaml
 execution:
   max_clarifications: 3  # Maximum number of user clarification requests
@@ -200,18 +216,20 @@ After reaching `max_clarifications`, the tool is automatically removed from avai
 
 ### GeneratePlanTool
 
-**Type:** System Tool  
+**Type:** System Tool
 **Source:** [sgr_deep_research/core/tools/generate_plan_tool.py](../sgr_deep_research/core/tools/generate_plan_tool.py)
 
 Generates a research plan to split complex requests into manageable steps.
 
 **Parameters:**
+
 - `reasoning` (str): Justification for research approach
 - `research_goal` (str): Primary research objective
-- `planned_steps` (list[str], 3-4 items): List of planned steps
-- `search_strategies` (list[str], 2-3 items): Information search strategies
+- `planned_steps` (list\[str\], 3-4 items): List of planned steps
+- `search_strategies` (list\[str\], 2-3 items): Information search strategies
 
 **Behavior:**
+
 - Returns JSON representation of the plan (excluding reasoning field)
 - Used to structure complex research tasks
 
@@ -223,19 +241,21 @@ No specific configuration required.
 
 ### AdaptPlanTool
 
-**Type:** System Tool  
+**Type:** System Tool
 **Source:** [sgr_deep_research/core/tools/adapt_plan_tool.py](../sgr_deep_research/core/tools/adapt_plan_tool.py)
 
 Adapts a research plan based on new findings.
 
 **Parameters:**
+
 - `reasoning` (str): Why plan needs adaptation based on new data
 - `original_goal` (str): Original research goal
 - `new_goal` (str): Updated research goal
-- `plan_changes` (list[str], 1-3 items): Specific changes made to plan
-- `next_steps` (list[str], 2-4 items): Updated remaining steps
+- `plan_changes` (list\[str\], 1-3 items): Specific changes made to plan
+- `next_steps` (list\[str\], 2-4 items): Updated remaining steps
 
 **Behavior:**
+
 - Returns JSON representation of adapted plan (excluding reasoning field)
 - Allows dynamic plan adjustment during research
 
@@ -249,17 +269,19 @@ No specific configuration required.
 
 ### WebSearchTool
 
-**Type:** Auxiliary Tool  
+**Type:** Auxiliary Tool
 **Source:** [sgr_deep_research/core/tools/web_search_tool.py](../sgr_deep_research/core/tools/web_search_tool.py)
 
 Searches the web for real-time information using Tavily Search API.
 
 **Parameters:**
+
 - `reasoning` (str): Why this search is needed and what to expect
 - `query` (str): Search query in same language as user request
 - `max_results` (int, default=5, range 1-10): Maximum number of results to retrieve
 
 **Behavior:**
+
 - Executes search via TavilySearchService
 - Adds found sources to `context.sources` dictionary
 - Creates SearchResult and appends to `context.searches`
@@ -270,6 +292,7 @@ Searches the web for real-time information using Tavily Search API.
 Use for finding up-to-date information, verifying facts, researching current events, technology updates, or any topic requiring recent information.
 
 **Best Practices:**
+
 - Use specific terms and context in queries
 - For acronyms, add context: "SGR Schema-Guided Reasoning"
 - Use quotes for exact phrases: "Structured Output OpenAI"
@@ -278,6 +301,7 @@ Use for finding up-to-date information, verifying facts, researching current eve
 - Search snippets often contain direct answers - check them carefully
 
 **Configuration:**
+
 ```yaml
 search:
   tavily_api_key: "your-tavily-api-key"  # Required: Tavily API key
@@ -289,6 +313,7 @@ search:
 After reaching `max_searches`, the tool is automatically removed from available tools.
 
 **Example:**
+
 ```yaml
 agents:
   research_agent:
@@ -301,16 +326,18 @@ agents:
 
 ### ExtractPageContentTool
 
-**Type:** Auxiliary Tool  
+**Type:** Auxiliary Tool
 **Source:** [sgr_deep_research/core/tools/extract_page_content_tool.py](../sgr_deep_research/core/tools/extract_page_content_tool.py)
 
 Extracts full detailed content from specific web pages using Tavily Extract API.
 
 **Parameters:**
+
 - `reasoning` (str): Why extract these specific pages
-- `urls` (list[str], 1-5 items): List of URLs to extract full content from
+- `urls` (list\[str\], 1-5 items): List of URLs to extract full content from
 
 **Behavior:**
+
 - Extracts full content from specified URLs via TavilySearchService
 - Updates existing sources in `context.sources` with full content
 - For new URLs, adds them with sequential numbering
@@ -320,12 +347,14 @@ Extracts full detailed content from specific web pages using Tavily Extract API.
 Call after WebSearchTool to get detailed information from promising URLs found in search results.
 
 **Important Warnings:**
+
 - Extracted pages may show data from DIFFERENT years/time periods than asked
 - ALWAYS verify that extracted content matches the question's temporal context
 - If extracted content contradicts search snippet, prefer snippet for factual questions
 - For date/number questions, cross-check extracted values with search snippets
 
 **Configuration:**
+
 ```yaml
 search:
   tavily_api_key: "your-tavily-api-key"  # Required: Tavily API key
@@ -334,6 +363,7 @@ search:
 ```
 
 **Example:**
+
 ```yaml
 agents:
   research_agent:
@@ -386,6 +416,7 @@ Tools can also be created from MCP (Model Context Protocol) servers. These tools
 **Source:** [sgr_deep_research/core/base_tool.py](../sgr_deep_research/core/base_tool.py) (MCPBaseTool class)
 
 **Configuration:**
+
 ```yaml
 mcp:
   mcpServers:
@@ -398,12 +429,14 @@ mcp:
 ```
 
 **Behavior:**
+
 - MCP tools are automatically converted to BaseTool instances
 - Tool schemas are generated from MCP server input schemas
 - Execution calls MCP server with tool payload
 - Response is limited by `execution.mcp_context_limit`
 
 **Configuration:**
+
 ```yaml
 execution:
   mcp_context_limit: 15000  # Maximum context length from MCP server response
