@@ -105,34 +105,22 @@ def _prepare_message_content(message: ChatMessage) -> Union[str, List[Dict[str, 
         return image_parts
 
 
-def extract_task_from_first_user_message(messages: list[ChatMessage]) -> str:
-    """Extract task text from the first user message (for agent initialization
-    and logging).
+def extract_user_content_from_messages(
+    messages: list[ChatMessage], first: bool = False
+) -> Union[str, List[Dict[str, Any]]]:
+    """Extract content from user message(s) with support for images.
 
-    Returns text content from the first user message, ignoring images.
-    Used only for agent.task field and prompt template - actual conversation context
-    is passed separately via agent.conversation.
+    Args:
+        messages: List of chat messages
+        first: If True, extract from first user message (for task initialization).
+               If False, extract from last user message (for clarifications).
+
+    Returns:
+        Processed content (text + images) in OpenAI-compatible format.
     """
-    for message in messages:
-        if message.role == "user":
-            if isinstance(message.content, str):
-                return message.content
-            elif isinstance(message.content, list):
-                text_parts = [p.get("text") for p in message.content if isinstance(p, dict) and p.get("type") == "text"]
-                text = " ".join(filter(None, text_parts))
-                if text:
-                    return text
+    message_iter = messages if first else reversed(messages)
 
-    return "Image-only request"
-
-
-def extract_user_content_from_messages(messages: list[ChatMessage]) -> Union[str, List[Dict[str, Any]]]:
-    """Extract content from the last user message with support for images.
-
-    Returns processed content (text + images) in OpenAI-compatible format.
-    Used for clarification requests where full multimodal content is needed.
-    """
-    for message in reversed(messages):
+    for message in message_iter:
         if message.role == "user":
             return _prepare_message_content(message)
 
@@ -147,7 +135,8 @@ async def provide_clarification(agent_id: str, request: ClarificationRequest):
             raise HTTPException(status_code=404, detail="Agent not found")
 
         clarifications_preview = (
-            request.clarifications[:100] if isinstance(request.clarifications, str) 
+            request.clarifications[:100]
+            if isinstance(request.clarifications, str)
             else f"{len(request.clarifications)} parts (multimodal)"
         )
         logger.info(f"Providing clarification to agent {agent.id}: {clarifications_preview}...")
@@ -195,7 +184,14 @@ async def create_chat_completion(request: ChatCompletionRequest):
     try:
         # Extract task text from first user message (for logging/prompts only)
         # Full conversation context is passed via agent.conversation
-        task = extract_task_from_first_user_message(request.messages)
+        task_content = extract_user_content_from_messages(request.messages, first=True)
+
+        # Extract text from content for agent.task field (string only)
+        if isinstance(task_content, str):
+            task = task_content
+        else:
+            text_parts = [p.get("text") for p in task_content if isinstance(p, dict) and p.get("type") == "text"]
+            task = " ".join(filter(None, text_parts)) or "Image-only request"
 
         # Process all messages: merge images field into content parts
         processed_messages = []

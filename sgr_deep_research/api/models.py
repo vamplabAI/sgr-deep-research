@@ -92,5 +92,5 @@ class ClarificationRequest(BaseModel):
     """Simple request for providing clarifications to an agent."""
 
     clarifications: Union[str, List[Dict[str, Any]]] = Field(
-        description="Clarification content: text string or OpenAI content parts (text/image_url) with support for images"
+        description="Clarification content: text string or OpenAI content parts (text/image_url)"
     )

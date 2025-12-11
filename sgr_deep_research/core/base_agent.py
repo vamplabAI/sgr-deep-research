@@ -58,8 +58,9 @@ class BaseAgent(AgentRegistryMixin):
 
     async def provide_clarification(self, clarifications: Union[str, List[Dict[str, Any]]]):
         """Receive clarification from an external source (e.g. user input).
-        
-        Supports both text-only clarifications (str) and multimodal content (list of parts with images).
+
+        Supports both text-only clarifications (str) and multimodal
+        content (list of parts with images).
         """
         if isinstance(clarifications, str):
             # Text-only clarification: use template as before
@@ -69,7 +70,7 @@ class BaseAgent(AgentRegistryMixin):
             # Multimodal content (list of parts): use directly, but wrap text parts in template if present
             text_parts = [p.get("text") for p in clarifications if isinstance(p, dict) and p.get("type") == "text"]
             image_parts = [p for p in clarifications if isinstance(p, dict) and p.get("type") == "image_url"]
-            
+
             if text_parts:
                 # Combine text parts and wrap in template
                 combined_text = " ".join(filter(None, text_parts))
@@ -81,7 +82,7 @@ class BaseAgent(AgentRegistryMixin):
                 # Images only: use as-is (no template wrapping for image-only)
                 content = clarifications
                 log_content = f"{len(image_parts)} image(s)"
-        
+
         self.conversation.append({"role": "user", "content": content})
         self._context.clarifications_used += 1
         self._context.clarification_received.set()
