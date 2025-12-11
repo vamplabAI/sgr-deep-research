@@ -1,16 +1,27 @@
 """OpenAI-compatible models for API endpoints."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Literal
+from typing import Any, Dict, List, Literal, Union
 
 from pydantic import BaseModel, Field
 
 
 class ChatMessage(BaseModel):
-    """Chat message."""
+    """Chat message compatible with OpenAI ChatCompletionMessageParam.
+
+    Supports multimodal content via content parts (text + image_url).
+    The 'images' field is a convenience shortcut that gets converted to
+    image_url parts.
+    """
 
     role: Literal["system", "user", "assistant", "tool"] = Field(default="user", description="Sender role")
-    content: str = Field(description="Message content")
+    content: Union[str, List[Dict[str, Any]]] = Field(
+        description="Message content: text string or OpenAI content parts (text/image_url)"
+    )
+    images: List[str] | None = Field(
+        default=None,
+        description="Optional convenience field: image paths/URLs/base64 (converted to image_url parts)",
+    )
 
 
 class ChatCompletionRequest(BaseModel):
@@ -80,4 +91,6 @@ class AgentListResponse(BaseModel):
 class ClarificationRequest(BaseModel):
     """Simple request for providing clarifications to an agent."""
 
-    clarifications: str = Field(description="Clarification text to provide to the agent")
+    clarifications: Union[str, List[Dict[str, Any]]] = Field(
+        description="Clarification content: text string or OpenAI content parts (text/image_url)"
+    )

@@ -4,7 +4,7 @@ import os
 import traceback
 import uuid
 from datetime import datetime
-from typing import Type
+from typing import Any, Dict, List, Type, Union
 
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionFunctionToolParam
@@ -56,15 +56,38 @@ class BaseAgent(AgentRegistryMixin):
         self.logger = logging.getLogger(f"sgr_deep_research.agents.{self.id}")
         self.log = []
 
-    async def provide_clarification(self, clarifications: str):
-        """Receive clarification from an external source (e.g. user input)"""
-        self.conversation.append(
-            {"role": "user", "content": PromptLoader.get_clarification_template(clarifications, self.config.prompts)}
-        )
+    async def provide_clarification(self, clarifications: Union[str, List[Dict[str, Any]]]):
+        """Receive clarification from an external source (e.g. user input).
+
+        Supports both text-only clarifications (str) and multimodal
+        content (list of parts with images).
+        """
+        if isinstance(clarifications, str):
+            # Text-only clarification: use template as before
+            content = PromptLoader.get_clarification_template(clarifications, self.config.prompts)
+            log_content = clarifications[:2000]
+        else:
+            # Multimodal content (list of parts): use directly, but wrap text parts in template if present
+            text_parts = [p.get("text") for p in clarifications if isinstance(p, dict) and p.get("type") == "text"]
+            image_parts = [p for p in clarifications if isinstance(p, dict) and p.get("type") == "image_url"]
+
+            if text_parts:
+                # Combine text parts and wrap in template
+                combined_text = " ".join(filter(None, text_parts))
+                template_text = PromptLoader.get_clarification_template(combined_text, self.config.prompts)
+                # Create parts: template text + images
+                content = [{"type": "text", "text": template_text}] + image_parts
+                log_content = combined_text[:2000]
+            else:
+                # Images only: use as-is (no template wrapping for image-only)
+                content = clarifications
+                log_content = f"{len(image_parts)} image(s)"
+
+        self.conversation.append({"role": "user", "content": content})
         self._context.clarifications_used += 1
         self._context.clarification_received.set()
         self._context.state = AgentStatesEnum.RESEARCHING
-        self.logger.info(f"✅ Clarification received: {clarifications[:2000]}...")
+        self.logger.info(f"✅ Clarification received: {log_content}...")
 
     def _log_reasoning(self, result: ReasoningTool) -> None:
         next_step = result.remaining_steps[0] if result.remaining_steps else "Completing"
@@ -131,9 +154,25 @@ class BaseAgent(AgentRegistryMixin):
 
         json.dump(agent_log, open(filepath, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
 
+    @staticmethod
+    def _normalize_messages(messages: list[dict]) -> list[dict]:
+        """Ensure messages use OpenAI content parts when needed (supports
+        images)."""
+        normalized = []
+        for msg in messages:
+            content = msg.get("content")
+            if isinstance(content, str):
+                msg = {**msg, "content": [{"type": "text", "text": content}]}
+            elif isinstance(content, list):
+                msg = {**msg, "content": content}
+            elif content is None:
+                msg = {**msg, "content": [{"type": "text", "text": ""}]}
+            normalized.append(msg)
+        return normalized
+
     async def _prepare_context(self) -> list[dict]:
         """Prepare conversation context with system prompt."""
-        return [
+        messages = [
             {"role": "system", "content": PromptLoader.get_system_prompt(self.toolkit, self.config.prompts)},
             {
                 "role": "user",
@@ -141,6 +180,7 @@ class BaseAgent(AgentRegistryMixin):
             },
             *self.conversation,
         ]
+        return self._normalize_messages(messages)
 
     async def _prepare_tools(self) -> list[ChatCompletionFunctionToolParam]:
         """Prepare available tools for the current agent state and progress."""
