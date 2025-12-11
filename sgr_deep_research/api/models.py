@@ -1,21 +1,26 @@
 """OpenAI-compatible models for API endpoints."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Literal
+from typing import Any, Dict, List, Literal, Union
 
 from pydantic import BaseModel, Field
 
 
 class ChatMessage(BaseModel):
-    """Chat message with optional multimodal parts."""
+    """Chat message compatible with OpenAI ChatCompletionMessageParam.
+
+    Supports multimodal content via content parts (text + image_url).
+    The 'images' field is a convenience shortcut that gets converted to
+    image_url parts.
+    """
 
     role: Literal["system", "user", "assistant", "tool"] = Field(default="user", description="Sender role")
-    content: str | List[Dict[str, Any]] = Field(
-        description="Message content (text or OpenAI content parts)"
-    )  # Compatible with OpenAI Multipart
+    content: Union[str, List[Dict[str, Any]]] = Field(
+        description="Message content: text string or OpenAI content parts (text/image_url)"
+    )
     images: List[str] | None = Field(
         default=None,
-        description="Optional list of image paths/URLs (converted to image_url parts)",
+        description="Optional convenience field: image paths/URLs/base64 (converted to image_url parts)",
     )
 
 
