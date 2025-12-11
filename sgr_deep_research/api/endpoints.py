@@ -126,6 +126,19 @@ def extract_task_from_first_user_message(messages: list[ChatMessage]) -> str:
     return "Image-only request"
 
 
+def extract_user_content_from_messages(messages: list[ChatMessage]) -> Union[str, List[Dict[str, Any]]]:
+    """Extract content from the last user message with support for images.
+
+    Returns processed content (text + images) in OpenAI-compatible format.
+    Used for clarification requests where full multimodal content is needed.
+    """
+    for message in reversed(messages):
+        if message.role == "user":
+            return _prepare_message_content(message)
+
+    raise ValueError("User message not found in messages")
+
+
 @router.post("/agents/{agent_id}/provide_clarification")
 async def provide_clarification(agent_id: str, request: ClarificationRequest):
     try:
@@ -133,7 +146,11 @@ async def provide_clarification(agent_id: str, request: ClarificationRequest):
         if not agent:
             raise HTTPException(status_code=404, detail="Agent not found")
 
-        logger.info(f"Providing clarification to agent {agent.id}: {request.clarifications[:100]}...")
+        clarifications_preview = (
+            request.clarifications[:100] if isinstance(request.clarifications, str) 
+            else f"{len(request.clarifications)} parts (multimodal)"
+        )
+        logger.info(f"Providing clarification to agent {agent.id}: {clarifications_preview}...")
 
         await agent.provide_clarification(request.clarifications)
         return StreamingResponse(
@@ -172,7 +189,7 @@ async def create_chat_completion(request: ChatCompletionRequest):
     ):
         return await provide_clarification(
             agent_id=request.model,
-            request=ClarificationRequest(clarifications=extract_task_from_first_user_message(request.messages)),
+            request=ClarificationRequest(clarifications=extract_user_content_from_messages(request.messages)),
         )
 
     try:
