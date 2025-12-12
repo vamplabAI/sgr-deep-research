@@ -13,6 +13,7 @@ config.yaml.bak
 config.yaml.backup
 *.key
 *.secret
+.cursor
 
 # PYTHON
 __pycache__/
