@@ -61,7 +61,7 @@ Repository = "https://github.com/vakovalskii/sgr-deep-research"
 Issues = "https://github.com/vakovalskii/sgr-deep-research/issues"
 
 [project.scripts]
-sgr = "sgr_deep_research.__main__:main"
+sgr = "sgr_agent_core.__main__:main"
 
 [dependency-groups]
 dev = [
@@ -81,19 +81,19 @@ tests = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["sgr_deep_research*"]
+include = ["sgr_agent_core*"]
 
 [tool.setuptools]
 zip-safe = false
 
 [tool.setuptools.dynamic]
-version = {attr = "sgr_deep_research.__version__"}
+version = {attr = "sgr_agent_core.__version__"}
 
 [tool.setuptools.package-dir]
 "" = "."
 
 [tool.setuptools.package-data]
-"sgr_deep_research" = ["**/*.yaml", "**/*.yml", "**/*.json", "**/*.txt"]
+"sgr_agent_core" = ["**/*.yaml", "**/*.yml", "**/*.json", "**/*.txt"]
 
 [tool.ruff]
 target-version = "py312"

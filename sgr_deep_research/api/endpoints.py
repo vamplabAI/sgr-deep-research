@@ -4,6 +4,7 @@ import logging
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
+from sgr_agent_core import AgentFactory, AgentStatesEnum, BaseAgent
 from sgr_deep_research.api.models import (
     AgentListItem,
     AgentListResponse,
@@ -12,9 +13,6 @@ from sgr_deep_research.api.models import (
     ClarificationRequest,
     HealthResponse,
 )
-from sgr_deep_research.core import BaseAgent
-from sgr_deep_research.core.agent_factory import AgentFactory
-from sgr_deep_research.core.models import AgentStatesEnum
 
 logger = logging.getLogger(__name__)
 

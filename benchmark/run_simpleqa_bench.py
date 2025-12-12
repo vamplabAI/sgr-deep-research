@@ -14,7 +14,7 @@ from benchmark.utils import (
     grading_answer,
     save_result,
 )
-from sgr_deep_research.core.agent_config import GlobalConfig
+from sgr_agent_core.agent_config import GlobalConfig
 
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 config_path = os.path.join(project_root, "config.yaml")

@@ -10,9 +10,9 @@ from datetime import datetime
 import pytest
 from pydantic import ValidationError
 
-from sgr_deep_research.core.models import (
+from sgr_agent_core.models import (
+    AgentContext,
     AgentStatesEnum,
-    ResearchContext,
     SearchResult,
     SourceData,
 )
@@ -172,7 +172,7 @@ class TestResearchContext:
 
     def test_research_context_creation(self):
         """Test creating a research context with default values."""
-        context = ResearchContext()
+        context = AgentContext()
         assert context.current_step_reasoning is None
         assert context.execution_result is None
         assert context.state == AgentStatesEnum.INITED
@@ -185,7 +185,7 @@ class TestResearchContext:
 
     def test_research_context_state_change(self):
         """Test changing research context state."""
-        context = ResearchContext()
+        context = AgentContext()
         context.state = AgentStatesEnum.RESEARCHING
         assert context.state == AgentStatesEnum.RESEARCHING
 
@@ -194,7 +194,7 @@ class TestResearchContext:
 
     def test_research_context_iteration_increment(self):
         """Test incrementing iteration counter."""
-        context = ResearchContext()
+        context = AgentContext()
         assert context.iteration == 0
 
         context.iteration += 1
@@ -205,7 +205,7 @@ class TestResearchContext:
 
     def test_research_context_add_search(self):
         """Test adding search results to context."""
-        context = ResearchContext()
+        context = AgentContext()
         search = SearchResult(query="Test query")
         context.searches.append(search)
 
@@ -214,7 +214,7 @@ class TestResearchContext:
 
     def test_research_context_add_source(self):
         """Test adding sources to context."""
-        context = ResearchContext()
+        context = AgentContext()
         source = SourceData(number=1, url="https://example.com")
         context.sources["https://example.com"] = source
 
@@ -224,7 +224,7 @@ class TestResearchContext:
 
     def test_research_context_searches_used(self):
         """Test tracking number of searches used."""
-        context = ResearchContext()
+        context = AgentContext()
         assert context.searches_used == 0
 
         context.searches_used += 1
@@ -235,7 +235,7 @@ class TestResearchContext:
 
     def test_research_context_clarifications_used(self):
         """Test tracking number of clarifications used."""
-        context = ResearchContext()
+        context = AgentContext()
         assert context.clarifications_used == 0
 
         context.clarifications_used += 1
@@ -243,7 +243,7 @@ class TestResearchContext:
 
     def test_research_context_agent_state_method(self):
         """Test agent_state method returns correct data."""
-        context = ResearchContext()
+        context = AgentContext()
         context.state = AgentStatesEnum.RESEARCHING
         context.iteration = 5
         context.searches_used = 3
@@ -262,7 +262,7 @@ class TestResearchContext:
 
     def test_research_context_agent_state_excludes_fields(self):
         """Test that agent_state excludes specific fields."""
-        context = ResearchContext()
+        context = AgentContext()
         context.searches.append(SearchResult(query="Test"))
         context.sources["url"] = SourceData(number=1, url="url")
 
@@ -282,7 +282,7 @@ class TestResearchContext:
     @pytest.mark.asyncio
     async def test_research_context_clarification_event(self):
         """Test clarification event functionality."""
-        context = ResearchContext()
+        context = AgentContext()
 
         # Event should not be set initially
         assert not context.clarification_received.is_set()
@@ -297,7 +297,7 @@ class TestResearchContext:
 
     def test_research_context_execution_result(self):
         """Test setting execution result."""
-        context = ResearchContext()
+        context = AgentContext()
         assert context.execution_result is None
 
         context.execution_result = "Final answer text"
@@ -305,7 +305,7 @@ class TestResearchContext:
 
     def test_research_context_current_step_reasoning(self):
         """Test setting current step reasoning."""
-        context = ResearchContext()
+        context = AgentContext()
         assert context.current_step_reasoning is None
 
         reasoning_data = {"step": 1, "action": "search"}

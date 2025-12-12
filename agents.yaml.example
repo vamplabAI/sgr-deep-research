@@ -12,7 +12,7 @@
 agents:
   # Example 1: Simple custom research agent with overrides
   custom_research_agent:
-    base_class: "sgr_deep_research.core.SGRAgent"
+    base_class: "sgr_agent_core.agents.sgr_agent.ResearchSGRAgent"
     # Optional: Override LLM settings for this agent
     llm:
       model: "gpt-4o"
@@ -56,7 +56,7 @@ agents:
 
   # Example 2: Minimal agent with defaults
   simple_agent:
-    base_class: "SGRToolCallingResearchAgent"
+    base_class: "SGRToolCallingAgent"
 
     # Only override what's needed
     llm:
@@ -113,7 +113,7 @@ agents:
 
   # Example 5: Agent using inline prompts instead of files
   inline_prompt_agent:
-    base_class: "SGRResearchAgent"
+    base_class: "ResearchSGRAgent"
 
     prompts:
       system_prompt_str: |

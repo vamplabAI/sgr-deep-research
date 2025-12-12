@@ -1,11 +1,11 @@
 """Main entry point for SGR Agent Core API server."""
 
 import uvicorn
+from app import app
+from default_definitions import get_default_agents_definitions
+from settings import ServerConfig
 
-from sgr_deep_research.app import app
-from sgr_deep_research.core.agent_config import GlobalConfig
-from sgr_deep_research.default_definitions import get_default_agents_definitions
-from sgr_deep_research.settings import ServerConfig
+from sgr_agent_core.agent_config import GlobalConfig
 
 
 def main():
