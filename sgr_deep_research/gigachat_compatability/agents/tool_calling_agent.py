@@ -4,15 +4,15 @@ from openai import AsyncOpenAI, pydantic_function_tool
 from openai.types.chat import ChatCompletionToolParam
 
 from sgr_deep_research.core.agent_definition import ExecutionConfig, LLMConfig, PromptsConfig
-from sgr_deep_research.core.base_agent import BaseAgent
-from gigachat_compatability.base_tool import BaseTool_functional
-from gigachat_compatability.clarification_tool import ClarificationTool_functional
-from gigachat_compatability.create_report_tool import CreateReportTool_functional
-from gigachat_compatability.final_answer_tool import FinalAnswerTool_functional
-from gigachat_compatability.web_search_tool import WebSearchTool_functional
+from sgr_deep_research.gigachat_compatability.base_agent import BaseAgent_functional
+from sgr_deep_research.gigachat_compatability.base_tool import BaseTool_functional
+from sgr_deep_research.gigachat_compatability.tools.clarification_tool import ClarificationTool_functional
+from sgr_deep_research.gigachat_compatability.tools.create_report_tool import CreateReportTool_functional
+from sgr_deep_research.gigachat_compatability.tools.final_answer_tool import FinalAnswerTool_functional
+from sgr_deep_research.gigachat_compatability.tools.web_search_tool import WebSearchTool_functional
 
 
-class ToolCallingAgent(BaseAgent):
+class ToolCallingAgent_functional(BaseAgent_functional):
     """Tool Calling Research Agent relying entirely on LLM native function
     calling."""
 
@@ -83,9 +83,8 @@ class ToolCallingAgent(BaseAgent):
             function_call="auto", # Use 'auto' for function calling
             stream=False
         )
-        total_tokens = completion.usage.total_tokens     # Общее количество токенов
 
-        self._update_token_usage(total_tokens)
+        self._accumulate_tokens(completion.usage)
         
         message = completion.choices[0].message
         

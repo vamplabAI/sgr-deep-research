@@ -4,22 +4,19 @@ import json
 import logging
 import os
 from datetime import datetime
-from typing import TYPE_CHECKING, Literal, ClassVar
+from typing import Literal, ClassVar
 
 from pydantic import Field
 
 from sgr_deep_research.core.agent_config import GlobalConfig
-from sgr_deep_research.core.base_tool import BaseTool
-from sgr_deep_research.core.tools.create_report_tool import CreateReportTool
-
-if TYPE_CHECKING:
-    from sgr_deep_research.core.models import ResearchContext
+from sgr_deep_research.gigachat_compatability.base_tool import BaseTool_functional
+from sgr_deep_research.gigachat_compatability.models import ResearchContextCounted
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-class CreateReportTool_functional(CreateReportTool):
+class CreateReportTool_functional(BaseTool_functional):
     """Create comprehensive detailed report with citations as a final step of
     research.
 
@@ -42,7 +39,7 @@ class CreateReportTool_functional(CreateReportTool):
     )
     confidence: Literal["high", "medium", "low"] = Field(description="Confidence in findings")
 
-    async def __call__(self, context: ResearchContext) -> str:
+    async def __call__(self, context: ResearchContextCounted) -> str:
         # Save report
         reports_dir = GlobalConfig().execution.reports_dir
         os.makedirs(reports_dir, exist_ok=True)

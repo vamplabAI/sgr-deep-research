@@ -1,22 +1,18 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Literal, ClassVar
+from typing import Literal, ClassVar
 
 from pydantic import Field
 
-from sgr_deep_research.core.base_tool import BaseTool
-from sgr_deep_research.core.models import AgentStatesEnum
-from sgr_deep_research.core.tools.final_answer_tool import FinalAnswerTool
-
-if TYPE_CHECKING:
-    from sgr_deep_research.core.models import ResearchContext
+from sgr_deep_research.gigachat_compatability.base_tool import BaseTool_functional
+from sgr_deep_research.gigachat_compatability.models import AgentStatesEnum, ResearchContextCounted
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-class FinalAnswerTool_functional(FinalAnswerTool):
+class FinalAnswerTool_functional(BaseTool_functional):
     """Finalize research task and complete agent execution after all steps are
     completed.
 
@@ -32,7 +28,7 @@ class FinalAnswerTool_functional(FinalAnswerTool):
     answer: str = Field(description="result of the research AS merge of tools' answers: NO INFO DROPPED, NO MODIFICATIONS")
     status: Literal[AgentStatesEnum.COMPLETED, AgentStatesEnum.FAILED] = Field(description="Task completion status")
 
-    async def __call__(self, context: ResearchContext) -> str:
+    async def __call__(self, context: ResearchContextCounted) -> str:
         context.state = self.status
         context.execution_result = self.answer
         return self.model_dump_json(

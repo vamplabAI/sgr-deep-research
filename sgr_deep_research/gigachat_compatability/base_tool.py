@@ -2,17 +2,15 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import TYPE_CHECKING, ClassVar
+from typing import ClassVar
 
 # from fastmcp import Client
 from pydantic import BaseModel
 
 from sgr_deep_research.core.agent_config import GlobalConfig
 from sgr_deep_research.core.services.registry import ToolRegistry
-from sgr_deep_research.core.base_tool import BaseTool
-
-if TYPE_CHECKING:
-    from sgr_deep_research.core.models import ResearchContext
+from pydantic import BaseModel as PydanticBaseModel
+from sgr_deep_research.gigachat_compatability.models import ResearchContextCounted
 
 
 logger = logging.getLogger(__name__)
@@ -25,13 +23,13 @@ class ToolRegistryMixin:
             ToolRegistry.register(cls, name=cls.tool_name)
 
 
-class BaseTool_functional(BaseTool, ToolRegistryMixin):
+class BaseTool_functional(PydanticBaseModel, ToolRegistryMixin):
     """Class to provide tool handling capabilities."""
 
     tool_name: ClassVar[str] = None
     description: ClassVar[str] = None
 
-    async def __call__(self, context: ResearchContext) -> str:
+    async def __call__(self, context: ResearchContextCounted) -> str:
         """Result should be a string or dumped json."""
         raise NotImplementedError("Execute method must be implemented by subclass")
 

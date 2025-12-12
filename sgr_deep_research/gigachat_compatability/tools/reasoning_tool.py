@@ -3,11 +3,10 @@ from __future__ import annotations
 from pydantic import Field
 from typing import ClassVar
 
-from sgr_deep_research.core.base_tool import BaseTool
-from sgr_deep_research.core.tools.reasoning_tool import ReasoningTool
+from sgr_deep_research.gigachat_compatability.base_tool import BaseTool_functional
 
 
-class ReasoningTool_functional(ReasoningTool):
+class ReasoningTool_functional(BaseTool_functional):
     """Agent core logic, determines next reasoning step with adaptive planning
     by schema-guided-reasoning capabilities Keep all text fields concise and
     focused.

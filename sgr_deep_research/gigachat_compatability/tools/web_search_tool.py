@@ -2,24 +2,20 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import TYPE_CHECKING, ClassVar
+from typing import ClassVar
 
 from pydantic import Field
 
 from sgr_deep_research.core.agent_config import GlobalConfig
-from sgr_deep_research.core.base_tool import BaseTool
-from sgr_deep_research.core.models import SearchResult
+from sgr_deep_research.gigachat_compatability.base_tool import BaseTool_functional
+from sgr_deep_research.gigachat_compatability.models import SearchResult, ResearchContextCounted
 from sgr_deep_research.core.services.tavily_search import TavilySearchService
-from sgr_deep_research.core.tools.web_search_tool import WebSearchTool
-
-if TYPE_CHECKING:
-    from sgr_deep_research.core.models import ResearchContext
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-class WebSearchTool_functional(WebSearchTool):
+class WebSearchTool_functional(BaseTool_functional):
     """Search the web for real-time information about any topic.
     Use this tool when you need up-to-date information that might not be available in your training data,
     or when you need to verify current facts.
@@ -59,7 +55,7 @@ class WebSearchTool_functional(WebSearchTool):
         super().__init__(**data)
         self._search_service = TavilySearchService()
 
-    async def __call__(self, context: ResearchContext) -> str:
+    async def __call__(self, context: ResearchContextCounted) -> str:
         """Execute web search using TavilySearchService."""
 
         logger.info(f"🔍 Search query: '{self.query}'")

@@ -1,23 +1,20 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, ClassVar
+from typing import ClassVar
 
 from pydantic import Field
 
 from sgr_deep_research.core.agent_config import GlobalConfig
-from sgr_deep_research.core.base_tool import BaseTool
+from sgr_deep_research.gigachat_compatability.base_tool import BaseTool_functional
 from sgr_deep_research.core.services.tavily_search import TavilySearchService
-from sgr_deep_research.core.tools.extract_page_content_tool import ExtractPageContentTool
-
-if TYPE_CHECKING:
-    from sgr_deep_research.core.models import ResearchContext
+from sgr_deep_research.gigachat_compatability.models import ResearchContextCounted
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-class ExtractPageContentTool_functional(ExtractPageContentTool):
+class ExtractPageContentTool_functional(BaseTool_functional):
     """Extract full detailed content from specific web pages.
      Use for: Getting complete page content from URLs found in web search Returns:
      Full page content in readable format (via Tavily Extract API)
@@ -42,7 +39,7 @@ class ExtractPageContentTool_functional(ExtractPageContentTool):
         super().__init__(**data)
         self._search_service = TavilySearchService()
 
-    async def __call__(self, context: ResearchContext) -> str:
+    async def __call__(self, context: ResearchContextCounted) -> str:
         """Extract full content from specified URLs."""
 
         logger.info(f"📄 Extracting content from {len(self.urls)} URLs")
