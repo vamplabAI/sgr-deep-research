@@ -158,7 +158,9 @@ class AgentDefinition(AgentConfig):
             data["llm"] = GlobalConfig().llm.model_copy(update=llm_conf).model_dump()
         if not isinstance(search_conf := data.get("search"), BaseModel):
             data["search"] = (
-                GlobalConfig().search.model_copy(update=search_conf).model_dump() if GlobalConfig().search else None
+                GlobalConfig().search.model_copy(update=search_conf).model_dump()
+                if GlobalConfig().search
+                else search_conf
             )
         if not isinstance(prompts_conf := data.get("prompts"), BaseModel):
             data["prompts"] = GlobalConfig().prompts.model_copy(update=prompts_conf).model_dump()
