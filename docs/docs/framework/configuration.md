@@ -38,11 +38,9 @@ graph TD
 ## GlobalConfig
 
 !!! Important "Важно: Единый инстанс GlobalConfig"
-Все вызовы `GlobalConfig()` возвращают один и тот же экземпляр. Это означает, что при создании нескольких объектов `GlobalConfig` вы получите ссылку на один и тот же объект в памяти.
+    Все вызовы `GlobalConfig()` возвращают один и тот же экземпляр. Это означает, что при создании нескольких объектов `GlobalConfig` вы получите ссылку на один и тот же объект в памяти.
 
-```
-Единожды применённые изменения и загруженные конфигурации распространятся на всю программу.
-```
+    Единожды применённые изменения и загруженные конфигурации распространятся на всю программу.
 
 ### Загрузка из переменных окружения (.env)
 
@@ -53,7 +51,6 @@ from sgr_agent_core import GlobalConfig
 
 config = GlobalConfig()
 ```
-
 Пример можно найти в [`.env.example`](https://github.com/vamplabAI/sgr-agent-core/blob/main/.env.example).
 
 ### Загрузка из YAML файла
@@ -67,7 +64,10 @@ from sgr_agent_core import GlobalConfig
 config = GlobalConfig.from_yaml("config.yaml")
 ```
 
+
 Пример можно найти в [`config.yaml.example`](https://github.com/vamplabAI/sgr-agent-core/blob/main/config.yaml.example).
+
+
 
 ### Переопределение параметров
 
@@ -84,9 +84,8 @@ config = GlobalConfig.from_yaml("config.yaml")
 config.definitions_from_yaml("agents.yaml")
 config.definitions_from_yaml("more_agents.yaml")
 ```
-
 !!!warning
-Метод `definitions_from_yaml` объединяет новые определения с существующими, перезаписывая агентов с одинаковыми именами
+    Метод `definitions_from_yaml` объединяет новые определения с существующими, перезаписывая агентов с одинаковыми именами
 
 #### Пример 1: Минимальная конфигурация
 
@@ -108,7 +107,6 @@ agents:
 ```
 
 В этом примере агент `simple_agent` использует:
-
 - Все настройки LLM из `GlobalConfig`, кроме `model`
 - Все настройки поиска из `GlobalConfig`
 - Все настройки выполнения из `GlobalConfig`
@@ -213,13 +211,13 @@ agents:
       - "FinalAnswerTool"
 ```
 
+
 ## Рекомендации
 
 - **Храните секреты в .env** - не коммитьте чувствительные ключи в репозиторий =)
 
-  В production окружении рекомендуется использовать ENV переменные вместо хардкода ключей в YAML
+    В production окружении рекомендуется использовать ENV переменные вместо хардкода ключей в YAML
 
 - **Используйте минимальные переопределения** - указывайте только то, что отличается от GlobalConfig
-
 - **Храните Definitions, a не Agents** - Агенты создаются под непосредственное выполнение задачи,
-  их definitions можно добавлять/удалять/изменять в любое время
+их definitions можно добавлять/удалять/изменять в любое время

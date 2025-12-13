@@ -29,5 +29,6 @@ jobs:
               mkdocs-material \
               mkdocs-dracula-theme \
               mkdocs-material-extensions \
-              mkdocs-get-deps
+              mkdocs-get-deps \
+              mkdocs-static-i18n
       - run: mkdocs gh-deploy --force

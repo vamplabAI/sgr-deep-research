@@ -3,6 +3,19 @@ site_url: https://vamplabai.github.io/sgr-agent-core/
 repo_url: https://github.com/vamplabai/sgr-agent-core
 repo_name: vamplabAI/sgr-agent-core
 
+plugins:
+  - search
+  - i18n:
+      docs_structure: folder
+      languages:
+        - locale: en
+          default: true
+          name: English
+          build: true
+        - locale: ru
+          name: Русский
+          build: true
+
 theme:
   name: material
   icon:

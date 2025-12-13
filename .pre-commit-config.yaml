@@ -32,6 +32,7 @@ repos:
     hooks:
       - id: mdformat
         args: ["--number"]
+        exclude: ^docs/
         additional_dependencies:
           - mdformat-gfm
           - mdformat-black
