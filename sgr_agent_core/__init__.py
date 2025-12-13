@@ -19,6 +19,7 @@ from sgr_agent_core.agent_definition import (
     SearchConfig,
 )
 from sgr_agent_core.agent_factory import AgentFactory
+from sgr_agent_core.agents import *  # noqa: F403
 from sgr_agent_core.base_agent import BaseAgent
 from sgr_agent_core.base_tool import BaseTool, MCPBaseTool
 from sgr_agent_core.models import (
@@ -30,6 +31,7 @@ from sgr_agent_core.models import (
 )
 from sgr_agent_core.next_step_tool import NextStepToolsBuilder, NextStepToolStub
 from sgr_agent_core.services import AgentRegistry, MCP2ToolConverter, PromptLoader, ToolRegistry
+from sgr_agent_core.tools import *  # noqa: F403
 
 __all__ = [
     # Version

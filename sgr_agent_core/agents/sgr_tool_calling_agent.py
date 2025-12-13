@@ -3,7 +3,7 @@ from typing import Literal, Type
 from openai import AsyncOpenAI, pydantic_function_tool
 from openai.types.chat import ChatCompletionFunctionToolParam
 
-from sgr_agent_core import AgentConfig
+from sgr_agent_core.agent_config import AgentConfig
 from sgr_agent_core.agents.sgr_agent import SGRAgent
 from sgr_agent_core.models import AgentStatesEnum
 from sgr_agent_core.tools import (
