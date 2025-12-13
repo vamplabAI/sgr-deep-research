@@ -6,7 +6,7 @@ initialization, subclassing, and tool_name generation.
 
 from pydantic import BaseModel
 
-from sgr_deep_research.core.base_tool import BaseTool
+from sgr_agent_core.base_tool import BaseTool
 
 
 class TestBaseTool:

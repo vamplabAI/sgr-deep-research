@@ -6,8 +6,9 @@ from unittest.mock import Mock
 import pytest
 from openai import AsyncOpenAI
 
-from sgr_deep_research.core.agent_definition import ExecutionConfig, LLMConfig, PromptsConfig
-from sgr_deep_research.core.base_agent import BaseAgent
+from sgr_agent_core import ExecutionConfig, LLMConfig, PromptsConfig
+from sgr_agent_core.agent_definition import AgentConfig
+from sgr_agent_core.base_agent import BaseAgent
 
 
 def create_test_agent(
@@ -18,6 +19,7 @@ def create_test_agent(
     prompts_config: PromptsConfig | None = None,
     execution_config: ExecutionConfig | None = None,
     toolkit: list | None = None,
+    agent_config: AgentConfig | None = None,
 ) -> BaseAgent:
     """Create an agent instance for testing.
 
@@ -29,6 +31,7 @@ def create_test_agent(
         prompts_config: Prompts configuration (will use defaults if None)
         execution_config: Execution configuration (will use defaults if None)
         toolkit: List of tools (will be empty if None)
+        agent_config: Agent configuration (will be created from other configs if None)
 
     Returns:
         Created agent instance
@@ -57,12 +60,17 @@ def create_test_agent(
             max_searches=4,
         )
 
+    if agent_config is None:
+        agent_config = AgentConfig(
+            llm=llm_config,
+            prompts=prompts_config,
+            execution=execution_config,
+        )
+
     return agent_class(
         task=task,
         openai_client=openai_client,
-        llm_config=llm_config,
-        prompts_config=prompts_config,
-        execution_config=execution_config,
+        agent_config=agent_config,
         toolkit=toolkit or [],
     )
 

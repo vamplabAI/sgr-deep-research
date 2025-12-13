@@ -10,6 +10,8 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from fastapi import HTTPException
 
+from sgr_agent_core.agents import SGRAgent
+from sgr_agent_core.models import AgentStatesEnum
 from sgr_deep_research.api.endpoints import (
     _is_agent_id,
     agents_storage,
@@ -20,8 +22,6 @@ from sgr_deep_research.api.endpoints import (
     provide_clarification,
 )
 from sgr_deep_research.api.models import ChatCompletionRequest, ChatMessage, ClarificationRequest
-from sgr_deep_research.core.agents import SGRAgent
-from sgr_deep_research.core.models import AgentStatesEnum
 from tests.conftest import create_test_agent
 
 
@@ -222,7 +222,7 @@ class TestAgentStateEndpoint:
     @pytest.mark.asyncio
     async def test_get_agent_state_success(self):
         """Test successful retrieval of agent state."""
-        from sgr_deep_research.core.models import SourceData
+        from sgr_agent_core.models import SourceData
 
         # Create and store an agent
         agent = create_test_agent(SGRAgent, task="Test task")

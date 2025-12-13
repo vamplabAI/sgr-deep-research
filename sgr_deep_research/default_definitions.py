@@ -1,10 +1,8 @@
-import sgr_deep_research.core.tools as tools
-from sgr_deep_research.core.agent_definition import AgentDefinition
-from sgr_deep_research.core.agents.sgr_agent import SGRAgent
-from sgr_deep_research.core.agents.sgr_auto_tool_calling_agent import SGRAutoToolCallingAgent
-from sgr_deep_research.core.agents.sgr_so_tool_calling_agent import SGRSOToolCallingAgent
-from sgr_deep_research.core.agents.sgr_tool_calling_agent import SGRToolCallingAgent
-from sgr_deep_research.core.agents.tool_calling_agent import ToolCallingAgent
+from pathlib import Path
+
+import sgr_agent_core.tools as tools
+from sgr_agent_core.agent_definition import AgentDefinition, PromptsConfig
+from sgr_agent_core.agents import ResearchSGRAgent, ResearchSGRToolCallingAgent, ResearchToolCallingAgent
 
 DEFAULT_TOOLKIT = [
     tools.ClarificationTool,
@@ -29,28 +27,21 @@ def get_default_agents_definitions() -> dict[str, AgentDefinition]:
     agents = [
         AgentDefinition(
             name="sgr_agent",
-            base_class=SGRAgent,
+            base_class=ResearchSGRAgent,
             tools=DEFAULT_TOOLKIT,
+            prompts=PromptsConfig(system_prompt_file=Path("sgr_agent_core/prompts/research_system_prompt.txt")),
         ),
         AgentDefinition(
             name="tool_calling_agent",
-            base_class=ToolCallingAgent,
+            base_class=ResearchToolCallingAgent,
             tools=DEFAULT_TOOLKIT,
+            prompts=PromptsConfig(system_prompt_file=Path("sgr_agent_core/prompts/research_system_prompt.txt")),
         ),
         AgentDefinition(
             name="sgr_tool_calling_agent",
-            base_class=SGRToolCallingAgent,
+            base_class=ResearchSGRToolCallingAgent,
             tools=DEFAULT_TOOLKIT,
-        ),
-        AgentDefinition(
-            name="sgr_auto_tool_calling_agent",
-            base_class=SGRAutoToolCallingAgent,
-            tools=DEFAULT_TOOLKIT,
-        ),
-        AgentDefinition(
-            name="sgr_so_tool_calling_agent",
-            base_class=SGRSOToolCallingAgent,
-            tools=DEFAULT_TOOLKIT,
+            prompts=PromptsConfig(system_prompt_file=Path("sgr_agent_core/prompts/research_system_prompt.txt")),
         ),
     ]
     return {agent.name: agent for agent in agents}

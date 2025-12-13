@@ -11,9 +11,9 @@ from unittest.mock import Mock
 
 import pytest
 
-from sgr_deep_research.core.base_agent import BaseAgent
-from sgr_deep_research.core.models import AgentStatesEnum, ResearchContext
-from sgr_deep_research.core.tools import BaseTool, ReasoningTool
+from sgr_agent_core.base_agent import BaseAgent
+from sgr_agent_core.models import AgentContext, AgentStatesEnum
+from sgr_agent_core.tools import BaseTool, ReasoningTool
 from tests.conftest import create_test_agent
 
 
@@ -22,7 +22,7 @@ class TestBaseAgentInitialization:
 
     def test_initialization_basic(self):
         """Test basic initialization with required parameters."""
-        from sgr_deep_research.core.agent_definition import ExecutionConfig
+        from sgr_agent_core.agent_definition import ExecutionConfig
 
         agent = create_test_agent(
             BaseAgent,
@@ -32,22 +32,24 @@ class TestBaseAgentInitialization:
 
         assert agent.task == "Test task"
         assert agent.name == "base_agent"
-        assert agent.max_iterations == 20
-        assert agent.max_clarifications == 3
+        assert agent.config.execution.max_iterations == 20
+        assert agent.config.execution.max_clarifications == 3
 
     def test_initialization_with_custom_limits(self):
         """Test initialization with custom iteration and clarification
         limits."""
-        from sgr_deep_research.core.agent_definition import ExecutionConfig
+        from sgr_agent_core.agent_definition import ExecutionConfig
 
         agent = create_test_agent(
             BaseAgent,
             task="Test task",
             execution_config=ExecutionConfig(max_iterations=10, max_clarifications=5),
         )
+        assert agent.config.execution.max_iterations == 10
+        assert agent.config.execution.max_clarifications == 5
 
-        assert agent.max_iterations == 10
-        assert agent.max_clarifications == 5
+        assert agent.config.execution.max_iterations == 10
+        assert agent.config.execution.max_clarifications == 5
 
     def test_id_generation(self):
         """Test that unique ID is generated correctly."""
@@ -85,7 +87,7 @@ class TestBaseAgentInitialization:
         """Test that ResearchContext is initialized."""
         agent = create_test_agent(BaseAgent, task="Test")
 
-        assert isinstance(agent._context, ResearchContext)
+        assert isinstance(agent._context, AgentContext)
         assert agent._context.iteration == 0
         assert agent._context.searches_used == 0
         assert agent._context.clarifications_used == 0
@@ -110,7 +112,7 @@ class TestBaseAgentInitialization:
         agent = create_test_agent(BaseAgent, task="Test")
 
         assert agent.logger is not None
-        assert "sgr_deep_research.agents" in agent.logger.name
+        assert "sgr_agent_core.agents" in agent.logger.name
         assert agent.id in agent.logger.name
 
 
@@ -247,12 +249,14 @@ class TestBaseAgentAbstractMethods:
     """Tests for abstract methods that must be implemented by subclasses."""
 
     @pytest.mark.asyncio
-    async def test_prepare_tools_raises_not_implemented(self):
-        """Test that _prepare_tools raises NotImplementedError."""
+    async def test_prepare_tools_returns_tools(self):
+        """Test that _prepare_tools returns list of tools."""
         agent = create_test_agent(BaseAgent, task="Test")
 
-        with pytest.raises(NotImplementedError):
-            await agent._prepare_tools()
+        tools = await agent._prepare_tools()
+        assert isinstance(tools, list)
+        # BaseAgent with empty toolkit should return empty list
+        assert len(tools) == 0
 
     @pytest.mark.asyncio
     async def test_reasoning_phase_raises_not_implemented(self):
@@ -292,7 +296,7 @@ class TestBaseAgentPrepareContext:
 
         context = await agent._prepare_context()
 
-        assert len(context) == 2  # system + user
+        assert len(context) == 3  # system + initial_user_request + conversation
         assert context[0]["role"] == "system"
         assert context[1]["role"] == "user"
 
@@ -308,4 +312,4 @@ class TestBaseAgentPrepareContext:
 
         context = await agent._prepare_context()
 
-        assert len(context) == 4  # system + 3 messages
+        assert len(context) == 5  # system + initial_user_request + 3 messages

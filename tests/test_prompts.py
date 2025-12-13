@@ -10,9 +10,9 @@ from unittest.mock import patch
 
 import pytest
 
-from sgr_deep_research.core.agent_definition import PromptsConfig
-from sgr_deep_research.core.base_tool import BaseTool
-from sgr_deep_research.core.services.prompt_loader import PromptLoader
+from sgr_agent_core.agent_definition import PromptsConfig
+from sgr_agent_core.base_tool import BaseTool
+from sgr_agent_core.services import PromptLoader
 
 
 class TestPromptLoader:

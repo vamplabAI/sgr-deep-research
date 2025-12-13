@@ -8,7 +8,7 @@ import json
 
 import pytest
 
-from sgr_deep_research.core.stream import OpenAIStreamingGenerator, StreamingGenerator
+from sgr_agent_core.stream import OpenAIStreamingGenerator, StreamingGenerator
 
 
 class TestStreamingGenerator:

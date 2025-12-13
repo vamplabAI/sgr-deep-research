@@ -1,12 +1,11 @@
 from openai import pydantic_function_tool
 from openai.types.chat import ChatCompletionFunctionToolParam
 
-from sgr_deep_research.core import FinalAnswerTool, ReasoningTool
-from sgr_deep_research.core.agents.sgr_tool_calling_agent import SGRToolCallingAgent
-from sgr_deep_research.core.tools import ExtractPageContentTool, WebSearchTool
+from sgr_agent_core.agents import ResearchSGRToolCallingAgent
+from sgr_agent_core.tools import ExtractPageContentTool, FinalAnswerTool, ReasoningTool, WebSearchTool
 
 
-class BenchmarkAgent(SGRToolCallingAgent):
+class BenchmarkAgent(ResearchSGRToolCallingAgent):
     """Agent for benchmarking with automatic tool selection."""
 
     name: str = "benchmark_agent"
