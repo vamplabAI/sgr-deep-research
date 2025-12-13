@@ -1,0 +1,65 @@
+site_name: SGR Agent Core
+site_url: https://vamplabai.github.io/sgr-agent-core/
+repo_url: https://github.com/vamplabai/sgr-agent-core
+repo_name: vamplabAI/sgr-agent-core
+
+theme:
+  name: material
+  icon:
+    annotation: material/plus-circle
+  palette:
+
+    - scheme: slate
+      primary: green
+      accent: green
+      toggle:
+        icon: material/brightness-7
+        name: Переключить на светлую тему
+
+    - scheme: default
+      primary: green
+      accent: green
+      toggle:
+        icon: material/brightness-4
+        name: Переключить на тёмную тему
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.code.highlight
+nav:
+  - Agent Core Framework:
+    - Main Concepts: framework/main-concepts.md
+    - User Guide:
+        - Create first agent: framework/first-steps.md
+        - Configuration: framework/configuration.md
+        - Tools: framework/tools.md
+  - SGR API service:
+    - Quick Start: SGR-Quick-Start.md
+    - Workflow: SGR-Agent's-Workflow.md
+    - Demonstration: SGR-Demonstration.md
+    - Integration & Examples: SGR-Integration-&-Examples.md
+    - Description API: SGR-Description-API.md
+    - Summary Table: SGR-Summary-table.md
+    - SGR vs Function Calling: SGR-vs-Function-Calling_-When-to-Use-Each-Approach.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
