@@ -9,6 +9,7 @@ from sgr_agent_core.tools import (
     BaseTool,
     ClarificationTool,
     CreateReportTool,
+    ExtractPageContentTool,
     FinalAnswerTool,
     WebSearchTool,
 )
@@ -91,6 +92,25 @@ class ToolCallingAgent(BaseAgent):
 
 
 class ResearchToolCallingAgent(ToolCallingAgent):
+    def __init__(
+        self,
+        task: str,
+        openai_client: AsyncOpenAI,
+        agent_config: AgentConfig,
+        toolkit: list[Type[BaseTool]],
+        def_name: str | None = None,
+        **kwargs: dict,
+    ):
+        research_toolkit = [WebSearchTool, ExtractPageContentTool, CreateReportTool, FinalAnswerTool]
+        super().__init__(
+            task=task,
+            openai_client=openai_client,
+            agent_config=agent_config,
+            toolkit=research_toolkit + [t for t in toolkit if t not in research_toolkit],
+            def_name=def_name,
+            **kwargs,
+        )
+
     async def _prepare_tools(self) -> list[ChatCompletionFunctionToolParam]:
         """Prepare available tools for the current agent state and progress."""
         tools = set(self.toolkit)

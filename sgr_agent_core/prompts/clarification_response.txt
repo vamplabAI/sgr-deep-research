@@ -1,0 +1,5 @@
+Current Date: {current_date} (Year-Month-Day ISO format: YYYY-MM-DD HH:MM:SS)
+
+CLARIFICATIONS:
+
+{clarifications}
