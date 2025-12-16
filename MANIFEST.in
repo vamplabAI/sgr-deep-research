@@ -1,5 +1,8 @@
-include sgr_deep_research/prompts/system_prompt.txt
-include sgr_deep_research/prompts/tool_function_prompt.txt
+include sgr_agent_core/core/prompts/system_prompt.txt
+include sgr_agent_core/core/prompts/research_system_prompt.txt
+include sgr_agent_core/core/prompts/initial_user_request.txt
+include sgr_agent_core/core/prompts/clarification_response.txt
 include LICENSE
 include README.md
+include agents.yaml.example
 include config.yaml.example

@@ -8,22 +8,20 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from sgr_deep_research.core.agent_definition import (
+from sgr_agent_core.agent_definition import (
     AgentDefinition,
     ExecutionConfig,
     LLMConfig,
     PromptsConfig,
 )
-from sgr_deep_research.core.agent_factory import AgentFactory
-from sgr_deep_research.core.agents import (
+from sgr_agent_core.agent_factory import AgentFactory
+from sgr_agent_core.agents import (
     SGRAgent,
-    SGRAutoToolCallingAgent,
-    SGRSOToolCallingAgent,
     SGRToolCallingAgent,
     ToolCallingAgent,
 )
-from sgr_deep_research.core.base_agent import BaseAgent
-from sgr_deep_research.core.tools import BaseTool, ReasoningTool
+from sgr_agent_core.base_agent import BaseAgent
+from sgr_agent_core.tools import BaseTool, ReasoningTool
 
 
 def mock_global_config():
@@ -45,7 +43,7 @@ def mock_global_config():
     # Patch GlobalConfig where it's imported inside the validator
     # GlobalConfig is imported inside the method from agent_config, so we need to patch it there
     # The import happens at runtime inside the validator method
-    return patch("sgr_deep_research.core.agent_config.GlobalConfig", return_value=mock_config)
+    return patch("sgr_agent_core.agent_config.GlobalConfig", return_value=mock_config)
 
 
 class TestAgentFactory:
@@ -55,7 +53,7 @@ class TestAgentFactory:
     async def test_create_agent_from_definition(self):
         """Test creating agent from AgentDefinition."""
         with (
-            patch("sgr_deep_research.core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
+            patch("sgr_agent_core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
             mock_global_config(),
         ):
             agent_def = AgentDefinition(
@@ -80,15 +78,13 @@ class TestAgentFactory:
     async def test_create_all_agent_types(self):
         """Test creating all available agent types."""
         with (
-            patch("sgr_deep_research.core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
+            patch("sgr_agent_core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
             mock_global_config(),
         ):
             task = "Universal test task"
             agent_classes = [
                 SGRAgent,
                 SGRToolCallingAgent,
-                SGRAutoToolCallingAgent,
-                SGRSOToolCallingAgent,
                 ToolCallingAgent,
             ]
 
@@ -115,7 +111,7 @@ class TestAgentFactory:
     async def test_agent_factory_with_custom_params(self):
         """Test creating agents with custom execution parameters."""
         with (
-            patch("sgr_deep_research.core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
+            patch("sgr_agent_core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
             mock_global_config(),
         ):
             agent_def = AgentDefinition(
@@ -133,15 +129,15 @@ class TestAgentFactory:
             agent = await AgentFactory.create(agent_def, task="Custom task")
 
             assert agent.task == "Custom task"
-            assert agent.max_clarifications == 5
-            assert agent.max_iterations == 15
-            assert agent.max_searches == 10
+            assert agent.config.execution.max_clarifications == 5
+            assert agent.config.execution.max_iterations == 15
+            assert agent.config.execution.max_searches == 10
 
     @pytest.mark.asyncio
     async def test_agent_creation_preserves_agent_properties(self):
         """Test that agent creation preserves specific agent properties."""
         with (
-            patch("sgr_deep_research.core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
+            patch("sgr_agent_core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
             mock_global_config(),
         ):
             agent_def = AgentDefinition(
@@ -170,7 +166,7 @@ class TestConfigurationBasedAgentCreation:
     async def test_agent_config_integration(self):
         """Test that agents properly integrate configuration from settings."""
         with (
-            patch("sgr_deep_research.core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
+            patch("sgr_agent_core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
             mock_global_config(),
         ):
             agent_def = AgentDefinition(
@@ -195,8 +191,6 @@ class TestConfigurationBasedAgentCreation:
         agent_classes = [
             SGRAgent,
             SGRToolCallingAgent,
-            SGRAutoToolCallingAgent,
-            SGRSOToolCallingAgent,
             ToolCallingAgent,
         ]
         for agent_class in agent_classes:
@@ -204,8 +198,6 @@ class TestConfigurationBasedAgentCreation:
             assert agent_class.name in [
                 "sgr_agent",
                 "sgr_tool_calling_agent",
-                "sgr_auto_tool_calling_agent",
-                "sgr_so_tool_calling_agent",
                 "tool_calling_agent",
             ]
 
@@ -213,11 +205,11 @@ class TestConfigurationBasedAgentCreation:
     async def test_multiple_agent_creation_independence(self):
         """Test that multiple agents can be created independently."""
         with (
-            patch("sgr_deep_research.core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
+            patch("sgr_agent_core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
             mock_global_config(),
         ):
             tasks = ["Task 1", "Task 2", "Task 3"]
-            agent_classes = [SGRAgent, SGRToolCallingAgent, SGRAutoToolCallingAgent]
+            agent_classes = [SGRAgent, SGRToolCallingAgent, ToolCallingAgent]
 
             agents = []
             for i, agent_class in enumerate(agent_classes):
@@ -243,7 +235,7 @@ class TestConfigurationBasedAgentCreation:
 
             # Verify different types
             if len(agents) > 1:
-                assert type(agents[0]) is not type(agents[1])
+                assert type(agents[0]) is not type(agents[1])  # noqa
 
 
 class TestAgentCreationEdgeCases:
@@ -253,7 +245,7 @@ class TestAgentCreationEdgeCases:
     async def test_empty_task_creation(self):
         """Test creating agent with empty task."""
         with (
-            patch("sgr_deep_research.core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
+            patch("sgr_agent_core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
             mock_global_config(),
         ):
             agent_def = AgentDefinition(
@@ -282,7 +274,7 @@ class TestAgentCreationEdgeCases:
             description = "A custom test tool"
 
         with (
-            patch("sgr_deep_research.core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
+            patch("sgr_agent_core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
             mock_global_config(),
         ):
             agent_def = AgentDefinition(
@@ -353,7 +345,7 @@ class TestAgentFactoryRegistryIntegration:
     async def test_create_agent_with_string_base_class(self):
         """Test creating agent with string base_class name from registry."""
         with (
-            patch("sgr_deep_research.core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
+            patch("sgr_agent_core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
             mock_global_config(),
         ):
             # Use string name instead of class
@@ -378,7 +370,7 @@ class TestAgentFactoryRegistryIntegration:
     async def test_create_agent_with_string_tool(self):
         """Test creating agent with string tool name from registry."""
         with (
-            patch("sgr_deep_research.core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
+            patch("sgr_agent_core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
             mock_global_config(),
         ):
             # Use string name instead of class
@@ -410,7 +402,7 @@ class TestAgentFactoryRegistryIntegration:
             description = "A custom test tool"
 
         with (
-            patch("sgr_deep_research.core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
+            patch("sgr_agent_core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
             mock_global_config(),
         ):
             agent_def = AgentDefinition(
@@ -441,7 +433,7 @@ class TestAgentFactoryErrorHandling:
     async def test_create_agent_with_invalid_base_class_string(self):
         """Test creating agent with invalid base_class string name."""
         with (
-            patch("sgr_deep_research.core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
+            patch("sgr_agent_core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
             mock_global_config(),
         ):
             agent_def = AgentDefinition(
@@ -464,7 +456,7 @@ class TestAgentFactoryErrorHandling:
     async def test_create_agent_with_invalid_tool_string(self):
         """Test creating agent with invalid tool string name."""
         with (
-            patch("sgr_deep_research.core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
+            patch("sgr_agent_core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
             mock_global_config(),
         ):
             agent_def = AgentDefinition(
@@ -487,7 +479,7 @@ class TestAgentFactoryErrorHandling:
     async def test_create_agent_with_agent_creation_exception(self):
         """Test handling exception during agent instantiation."""
         with (
-            patch("sgr_deep_research.core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
+            patch("sgr_agent_core.agent_factory.MCP2ToolConverter.build_tools_from_mcp", return_value=[]),
             mock_global_config(),
             patch.object(SGRAgent, "__init__", side_effect=RuntimeError("Failed to initialize")),
         ):
@@ -523,7 +515,7 @@ class TestAgentFactoryMCPIntegration:
 
         with (
             patch(
-                "sgr_deep_research.core.agent_factory.MCP2ToolConverter.build_tools_from_mcp",
+                "sgr_agent_core.agent_factory.MCP2ToolConverter.build_tools_from_mcp",
                 return_value=mock_mcp_tools,
             ),
             mock_global_config(),
@@ -562,7 +554,7 @@ class TestAgentFactoryMCPIntegration:
 
         with (
             patch(
-                "sgr_deep_research.core.agent_factory.MCP2ToolConverter.build_tools_from_mcp",
+                "sgr_agent_core.agent_factory.MCP2ToolConverter.build_tools_from_mcp",
                 return_value=mock_mcp_tools,
             ),
             mock_global_config(),
@@ -592,7 +584,7 @@ class TestAgentFactoryDefinitionsList:
 
     def test_get_definitions_list(self):
         """Test getting list of agent definitions from config."""
-        with patch("sgr_deep_research.core.agent_factory.GlobalConfig") as mock_global_config:
+        with patch("sgr_agent_core.agent_factory.GlobalConfig") as mock_global_config:
             mock_config = Mock()
             mock_agent_def1 = Mock()
             mock_agent_def1.name = "agent1"
@@ -609,7 +601,7 @@ class TestAgentFactoryDefinitionsList:
 
     def test_get_definitions_list_empty(self):
         """Test getting empty list when no agents in config."""
-        with patch("sgr_deep_research.core.agent_factory.GlobalConfig") as mock_global_config:
+        with patch("sgr_agent_core.agent_factory.GlobalConfig") as mock_global_config:
             mock_config = Mock()
             mock_config.agents = {}
             mock_global_config.return_value = mock_config
