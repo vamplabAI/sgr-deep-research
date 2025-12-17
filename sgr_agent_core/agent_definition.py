@@ -105,6 +105,10 @@ class ExecutionConfig(BaseModel, extra="allow"):
 
     logs_dir: str = Field(default="logs", description="Directory for saving bot logs")
     reports_dir: str = Field(default="reports", description="Directory for saving reports")
+    
+    # Настройки стриминга и метрик
+    enable_streaming: bool = Field(default=True, description="Enable streaming responses (SSE format)")
+    track_token_usage: bool = Field(default=True, description="Track token usage and response speed metrics")
 
 
 class AgentConfig(BaseModel):

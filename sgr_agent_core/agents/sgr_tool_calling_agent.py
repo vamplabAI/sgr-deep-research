@@ -1,3 +1,4 @@
+import time
 from typing import Literal, Type
 
 from openai import AsyncOpenAI, pydantic_function_tool
@@ -43,20 +44,77 @@ class SGRToolCallingAgent(SGRAgent):
         self.tool_choice: Literal["required"] = "required"
 
     async def _reasoning_phase(self) -> ReasoningTool:
-        async with self.openai_client.chat.completions.stream(
-            model=self.config.llm.model,
-            messages=await self._prepare_context(),
-            max_tokens=self.config.llm.max_tokens,
-            temperature=self.config.llm.temperature,
-            tools=[pydantic_function_tool(ReasoningTool, name=ReasoningTool.tool_name)],
-            tool_choice={"type": "function", "function": {"name": ReasoningTool.tool_name}},
-        ) as stream:
-            async for event in stream:
-                if event.type == "chunk":
-                    self.streaming_generator.add_chunk(event.chunk)
-            reasoning: ReasoningTool = (
-                (await stream.get_final_completion()).choices[0].message.tool_calls[0].function.parsed_arguments
+        # Подготавливаем данные запроса
+        messages = await self._prepare_context()
+        tools = [pydantic_function_tool(ReasoningTool, name=ReasoningTool.tool_name)]
+        tool_choice_param = {"type": "function", "function": {"name": ReasoningTool.tool_name}}
+        
+        # Засекаем время начала
+        start_time = time.time()
+        
+        if self.config.execution.enable_streaming:
+            # РЕЖИМ СТРИМИНГА
+            request_data = {
+                "model": self.config.llm.model,
+                "messages": messages,
+                "max_tokens": self.config.llm.max_tokens,
+                "temperature": self.config.llm.temperature,
+                "tools": tools,
+                "tool_choice": tool_choice_param,
+                "stream": True,
+                "stream_options": {"include_usage": True},
+            }
+            
+            async with self.openai_client.chat.completions.stream(
+                model=self.config.llm.model,
+                messages=messages,
+                max_tokens=self.config.llm.max_tokens,
+                temperature=self.config.llm.temperature,
+                tools=tools,
+                tool_choice=tool_choice_param,
+                stream_options={"include_usage": True},
+            ) as stream:
+                async for event in stream:
+                    if event.type == "chunk":
+                        self.streaming_generator.add_chunk(event.chunk)
+                
+                final_completion = await stream.get_final_completion()
+                reasoning: ReasoningTool = (
+                    final_completion.choices[0].message.tool_calls[0].function.parsed_arguments
+                )
+        else:
+            # РЕЖИМ БЕЗ СТРИМИНГА - обычный запрос
+            request_data = {
+                "model": self.config.llm.model,
+                "messages": messages,
+                "max_tokens": self.config.llm.max_tokens,
+                "temperature": self.config.llm.temperature,
+                "tools": tools,
+                "tool_choice": tool_choice_param,
+                "stream": False,
+            }
+            
+            final_completion = await self.openai_client.chat.completions.create(
+                model=self.config.llm.model,
+                messages=messages,
+                max_tokens=self.config.llm.max_tokens,
+                temperature=self.config.llm.temperature,
+                tools=tools,
+                tool_choice=tool_choice_param,
             )
+            
+            # В обычном режиме нужно парсить arguments вручную
+            import json
+            tool_call = final_completion.choices[0].message.tool_calls[0]
+            arguments_dict = json.loads(tool_call.function.arguments)
+            reasoning: ReasoningTool = ReasoningTool(**arguments_dict)
+        
+        # Вычисляем время выполнения
+        duration_ms = (time.time() - start_time) * 1000
+        
+        # Логируем LLM вызов с метриками
+        response_data = final_completion.model_dump()
+        self._log_llm_call("reasoning_phase", request_data, response_data, duration_ms)
         self.conversation.append(
             {
                 "role": "assistant",
@@ -84,23 +142,91 @@ class SGRToolCallingAgent(SGRAgent):
         return reasoning
 
     async def _select_action_phase(self, reasoning: ReasoningTool) -> BaseTool:
-        async with self.openai_client.chat.completions.stream(
-            model=self.config.llm.model,
-            messages=await self._prepare_context(),
-            max_tokens=self.config.llm.max_tokens,
-            temperature=self.config.llm.temperature,
-            tools=await self._prepare_tools(),
-            tool_choice=self.tool_choice,
-        ) as stream:
-            async for event in stream:
-                if event.type == "chunk":
-                    self.streaming_generator.add_chunk(event.chunk)
-
-        completion = await stream.get_final_completion()
+        # Подготавливаем данные запроса
+        messages = await self._prepare_context()
+        tools = await self._prepare_tools()
+        
+        # Засекаем время начала
+        start_time = time.time()
+        
+        if self.config.execution.enable_streaming:
+            # РЕЖИМ СТРИМИНГА
+            request_data = {
+                "model": self.config.llm.model,
+                "messages": messages,
+                "max_tokens": self.config.llm.max_tokens,
+                "temperature": self.config.llm.temperature,
+                "tools": tools,
+                "tool_choice": self.tool_choice,
+                "stream": True,
+                "stream_options": {"include_usage": True},
+            }
+            
+            async with self.openai_client.chat.completions.stream(
+                model=self.config.llm.model,
+                messages=messages,
+                max_tokens=self.config.llm.max_tokens,
+                temperature=self.config.llm.temperature,
+                tools=tools,
+                tool_choice=self.tool_choice,
+                stream_options={"include_usage": True},
+            ) as stream:
+                async for event in stream:
+                    if event.type == "chunk":
+                        self.streaming_generator.add_chunk(event.chunk)
+                
+                completion = await stream.get_final_completion()
+        else:
+            # РЕЖИМ БЕЗ СТРИМИНГА - обычный запрос
+            request_data = {
+                "model": self.config.llm.model,
+                "messages": messages,
+                "max_tokens": self.config.llm.max_tokens,
+                "temperature": self.config.llm.temperature,
+                "tools": tools,
+                "tool_choice": self.tool_choice,
+                "stream": False,
+            }
+            
+            completion = await self.openai_client.chat.completions.create(
+                model=self.config.llm.model,
+                messages=messages,
+                max_tokens=self.config.llm.max_tokens,
+                temperature=self.config.llm.temperature,
+                tools=tools,
+                tool_choice=self.tool_choice,
+            )
+        
+        # Вычисляем время выполнения
+        duration_ms = (time.time() - start_time) * 1000
+        
+        # Логируем LLM вызов с метриками
+        response_data = completion.model_dump()
+        self._log_llm_call("action_selection", request_data, response_data, duration_ms)
 
         try:
-            tool = completion.choices[0].message.tool_calls[0].function.parsed_arguments
-        except (IndexError, AttributeError, TypeError):
+            # Для стриминга используется parsed_arguments, для обычного запроса - парсим вручную
+            tool_call = completion.choices[0].message.tool_calls[0]
+            
+            if hasattr(tool_call.function, 'parsed_arguments'):
+                # Режим стриминга
+                tool = tool_call.function.parsed_arguments
+            else:
+                # Режим без стриминга - парсим arguments вручную
+                import json
+                from sgr_agent_core.services import ToolRegistry
+                
+                tool_name = tool_call.function.name
+                arguments_dict = json.loads(tool_call.function.arguments)
+                
+                # Находим класс инструмента по имени
+                tool_class = ToolRegistry.get(tool_name)
+                if tool_class:
+                    tool = tool_class(**arguments_dict)
+                else:
+                    raise ValueError(f"Tool '{tool_name}' not found in registry")
+                    
+        except (IndexError, AttributeError, TypeError, json.JSONDecodeError) as e:
             # LLM returned a text response instead of a tool call - treat as completion
             final_content = completion.choices[0].message.content or "Task completed successfully"
             tool = FinalAnswerTool(

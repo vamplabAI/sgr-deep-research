@@ -55,6 +55,12 @@ class BaseAgent(AgentRegistryMixin):
         self.streaming_generator = OpenAIStreamingGenerator(model=self.id)
         self.logger = logging.getLogger(f"sgr_agent_core.agents.{self.id}")
         self.log = []
+        
+        # Метрики токенов и производительности
+        self.total_prompt_tokens = 0
+        self.total_completion_tokens = 0
+        self.total_tokens = 0
+        self.llm_call_count = 0
 
     async def provide_clarification(self, clarifications: str):
         """Receive clarification from an external source (e.g. user input)"""
@@ -113,6 +119,84 @@ class BaseAgent(AgentRegistryMixin):
             }
         )
 
+    def _log_llm_call(self, phase: str, request_data: dict, response_data: dict, duration_ms: float = 0):
+        """Логирование полного запроса и ответа LLM для трейсинга.
+        
+        Args:
+            phase: Название фазы (reasoning, action_selection, etc.)
+            request_data: Полный запрос к LLM (messages, tools, parameters)
+            response_data: Полный ответ от LLM
+            duration_ms: Длительность запроса в миллисекундах
+        """
+        # Извлекаем метрики использования токенов
+        usage = response_data.get('usage') or {}
+        prompt_tokens = usage.get('prompt_tokens', 0) if isinstance(usage, dict) else 0
+        completion_tokens = usage.get('completion_tokens', 0) if isinstance(usage, dict) else 0
+        total_tokens_call = usage.get('total_tokens', 0) if isinstance(usage, dict) else 0
+        
+        # Обновляем кумулятивные счетчики
+        if self.config.execution.track_token_usage:
+            self.total_prompt_tokens += prompt_tokens
+            self.total_completion_tokens += completion_tokens
+            self.total_tokens += total_tokens_call
+            self.llm_call_count += 1
+        
+        # Вычисляем скорость
+        tokens_per_second = (completion_tokens / (duration_ms / 1000)) if duration_ms > 0 else 0
+        
+        self.logger.info(
+            f"""
+###############################################
+🤖 LLM API CALL - {phase.upper()}
+    📤 REQUEST:
+        Model: {request_data.get('model')}
+        Temperature: {request_data.get('temperature')}
+        Max Tokens: {request_data.get('max_tokens')}
+        Messages Count: {len(request_data.get('messages', []))}
+        Tools Count: {len(request_data.get('tools', []))}
+    📥 RESPONSE:
+        Finish Reason: {response_data.get('choices', [{}])[0].get('finish_reason')}
+        Tool Calls: {len(response_data.get('choices', [{}])[0].get('message', {}).get('tool_calls', []))}
+    📊 МЕТРИКИ:
+        ⏱️  Время ответа: {duration_ms:.0f}ms
+        🔢 Токены (prompt): {prompt_tokens}
+        💬 Токены (completion): {completion_tokens}
+        📈 Всего токенов: {total_tokens_call}
+        ⚡ Скорость: {tokens_per_second:.1f} tok/s
+    📊 КУМУЛЯТИВНЫЕ:
+        🔢 Всего prompt токенов: {self.total_prompt_tokens}
+        💬 Всего completion токенов: {self.total_completion_tokens}
+        📈 Общий расход токенов: {self.total_tokens}
+        🔄 Вызовов LLM: {self.llm_call_count}
+###############################################"""
+        )
+        
+        # Сохраняем полный запрос и ответ
+        log_entry = {
+            "step_number": self._context.iteration,
+            "timestamp": datetime.now().isoformat(),
+            "step_type": "llm_call",
+            "phase": phase,
+            "request": request_data,  # Полный запрос
+            "response": response_data,  # Полный ответ
+        }
+        
+        # Добавляем метрики, если включено отслеживание
+        if self.config.execution.track_token_usage:
+            log_entry["metrics"] = {
+                "duration_ms": duration_ms,
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": total_tokens_call,
+                "tokens_per_second": tokens_per_second,
+                "cumulative_prompt_tokens": self.total_prompt_tokens,
+                "cumulative_completion_tokens": self.total_completion_tokens,
+                "cumulative_total_tokens": self.total_tokens,
+                "llm_call_number": self.llm_call_count,
+            }
+        
+        self.log.append(log_entry)
+
     def _save_agent_log(self):
         from sgr_agent_core.agent_config import GlobalConfig
 
@@ -128,6 +212,15 @@ class BaseAgent(AgentRegistryMixin):
             "toolkit": [tool.tool_name for tool in self.toolkit],
             "log": self.log,
         }
+        
+        # Добавляем финальную сводку по токенам
+        if self.config.execution.track_token_usage:
+            agent_log["token_usage_summary"] = {
+                "total_prompt_tokens": self.total_prompt_tokens,
+                "total_completion_tokens": self.total_completion_tokens,
+                "total_tokens": self.total_tokens,
+                "llm_calls_count": self.llm_call_count,
+            }
 
         json.dump(agent_log, open(filepath, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
 
