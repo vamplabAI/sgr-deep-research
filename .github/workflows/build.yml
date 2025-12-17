@@ -10,7 +10,7 @@ jobs:
 
   build_wheel:
     needs: linter
-    name: Build source distribution
+    name: Build distributions
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,29 +18,32 @@ jobs:
       - name: Build wheel
         run: pipx run build --wheel .
 
+      - name: Build sdist
+        run: pipx run build --sdist .
+
       - uses: actions/upload-artifact@v4
         with:
-          name: wheel
-          path: ./dist/*.whl
+          name: distributions
+          path: ./dist/*
 
-#  publish_prod:
-#    needs: build_wheel
-#    name: Publish package to PyPI
-#    runs-on: ubuntu-latest
-#    environment: release
-#    permissions:
-#      id-token: write
-#
-#    steps:
-#      - uses: actions/download-artifact@v4
-#        with:
-#          name: wheel
-#          path: dist
-#
-#      - name: Display structure of downloaded files
-#        run: ls -R dist
-#
-#      - name: Publish package distributions to TestPyPI
-#        uses: pypa/gh-action-pypi-publish@release/v1
-#        with:
-#          password: ${{ secrets.PYPI_API_TOKEN }}
+  publish_prod:
+    needs: build_wheel
+    name: Publish package to PyPI
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: distributions
+          path: dist
+
+      - name: Display structure of downloaded files
+        run: ls -R dist
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
