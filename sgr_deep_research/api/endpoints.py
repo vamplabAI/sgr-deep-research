@@ -1,8 +1,10 @@
 import asyncio
 import logging
+from typing import List
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
+from openai.types.chat import ChatCompletionMessageParam
 
 from sgr_agent_core import AgentFactory, AgentStatesEnum, BaseAgent
 from sgr_deep_research.api.models import (
@@ -34,9 +36,15 @@ async def get_agent_state(agent_id: str):
 
     agent = agents_storage[agent_id]
 
+    # Extract user context from conversation if available
+    user_context = None
+    if hasattr(agent, "conversation") and agent.conversation:
+        user_context = [msg for msg in agent.conversation if isinstance(msg, dict) and msg.get("role") == "user"]
+
     return AgentStateResponse(
         agent_id=agent.id,
         task=agent.task,
+        user_context=user_context,
         sources_count=len(agent._context.sources),
         **agent._context.model_dump(),
     )
@@ -73,11 +81,25 @@ async def get_available_models():
     return {"data": models_data, "object": "list"}
 
 
-def extract_user_content_from_messages(messages):
-    for message in reversed(messages):
-        if message.role == "user":
-            return message.content
-    raise ValueError("User message not found in messages")
+def extract_user_content_from_messages(messages: List[ChatCompletionMessageParam]) -> List[ChatCompletionMessageParam]:
+    """Extract all last consecutive user messages (text and images), returning
+    them in ChatCompletionMessageParam format."""
+    if not messages:
+        return []
+
+    collected: List[ChatCompletionMessageParam] = []
+
+    # get user content from end massive
+    for msg in reversed(messages):
+        # ChatCompletionMessageParam can be a dict, so we need to handle both cases
+        role = msg.get("role") if isinstance(msg, dict) else getattr(msg, "role", None)
+        if role == "user":
+            collected.append(msg)
+        else:
+            break
+
+    # return in normal order (reverse() returns None, so we need to reverse the list)
+    return list(reversed(collected))
 
 
 @router.post("/agents/{agent_id}/provide_clarification")
@@ -87,7 +109,12 @@ async def provide_clarification(agent_id: str, request: ClarificationRequest):
         if not agent:
             raise HTTPException(status_code=404, detail="Agent not found")
 
-        logger.info(f"Providing clarification to agent {agent.id}: {request.clarifications[:100]}...")
+        clarifications_preview = (
+            request.clarifications[:100]
+            if isinstance(request.clarifications, str)
+            else f"{len(request.clarifications)} parts (multimodal)"
+        )
+        logger.info(f"Providing clarification to agent {agent.id}: {clarifications_preview}...")
 
         await agent.provide_clarification(request.clarifications)
         return StreamingResponse(
@@ -124,13 +151,67 @@ async def create_chat_completion(request: ChatCompletionRequest):
         and request.model in agents_storage
         and agents_storage[request.model]._context.state == AgentStatesEnum.WAITING_FOR_CLARIFICATION
     ):
+        # Extract user messages and convert to ClarificationRequest format
+        user_messages = extract_user_content_from_messages(request.messages)
+        if not user_messages:
+            raise HTTPException(status_code=400, detail="No user messages found")
+
+        # Convert messages to clarifications format (string or list of content parts)
+        clarifications_content = []
+        for msg in user_messages:
+            content = msg.get("content") if isinstance(msg, dict) else getattr(msg, "content", None)
+            if isinstance(content, str):
+                clarifications_content.append({"type": "text", "text": content})
+            elif isinstance(content, list):
+                clarifications_content.extend(content)
+
+        # If single text part, return as string; otherwise return list
+        if len(clarifications_content) == 1 and clarifications_content[0].get("type") == "text":
+            clarifications = clarifications_content[0].get("text", "")
+        else:
+            clarifications = clarifications_content
+
         return await provide_clarification(
             agent_id=request.model,
-            request=ClarificationRequest(clarifications=extract_user_content_from_messages(request.messages)),
+            request=ClarificationRequest(clarifications=clarifications),
         )
 
     try:
-        task = extract_user_content_from_messages(request.messages)
+        task_messages = extract_user_content_from_messages(request.messages)
+
+        # Extract text-only summary for agent.task
+        text_parts = []
+        for msg in task_messages:
+            # ChatCompletionMessageParam can be a dict, so we need to handle both cases
+            content = msg.get("content") if isinstance(msg, dict) else getattr(msg, "content", None)
+            if isinstance(content, str):
+                text_parts.append(content)
+            elif isinstance(content, list):
+                for part in content:
+                    if isinstance(part, dict) and part.get("type") == "text":
+                        if part.get("text"):
+                            text_parts.append(part["text"])
+
+        task = " ".join(text_parts).strip() if text_parts else "Image-only request"
+
+        # Process all messages: ChatCompletionMessageParam is already a dict or compatible format
+        processed_messages = []
+        for msg in request.messages:
+            # ChatCompletionMessageParam can be a dict, so we need to handle both cases
+            if isinstance(msg, dict):
+                processed_messages.append(
+                    {
+                        "role": msg.get("role"),
+                        "content": msg.get("content"),
+                    }
+                )
+            else:
+                processed_messages.append(
+                    {
+                        "role": getattr(msg, "role", None),
+                        "content": getattr(msg, "content", None),
+                    }
+                )
 
         agent_def = next(filter(lambda ad: ad.name == request.model, AgentFactory.get_definitions_list()), None)
         if not agent_def:
@@ -141,6 +222,11 @@ async def create_chat_completion(request: ChatCompletionRequest):
             )
         agent = await AgentFactory.create(agent_def, task)
         logger.info(f"Created agent '{request.model}' for task: {task[:100]}...")
+
+        # Add all processed messages to agent conversation (excluding system, which is added by _prepare_context)
+        for msg in processed_messages:
+            if msg["role"] != "system":
+                agent.conversation.append(msg)
 
         agents_storage[agent.id] = agent
         _ = asyncio.create_task(agent.execute())

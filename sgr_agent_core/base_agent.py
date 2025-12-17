@@ -4,10 +4,10 @@ import os
 import traceback
 import uuid
 from datetime import datetime
-from typing import Type
+from typing import Any, Dict, List, Type, Union
 
 from openai import AsyncOpenAI, pydantic_function_tool
-from openai.types.chat import ChatCompletionFunctionToolParam
+from openai.types.chat import ChatCompletionFunctionToolParam, ChatCompletionMessageParam
 
 from sgr_agent_core.agent_definition import AgentConfig
 from sgr_agent_core.models import AgentContext, AgentStatesEnum
@@ -56,15 +56,38 @@ class BaseAgent(AgentRegistryMixin):
         self.logger = logging.getLogger(f"sgr_agent_core.agents.{self.id}")
         self.log = []
 
-    async def provide_clarification(self, clarifications: str):
-        """Receive clarification from an external source (e.g. user input)"""
-        self.conversation.append(
-            {"role": "user", "content": PromptLoader.get_clarification_template(clarifications, self.config.prompts)}
-        )
+    async def provide_clarification(self, clarifications: Union[str, List[Dict[str, Any]]]):
+        """Receive clarification from an external source (e.g. user input).
+
+        Supports both text-only clarifications (str) and multimodal
+        content (list of parts with images).
+        """
+        if isinstance(clarifications, str):
+            # Text-only clarification: use template as before
+            content = PromptLoader.get_clarification_template(clarifications, self.config.prompts)
+            log_content = clarifications[:2000]
+        else:
+            # Multimodal content (list of parts): use directly, but wrap text parts in template if present
+            text_parts = [p.get("text") for p in clarifications if isinstance(p, dict) and p.get("type") == "text"]
+            image_parts = [p for p in clarifications if isinstance(p, dict) and p.get("type") == "image_url"]
+
+            if text_parts:
+                # Combine text parts and wrap in template
+                combined_text = " ".join(filter(None, text_parts))
+                template_text = PromptLoader.get_clarification_template(combined_text, self.config.prompts)
+                # Create parts: template text + images
+                content = [{"type": "text", "text": template_text}] + image_parts
+                log_content = combined_text[:2000]
+            else:
+                # Images only: use as-is (no template wrapping for image-only)
+                content = clarifications
+                log_content = f"{len(image_parts)} image(s)"
+
+        self.conversation.append({"role": "user", "content": content})
         self._context.clarifications_used += 1
         self._context.clarification_received.set()
         self._context.state = AgentStatesEnum.RESEARCHING
-        self.logger.info(f"✅ Clarification received: {clarifications[:2000]}...")
+        self.logger.info(f"✅ Clarification received: {log_content}...")
 
     def _log_reasoning(self, result: ReasoningTool) -> None:
         next_step = result.remaining_steps[0] if result.remaining_steps else "Completing"
@@ -131,20 +154,48 @@ class BaseAgent(AgentRegistryMixin):
 
         json.dump(agent_log, open(filepath, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
 
-    async def _prepare_context(self) -> list[dict]:
-        """Prepare a conversation context with system prompt, task data and any
-        other context. Override this method to change the context setup for the
-        agent.
+    def extract_user_content_from_messages(
+        self, messages: List[ChatCompletionMessageParam]
+    ) -> List[ChatCompletionMessageParam]:
+        """Extract all last consecutive user messages (text and images),
+        returning them in ChatCompletionMessageParam format."""
+        if not messages:
+            return []
 
-        Returns a list of dictionaries, each containing a role and
-        content key.
-        """
+        collected: List[ChatCompletionMessageParam] = []
+
+        # get user content from end massive
+        for msg in reversed(messages):
+            # ChatCompletionMessageParam can be a dict, so we need to handle both cases
+            role = msg.get("role") if isinstance(msg, dict) else getattr(msg, "role", None)
+            if role == "user":
+                collected.append(msg)
+            else:
+                break
+
+        # return in normal order (reverse() returns None, so we need to reverse the list)
+        return list(reversed(collected))
+
+    async def _prepare_context(self) -> list[dict]:
+        """Prepare conversation context with system prompt."""
+        user_context = self.extract_user_content_from_messages(self.conversation)
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.INFO)
+        logger.debug(self.conversation)
         return [
             {"role": "system", "content": PromptLoader.get_system_prompt(self.toolkit, self.config.prompts)},
+            # Experiments with prompt
             {
                 "role": "user",
-                "content": PromptLoader.get_initial_user_request(self.task, self.config.prompts),
+                "content": PromptLoader.get_initial_user_request(
+                    (
+                        "Strictly and exactly execute the task that appears immediately after this sentence, "
+                        "interpreting all provided text and images as authoritative instructions."
+                    ),
+                    self.config.prompts,
+                ),
             },
+            *user_context,
             *self.conversation,
         ]
 

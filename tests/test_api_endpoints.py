@@ -21,7 +21,7 @@ from sgr_deep_research.api.endpoints import (
     get_agents_list,
     provide_clarification,
 )
-from sgr_deep_research.api.models import ChatCompletionRequest, ChatMessage, ClarificationRequest
+from sgr_deep_research.api.models import ChatCompletionRequest, ClarificationRequest
 from tests.conftest import create_test_agent
 
 
@@ -74,39 +74,43 @@ class TestExtractUserContentFromMessages:
 
     def test_extract_from_single_user_message(self):
         """Test extracting content from single user message."""
-        messages = [ChatMessage(role="user", content="Hello, this is a test message")]
+        messages = [{"role": "user", "content": "Hello, this is a test message"}]
 
-        content = extract_user_content_from_messages(messages)
-        assert content == "Hello, this is a test message"
+        result = extract_user_content_from_messages(messages)
+        assert len(result) == 1
+        assert result[0]["role"] == "user"
+        assert result[0]["content"] == "Hello, this is a test message"
 
     def test_extract_from_multiple_messages_gets_latest_user(self):
         """Test extracting content gets the latest user message."""
         messages = [
-            ChatMessage(role="system", content="System message"),
-            ChatMessage(role="user", content="First user message"),
-            ChatMessage(role="assistant", content="Assistant response"),
-            ChatMessage(role="user", content="Latest user message"),
+            {"role": "system", "content": "System message"},
+            {"role": "user", "content": "First user message"},
+            {"role": "assistant", "content": "Assistant response"},
+            {"role": "user", "content": "Latest user message"},
         ]
 
-        content = extract_user_content_from_messages(messages)
-        assert content == "Latest user message"
+        result = extract_user_content_from_messages(messages)
+        assert len(result) == 1
+        assert result[0]["role"] == "user"
+        assert result[0]["content"] == "Latest user message"
 
-    def test_extract_no_user_message_raises_error(self):
-        """Test that missing user message raises ValueError."""
+    def test_extract_no_user_message_returns_empty(self):
+        """Test that missing user message returns empty list."""
         messages = [
-            ChatMessage(role="system", content="System message"),
-            ChatMessage(role="assistant", content="Assistant response"),
+            {"role": "system", "content": "System message"},
+            {"role": "assistant", "content": "Assistant response"},
         ]
 
-        with pytest.raises(ValueError, match="User message not found"):
-            extract_user_content_from_messages(messages)
+        result = extract_user_content_from_messages(messages)
+        assert result == []
 
-    def test_extract_empty_messages_raises_error(self):
-        """Test that empty messages list raises ValueError."""
+    def test_extract_empty_messages_returns_empty(self):
+        """Test that empty messages list returns empty list."""
         messages = []
 
-        with pytest.raises(ValueError, match="User message not found"):
-            extract_user_content_from_messages(messages)
+        result = extract_user_content_from_messages(messages)
+        assert result == []
 
 
 class TestChatCompletionEndpoint:
@@ -139,7 +143,7 @@ class TestChatCompletionEndpoint:
 
         # Create request
         request = ChatCompletionRequest(
-            model="sgr_agent", messages=[ChatMessage(role="user", content="Test task")], stream=True
+            model="sgr_agent", messages=[{"role": "user", "content": "Test task"}], stream=True
         )
 
         # Mock asyncio.create_task to properly handle coroutines
@@ -165,7 +169,7 @@ class TestChatCompletionEndpoint:
     async def test_non_streaming_request_raises_error(self):
         """Test that non-streaming request raises HTTPException."""
         request = ChatCompletionRequest(
-            model="sgr_agent", messages=[ChatMessage(role="user", content="Test task")], stream=False
+            model="sgr_agent", messages=[{"role": "user", "content": "Test task"}], stream=False
         )
 
         with pytest.raises(HTTPException) as exc_info:
@@ -178,7 +182,7 @@ class TestChatCompletionEndpoint:
     async def test_invalid_model_raises_error(self):
         """Test that invalid model raises HTTPException."""
         request = ChatCompletionRequest(
-            model="invalid_model", messages=[ChatMessage(role="user", content="Test task")], stream=True
+            model="invalid_model", messages=[{"role": "user", "content": "Test task"}], stream=True
         )
 
         with pytest.raises(HTTPException) as exc_info:
@@ -203,7 +207,7 @@ class TestChatCompletionEndpoint:
         agent.streaming_generator.stream = Mock(return_value=iter(["clarification response"]))
 
         request = ChatCompletionRequest(
-            model=agent.id, messages=[ChatMessage(role="user", content="Here is my clarification")], stream=True
+            model=agent.id, messages=[{"role": "user", "content": "Here is my clarification"}], stream=True
         )
 
         await create_chat_completion(request)
