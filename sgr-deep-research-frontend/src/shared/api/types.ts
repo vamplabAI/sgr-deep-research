@@ -96,7 +96,7 @@ export interface AvailableModel {
   id: string
   object: 'model'
   created: number
-  owned_by: 'sgr-deep-research'
+  owned_by: 'sgr-agent-core'
 }
 
 export interface ValidationError {

@@ -16,4 +16,4 @@ clean:
 	rm -rf build
 	rm -rf *.egg-info
 	rm -rf dist
-	pip3 uninstall sgr-deep-research UNKNOWN -y
+	pip3 uninstall sgr-agent-core UNKNOWN -y
