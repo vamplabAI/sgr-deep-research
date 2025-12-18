@@ -313,3 +313,96 @@ class TestBaseAgentPrepareContext:
         context = await agent._prepare_context()
 
         assert len(context) == 5  # system + initial_user_request + 3 messages
+
+
+class TestBaseAgentSaveLog:
+    """Tests for agent log saving functionality."""
+
+    def test_save_agent_log_skipped_when_logs_dir_is_none(self, tmp_path):
+        """Test that _save_agent_log does not create files when logs_dir is None."""
+        from unittest.mock import patch
+
+        from sgr_agent_core.agent_definition import ExecutionConfig
+
+        agent = create_test_agent(
+            BaseAgent,
+            task="Test",
+            execution_config=ExecutionConfig(
+                max_iterations=20,
+                max_clarifications=3,
+                logs_dir=None,
+            ),
+        )
+        agent.log = [{"step": 1, "data": "test"}]
+
+        # Mock GlobalConfig to return None for logs_dir
+        mock_config = Mock()
+        mock_config.execution.logs_dir = None
+
+        with patch("sgr_agent_core.agent_config.GlobalConfig", return_value=mock_config):
+            # Should not raise and should not create any files
+            agent._save_agent_log()
+
+        # Verify no files were created in tmp_path
+        assert list(tmp_path.iterdir()) == []
+
+    def test_save_agent_log_skipped_when_logs_dir_is_empty_string(self, tmp_path):
+        """Test that _save_agent_log does not create files when logs_dir is empty string."""
+        from unittest.mock import patch
+
+        from sgr_agent_core.agent_definition import ExecutionConfig
+
+        agent = create_test_agent(
+            BaseAgent,
+            task="Test",
+            execution_config=ExecutionConfig(
+                max_iterations=20,
+                max_clarifications=3,
+                logs_dir="",
+            ),
+        )
+        agent.log = [{"step": 1, "data": "test"}]
+
+        # Mock GlobalConfig to return empty string for logs_dir
+        mock_config = Mock()
+        mock_config.execution.logs_dir = ""
+
+        with patch("sgr_agent_core.agent_config.GlobalConfig", return_value=mock_config):
+            # Should not raise and should not create any files
+            agent._save_agent_log()
+
+        # Verify no files were created
+        assert list(tmp_path.iterdir()) == []
+
+    def test_save_agent_log_creates_file_when_logs_dir_is_set(self, tmp_path):
+        """Test that _save_agent_log creates log file when logs_dir is specified."""
+        import os
+        from unittest.mock import patch
+
+        from sgr_agent_core.agent_definition import ExecutionConfig
+
+        logs_dir = str(tmp_path / "logs")
+
+        agent = create_test_agent(
+            BaseAgent,
+            task="Test",
+            execution_config=ExecutionConfig(
+                max_iterations=20,
+                max_clarifications=3,
+                logs_dir=logs_dir,
+            ),
+        )
+        agent.log = [{"step": 1, "data": "test"}]
+
+        # Mock GlobalConfig to return the logs_dir
+        mock_config = Mock()
+        mock_config.execution.logs_dir = logs_dir
+
+        with patch("sgr_agent_core.agent_config.GlobalConfig", return_value=mock_config):
+            agent._save_agent_log()
+
+        # Verify log file was created
+        assert os.path.exists(logs_dir)
+        log_files = list(os.listdir(logs_dir))
+        assert len(log_files) == 1
+        assert log_files[0].endswith("-log.json")
