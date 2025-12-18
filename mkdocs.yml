@@ -15,6 +15,18 @@ plugins:
         - locale: ru
           name: Русский
           build: true
+          nav_translations:
+            Home: Главная
+            Main Concepts: Основные концепции
+            User Guide: Руководство пользователя
+            Create first agent: Создание первого агента
+            Configuration: Конфигурация
+            Quick Start: Быстрый старт
+            Workflow: Рабочий процесс
+            Demonstration: Демонстрация
+            Integration & Examples: Интеграция и примеры
+            Description API: Описание API
+            Summary Table: Сводная таблица
 
 theme:
   name: material
@@ -45,12 +57,14 @@ theme:
     - content.code.annotate
     - content.code.highlight
 nav:
+  - Home: index.md
   - Agent Core Framework:
     - Main Concepts: framework/main-concepts.md
     - User Guide:
         - Create first agent: framework/first-steps.md
         - Configuration: framework/configuration.md
         - Tools: framework/tools.md
+    - QnA: framework/qna.md
   - SGR API service:
     - Quick Start: SGR-Quick-Start.md
     - Workflow: SGR-Agent's-Workflow.md

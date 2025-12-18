@@ -4,32 +4,181 @@
 
 ![SGR Agent Core Concept](../../assets/images/sgr_concept.png)
 
-## Агент
+## Vibe-Глоссарий
 
-**BaseAgent** — базовый класс для всех агентов. Определяет трёхфазный цикл выполнения: Reasoning Phase → Select Action Phase → Action Phase. Управляет состоянием через `ResearchContext`, обеспечивает стриминг ответов и обработку уточнений.
+???+ quote "Смотря какой fabric, смотря сколько details"
+    В профессиональной речи сложно подобрать адаптации некоторым терминам, поэтому в этой документации могут встречаться жаргонизмы, англицизмы и ещё бог весть что :)
 
-## Тул
+**Large Language Model (LLM)** — большая языковая модель, обученная на больших объёмах данных для генерации и понимания текста. В контексте фреймворка используется для reasoning, планирования и выбора действий агента.
 
-**BaseTool** — базовый класс для всех инструментов. Определяет единый интерфейс через метод `__call__()`. Все инструменты автоматически регистрируются через `ToolRegistryMixin` и возвращают результат как строку или JSON.
+**Structured Output (SO)** — подход к получению структурированных данных от LLM через явное определение JSON-схемы. Вместо свободного текстового ответа модель возвращает данные в строго определённом формате, что обеспечивает надёжный парсинг и валидацию. В фреймворке используется через параметр `response_format`
 
-## Конфиг
+**Function Calling (FC)** — нативный механизм для вызова функций/инструментов. LLM получает описание доступных функций и может явно запросить их вызов, возвращая структурированные аргументы. Позволяет интегрировать внешние инструменты и API в диалог с моделью.
 
-**AgentConfig** — централизованная конфигурация агента, объединяющая настройки:
+**Reasoning** — процесс рассуждения и анализа, в ходе которого агент оценивает текущую ситуацию, анализирует доступную информацию, планирует следующие шаги и принимает решение о выборе действия. В фреймворке reasoning может быть явным (через структурированную схему) или неявным (внутри LLM).
 
-- **LLMConfig** — параметры языковой модели (API ключ, модель, температура, токены)
-- **SearchConfig** — настройки поиска (Tavily API, лимиты поисков и результатов)
-- **ExecutionConfig** — параметры выполнения (максимальные итерации, уточнения, директории)
-- **PromptsConfig** — настройки промптов (системный промпт, шаблоны запросов)
-- **MCPConfig** — настройки интеграции с MCP серверами
+**Tool / тул / тулза** — исполняемый компонент, который агент может вызывать для выполнения конкретных действий (поиск в интернете, запрос уточнений, создание отчёта и т.д.).
 
-## Дефинишн
+**Agent / агент** — автономная программная сущность, способная воспринимать окружение, принимать решения и выполнять действия для достижения поставленной цели. В фреймворке агент реализует цикл Reasoning → Action, используя LLM для принятия решений и инструменты для выполнения действий.
 
-**AgentDefinition** — определение агента как шаблона для создания экземпляров. Включает имя агента, базовый класс, набор инструментов и все настройки из `AgentConfig`. Поддерживает загрузку из YAML файлов и автоматическое наследование настроек из `GlobalConfig`.
 
-## Регистри
 
-**Registry** — централизованные реестры (`AgentRegistry`, `ToolRegistry`) для автоматической регистрации и поиска классов. Обеспечивают динамический поиск по имени и типобезопасность через дженерики.
+## Agent
 
-## Stream
+**BaseAgent** — Родительский класс для всех агентов. Определяет двухфазный цикл выполнения: Reasoning Phase → (Select Action Phase + Call Action Phase)
 
-**Streaming** — стриминг ответов для передачи данных в реальном времени. Реализует асинхронную очередь и совместим с форматом OpenAI streaming API.
+С точки зрения программной логики можно сказать, что фазы три, но Call Action, строго говоря, не является действием агента -
+она делегирует задачу тулзе, поэтому кажется более простым и привычным воспринимать как ReAct цикл выполнения. </br>
+Практическое количество действий и запросов к LLM может сильно различаться от конкретных реализаций
+
+Все созданные агенты автоматически регистрируются в `AgentRegistry`
+
+??? example "BaseAgent подробнее"
+    *Для понимания полной логики лучше ознакомиться с [исходным кодом](https://github.com/vamplabAI/sgr-agent-core/blob/main/sgr_agent_core/base_agent.py).*
+
+
+    Упрощённое представление основного цикла работы:
+    ```py
+    while agent.state not in FINISH_STATES:
+        reasoning = await agent._reasoning_phase()
+        action_tool = await agent._select_action_phase(reasoning)
+        await agent._action_phase(action_tool)
+    ```
+
+
+    В base_agent предоставлен минимальный интерфейс для модификации поведения агента и работы с контекстом.
+    При создании собственных решений стоит обратить внимание в первую очередь на эти методы
+    ```py
+
+        async def _prepare_context(self) -> list[dict]:
+            """Prepare a conversation context with system prompt, task data and any
+            other context. Override this method to change the context setup for the
+            agent.
+
+            Returns a list of dictionaries OpenAI like format, each containing a role and
+            content key by default.
+            """
+            return [
+                {"role": "system", "content": PromptLoader.get_system_prompt(self.toolkit, self.config.prompts)},
+                {
+                    "role": "user",
+                    "content": PromptLoader.get_initial_user_request(self.task, self.config.prompts),
+                },
+                *self.conversation,
+            ]
+
+        async def _prepare_tools(self) -> list[ChatCompletionFunctionToolParam]:
+            """Prepare available tools for the current agent state and progress.
+            Override this method to change the tool setup or conditions for tool
+            usage.
+
+            Returns a list of ChatCompletionFunctionToolParam based
+            available tools.
+            """
+            tools = set(self.toolkit)
+            if self._context.iteration >= self.config.execution.max_iterations:
+                raise RuntimeError("Max iterations reached")
+            return [pydantic_function_tool(tool, name=tool.tool_name) for tool in tools]
+
+        async def _reasoning_phase(self) -> ReasoningTool:
+            """Call LLM to decide next action based on current context."""
+            raise NotImplementedError("_reasoning_phase must be implemented by subclass")
+
+        async def _select_action_phase(self, reasoning: ReasoningTool) -> BaseTool:
+            """Select the most suitable tool for the action decided in the
+            reasoning phase.
+
+            Returns the tool suitable for the action.
+            """
+            raise NotImplementedError("_select_action_phase must be implemented by subclass")
+
+        async def _action_phase(self, tool: BaseTool) -> str:
+            """Call Tool for the action decided in the select_action phase.
+
+            Returns string or dumped JSON result of the tool execution.
+            """
+            raise NotImplementedError("_action_phase must be implemented by subclass")
+    ```
+
+### Доступные агенты
+
+Фреймворк включает несколько готовых реализаций агентов:
+
+#### SGRAgent
+
+**Schema-Guided Reasoning Agent** — полностью базируется на Structured Output подходе. </br>
+Хорошо себя показывает для моделей, которые плохо справляются с Reasoning / Function Calling самостоятельно.
+
+- **Reasoning Phase**: Создаётся динамическая JSON схема, содержащая описание всех доступных тулов.
+ LLM возвращает ответ, помимо размышлений содержащий готовую схему тула в поле `function`
+- **Select Action Phase**: Тул извлекается напрямую из `reasoning.function` — LLM уже выбрал тул в фазе reasoning
+- **Action Phase**: Стандартное выполнение выбранного тула
+
+
+#### ToolCallingAgent
+
+**Native Function Calling Agent** — полагается на нативный function calling без явной фазы reasoning.
+Современные модели достаточно самостоятельны и отдельно обучались именно такому формату работы и урезание их возможностей
+к размышлению может только мешать. </br>
+Лучше всего себя показывает в работе с большими, "умными" моделями
+
+- **Reasoning Phase**: Отсутствует — reasoning происходит внутри LLM
+- **Select Action Phase**: Использует `tool_choice="required"` для принудительного вызова тула внутри LLM
+- **Action Phase**: Стандартное выполнение выбранного тула
+
+#### SGRToolCallingAgent
+
+**Hybrid SGR + Function Calling Agent** — комбинирует структурированный reasoning с нативным function calling.
+Берёт лучшее от обоих миров. Хорошо себя показывает для большинства задач
+
+- **Reasoning Phase**: Использует function calling для получения результата системной `ReasoningTool` (явный reasoning через структурированную схему)
+- **Select Action Phase**: Использует function calling с `tool_choice="required"` для выбора конкретного тула на основе контекста reasoning этапа
+- **Action Phase**: Стандартное выполнение выбранного тула
+
+#### ResearchSGRAgent
+#### ResearchToolCallingAgent
+#### ResearchSGRToolCallingAgent
+
+Более прикладные реализации агентов для работы с информацией, имеющие предопределённый набор тулов
+
+
+## Tool
+
+**BaseTool** — Родительский класс для всех тулов. Представляет собой Pydantic модель.</br>
+Тул является единой точкой входа для любой логики поведения агента - набор тулов определяет его возможности и специфику.
+
+Все созданные тулы автоматически регистрируются в `ToolRegistry`
+
+### Компоненты тула
+
+- **`tool_name`** — название. Используется для идентификации тула в системе и при вызове через LLM.
+
+- **`description`** — описание и инструкции. Используется LLM для понимания назначения и возможностей тула. Если не указано явно, автоматически берётся из docstring класса.
+
+- **`__call__()`** —  Основной метод вызова логики тула агентом.
+
+### MCPTool
+
+**MCPBaseTool** — Базовый класс для тулов, интегрированных с MCP (Model Context Protocol) серверами. Обрабатывает вызовы через MCP клиент, переводит их в формат тулов фреймворка
+
+!!!tip
+    *Подробнее о тулах и их использовании: [Tools](tools.md)*
+
+## Definition
+
+**AgentDefinition** — Шаблон для создания агентов. Содержит в себе всю необходимую конфигурацию для сборки экземпляра под конкретную задачу.
+По генеральной идее мы имеем:
+Agent - Универсальная реализация методов основной логики работы агента
+Definition - Схема и значения настроек агента.
+Agent object - Agent+Definition: Готовый агент, имеющий изолированный контекст, историю, логи и выполняющий конкретную задачу
+
+## AgentConfig
+
+**AgentConfig** — централизованная конфигурация агента, объединяющая настройки LLM, поиска, выполнения, промптов и MCP. Поддерживает иерархическую систему конфигурации через `GlobalConfig` и `AgentDefinition` с автоматическим наследованием и переопределением параметров.
+!!!tip
+    *Подробнее о конфигурации и дефинициях: [Configuration Guide](configuration.md)*
+
+
+## Registry
+
+**Registry** — централизованные реестры (`AgentRegistry`, `ToolRegistry`) для автоматической регистрации и поиска классов.

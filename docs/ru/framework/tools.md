@@ -1,12 +1,12 @@
-# Tools Documentation
+# Документация по тулам
 
-This document describes all available tools in the SGR Deep Research framework, their parameters, behavior, and configuration options.
+Этот документ описывает все доступные тулы во фреймворке SGR Deep Research, их параметры, поведение и опции конфигурации.
 
-## Tool Categories
+## Категории тулов
 
-Tools are divided into two categories:
+Тулы делятся на две категории:
 
-**System Tools** - Essential tools required for deep research functionality. Without these, the research agent cannot function properly:
+**Системные тулы** — основные тулы, необходимые для функционирования глубокого исследования. Без них исследовательский агент не сможет работать корректно:
 
 - ReasoningTool
 - FinalAnswerTool
@@ -15,18 +15,18 @@ Tools are divided into two categories:
 - GeneratePlanTool
 - AdaptPlanTool
 
-**Auxiliary Tools** - Optional tools that extend agent capabilities but are not strictly required:
+**Вспомогательные тулы** — опциональные тулы, расширяющие возможности агента, но не являющиеся строго обязательными:
 
 - WebSearchTool
 - ExtractPageContentTool
 
 ## BaseTool
 
-All tools inherit from `BaseTool`, which provides the foundation for tool functionality.
+Все тулы наследуются от `BaseTool`, который обеспечивает основу функциональности тулов.
 
-**Source:** [sgr_agent_core/base_tool.py](https://github.com/vamplabAI/sgr-agent-core/blob/main/sgr_agent_core/base_tool.py)
+**Исходный код:** [sgr_agent_core/base_tool.py](https://github.com/vamplabAI/sgr-agent-core/blob/main/sgr_agent_core/base_tool.py)
 
-### BaseTool Class
+### Класс BaseTool
 
 ```python
 class BaseTool(BaseModel, ToolRegistryMixin):
@@ -39,23 +39,23 @@ class BaseTool(BaseModel, ToolRegistryMixin):
         raise NotImplementedError("Execute method must be implemented by subclass")
 ```
 
-### Key Features
+### Ключевые особенности
 
-- **Automatic Registration**: Tools are automatically registered in `ToolRegistry` when defined
-- **Pydantic Model**: All tools are Pydantic models, enabling validation and serialization
-- **Async Execution**: Tools execute asynchronously via the `__call__` method
-- **Context Access**: Tools receive `ResearchContext` and `AgentConfig` for state and configuration access
+- **Автоматическая регистрация**: Тулы автоматически регистрируются в `ToolRegistry` при определении
+- **Pydantic-модель**: Все тулы являются Pydantic-моделями, что обеспечивает валидацию и сериализацию
+- **Асинхронное выполнение**: Тулы выполняются асинхронно через метод `__call__`
+- **Доступ к контексту**: Тулы получают `ResearchContext` и `AgentConfig` для доступа к состоянию и конфигурации
 
-### Creating Custom Tools
+### Создание пользовательских тулов
 
-To create a custom tool:
+Для создания пользовательского тула:
 
-1. Inherit from `BaseTool`
-2. Define tool parameters as Pydantic fields
-3. Implement the `__call__` method
-4. Optionally set `tool_name` and `description` class variables
+1. Наследуйтесь от `BaseTool`
+2. Определите параметры тула как Pydantic-поля
+3. Реализуйте метод `__call__`
+4. Опционально установите переменные класса `tool_name` и `description`
 
-Example:
+Пример:
 
 ```python
 from sgr_agent_core.base_tool import BaseTool
@@ -68,251 +68,251 @@ if TYPE_CHECKING:
 
 
 class CustomTool(BaseTool):
-    """Description of what this tool does."""
+    """Описание того, что делает этот инструмент."""
 
-    tool_name = "customtool"  # Optional, auto-generated from class name if not set
+    tool_name = "customtool"  # Опционально, автогенерируется из имени класса если не задано
 
-    reasoning: str = Field(description="Why this tool is needed")
-    parameter: str = Field(description="Tool parameter")
+    reasoning: str = Field(description="Почему нужен этот тул")
+    parameter: str = Field(description="Параметр тула")
 
     async def __call__(self, context: AgentContext, config: AgentConfig, **_) -> str:
-        # Tool implementation
-        result = f"Processed: {self.parameter}"
+        # Реализация тула
+        result = f"Обработано: {self.parameter}"
         return result
 ```
 
-The tool will be automatically registered and available for use in agent configurations.
+Тул будет автоматически зарегистрирован и доступен для использования в конфигурациях агентов.
 
-## System Tools
+## Системные тулы
 
 ### ReasoningTool
 
-**Type:** System Tool
-**Source:** [sgr_agent_core/tools/reasoning_tool.py](https://github.com/vamplabAI/sgr-agent-core/blob/main/sgr_agent_core/tools/reasoning_tool.py)
+**Тип:** Системный тул
+**Исходный код:** [sgr_agent_core/tools/reasoning_tool.py](https://github.com/vamplabAI/sgr-agent-core/blob/main/sgr_agent_core/tools/reasoning_tool.py)
 
-Core tool for Schema-Guided Reasoning agents. Determines the next reasoning step with adaptive planning capabilities.
+Основной тул для агентов со схема-направляемым рассуждением. Определяет следующий шаг рассуждения с возможностями адаптивного планирования.
 
-**Parameters:**
+**Параметры:**
 
-- `reasoning_steps` (list\[str\], 2-3 items): Step-by-step reasoning process
-- `current_situation` (str, max 300 chars): Current research situation assessment
-- `plan_status` (str, max 150 chars): Status of current plan
-- `enough_data` (bool, default=False): Whether sufficient data is collected
-- `remaining_steps` (list\[str\], 1-3 items): Remaining action steps
-- `task_completed` (bool): Whether the research task is finished
+- `reasoning_steps` (list\[str\], 2-3 элемента): Пошаговый процесс рассуждения
+- `current_situation` (str, макс. 300 символов): Оценка текущей исследовательской ситуации
+- `plan_status` (str, макс. 150 символов): Статус текущего плана
+- `enough_data` (bool, по умолчанию=False): Собрано ли достаточно данных
+- `remaining_steps` (list\[str\], 1-3 элемента): Оставшиеся шаги действий
+- `task_completed` (bool): Завершена ли исследовательская задача
 
-**Behavior:**
-Returns JSON representation of reasoning state. Used by SGR agents to structure their decision-making process.
+**Поведение:**
+Возвращает JSON-представление состояния рассуждения. Используется SGR-агентами для структурирования процесса принятия решений.
 
-**Usage:**
-Required tool for SGR-based agents. Must be used before any other tool execution in the reasoning phase.
+**Использование:**
+Обязательный тул для SGR-агентов. Должен использоваться перед выполнением любого другого тула в фазе рассуждения.
 
-**Configuration:**
-No specific configuration required. Tool behavior is controlled by agent prompts and LLM settings.
+**Конфигурация:**
+Специальная конфигурация не требуется. Поведение тула контролируется промптами агента и настройками LLM.
 
 ### FinalAnswerTool
 
-**Type:** System Tool
-**Source:** [sgr_agent_core/tools/final_answer_tool.py](https://github.com/vamplabAI/sgr-agent-core/blob/main/sgr_agent_core/tools/final_answer_tool.py)
+**Тип:** Системный тул
+**Исходный код:** [sgr_agent_core/tools/final_answer_tool.py](https://github.com/vamplabAI/sgr-agent-core/blob/main/sgr_agent_core/tools/final_answer_tool.py)
 
-Finalizes research task and completes agent execution.
+Финализирует исследовательскую задачу и завершает выполнение агента.
 
-**Parameters:**
+**Параметры:**
 
-- `reasoning` (str): Why task is complete and how answer was verified
-- `completed_steps` (list\[str\], 1-5 items): Summary of completed steps including verification
-- `answer` (str): Comprehensive final answer with exact factual details
-- `status` (Literal\["completed", "failed"\]): Task completion status
+- `reasoning` (str): Почему задача завершена и как был верифицирован ответ
+- `completed_steps` (list\[str\], 1-5 элементов): Сводка выполненных шагов, включая верификацию
+- `answer` (str): Исчерпывающий финальный ответ с точными фактическими данными
+- `status` (Literal\["completed", "failed"\]): Статус завершения задачи
 
-**Behavior:**
+**Поведение:**
 
-- Sets `context.state` to the specified status
-- Stores `answer` in `context.execution_result`
-- Returns JSON representation of the final answer
+- Устанавливает `context.state` в указанный статус
+- Сохраняет `answer` в `context.execution_result`
+- Возвращает JSON-представление финального ответа
 
-**Usage:**
-Call after completing a research task to finalize execution.
+**Использование:**
+Вызывается после завершения исследовательской задачи для финализации выполнения.
 
-**Configuration:**
-No specific configuration required.
+**Конфигурация:**
+Специальная конфигурация не требуется.
 
-**Example:**
+**Пример:**
 
 ```yaml
 execution:
-  max_iterations: 10  # After this limit, only FinalAnswerTool and CreateReportTool are available
+  max_iterations: 10  # После этого лимита доступны только FinalAnswerTool и CreateReportTool
 ```
 
 ### CreateReportTool
 
-**Type:** System Tool
-**Source:** [sgr_agent_core/tools/create_report_tool.py](https://github.com/vamplabAI/sgr-agent-core/blob/main/sgr_agent_core/tools/create_report_tool.py)
+**Тип:** Системный тул
+**Исходный код:** [sgr_agent_core/tools/create_report_tool.py](https://github.com/vamplabAI/sgr-agent-core/blob/main/sgr_agent_core/tools/create_report_tool.py)
 
-Creates a comprehensive detailed report with citations as the final step of research.
+Создаёт детальный отчёт с цитатами как финальный шаг исследования.
 
-**Parameters:**
+**Параметры:**
 
-- `reasoning` (str): Why ready to create report now
-- `title` (str): Report title
-- `user_request_language_reference` (str): Copy of original user request for language consistency
-- `content` (str): Comprehensive research report with inline citations \[1\], \[2\], \[3\]
-- `confidence` (Literal\["high", "medium", "low"\]): Confidence level in findings
+- `reasoning` (str): Почему готов создать отчёт сейчас
+- `title` (str): Заголовок отчёта
+- `user_request_language_reference` (str): Копия оригинального запроса пользователя для языковой согласованности
+- `content` (str): Исчерпывающий исследовательский отчёт со встроенными цитатами \[1\], \[2\], \[3\]
+- `confidence` (Literal\["high", "medium", "low"\]): Уровень уверенности в результатах
 
-**Behavior:**
+**Поведение:**
 
-- Saves report to file in `config.execution.reports_dir`
-- Filename format: `{timestamp}_{safe_title}.md`
-- Includes full content with sources section
-- Returns JSON with report metadata (title, content, confidence, sources_count, word_count, filepath, timestamp)
+- Сохраняет отчёт в файл в `config.execution.reports_dir`
+- Формат имени файла: `{timestamp}_{safe_title}.md`
+- Включает полное содержимое с разделом источников
+- Возвращает JSON с метаданными отчёта (title, content, confidence, sources_count, word_count, filepath, timestamp)
 
-**Usage:**
-Final step after collecting sufficient research data.
+**Использование:**
+Финальный шаг после сбора достаточных исследовательских данных.
 
-**Configuration:**
+**Конфигурация:**
 
 ```yaml
 execution:
-  reports_dir: "reports"  # Directory for saving reports
+  reports_dir: "reports"  # Директория для сохранения отчётов
 ```
 
-**Important:**
+**Важно:**
 
-- Every factual claim in content MUST have inline citations \[1\], \[2\], \[3\]
-- Citations must be integrated directly into sentences
-- Content must use the same language as `user_request_language_reference`
+- Каждое фактическое утверждение в содержимом ДОЛЖНО иметь встроенные цитаты \[1\], \[2\], \[3\]
+- Цитаты должны быть интегрированы непосредственно в предложения
+- Содержимое должно использовать тот же язык, что и `user_request_language_reference`
 
 ### ClarificationTool
 
-**Type:** System Tool
-**Source:** [sgr_agent_core/tools/clarification_tool.py](https://github.com/vamplabAI/sgr-agent-core/blob/main/sgr_agent_core/tools/clarification_tool.py)
+**Тип:** Системный тул
+**Исходный код:** [sgr_agent_core/tools/clarification_tool.py](https://github.com/vamplabAI/sgr-agent-core/blob/main/sgr_agent_core/tools/clarification_tool.py)
 
-Asks clarifying questions when facing an ambiguous request.
+Задаёт уточняющие вопросы при неоднозначном запросе.
 
-**Parameters:**
+**Параметры:**
 
-- `reasoning` (str, max 200 chars): Why clarification is needed (1-2 sentences MAX)
-- `unclear_terms` (list\[str\], 1-3 items): List of unclear terms (brief, 1-3 words each)
-- `assumptions` (list\[str\], 2-3 items): Possible interpretations (short, 1 sentence each)
-- `questions` (list\[str\], 1-3 items): Specific clarifying questions (short and direct)
+- `reasoning` (str, макс. 200 символов): Почему нужно уточнение (1-2 предложения МАКСИМУМ)
+- `unclear_terms` (list\[str\], 1-3 элемента): Список неясных терминов (кратко, 1-3 слова каждый)
+- `assumptions` (list\[str\], 2-3 элемента): Возможные интерпретации (кратко, 1 предложение каждое)
+- `questions` (list\[str\], 1-3 элемента): Конкретные уточняющие вопросы (короткие и прямые)
 
-**Behavior:**
+**Поведение:**
 
-- Returns questions as newline-separated string
-- Pauses agent execution until clarification is received
-- Sets agent state to `WAITING_FOR_CLARIFICATION`
-- Increments `context.clarifications_used`
+- Возвращает вопросы как строку, разделённую переносами строк
+- Приостанавливает выполнение агента до получения уточнения
+- Устанавливает состояние агента в `WAITING_FOR_CLARIFICATION`
+- Увеличивает `context.clarifications_used`
 
-**Usage:**
-Use when user request is ambiguous or requires additional information.
+**Использование:**
+Используется, когда запрос пользователя неоднозначен или требует дополнительной информации.
 
-**Configuration:**
+**Конфигурация:**
 
 ```yaml
 execution:
-  max_clarifications: 3  # Maximum number of user clarification requests
+  max_clarifications: 3  # Максимальное количество запросов уточнения у пользователя
 ```
 
-After reaching `max_clarifications`, the tool is automatically removed from available tools.
+После достижения `max_clarifications` тул автоматически удаляется из доступных тулов.
 
 ### GeneratePlanTool
 
-**Type:** System Tool
-**Source:** [sgr_agent_core/tools/generate_plan_tool.py](https://github.com/vamplabAI/sgr-agent-core/blob/main/sgr_agent_core/tools/generate_plan_tool.py)
+**Тип:** Системный тул
+**Исходный код:** [sgr_agent_core/tools/generate_plan_tool.py](https://github.com/vamplabAI/sgr-agent-core/blob/main/sgr_agent_core/tools/generate_plan_tool.py)
 
-Generates a research plan to split complex requests into manageable steps.
+Генерирует исследовательский план для разбиения сложных запросов на управляемые шаги.
 
-**Parameters:**
+**Параметры:**
 
-- `reasoning` (str): Justification for research approach
-- `research_goal` (str): Primary research objective
-- `planned_steps` (list\[str\], 3-4 items): List of planned steps
-- `search_strategies` (list\[str\], 2-3 items): Information search strategies
+- `reasoning` (str): Обоснование исследовательского подхода
+- `research_goal` (str): Основная исследовательская цель
+- `planned_steps` (list\[str\], 3-4 элемента): Список запланированных шагов
+- `search_strategies` (list\[str\], 2-3 элемента): Стратегии поиска информации
 
-**Behavior:**
+**Поведение:**
 
-- Returns JSON representation of the plan (excluding reasoning field)
-- Used to structure complex research tasks
+- Возвращает JSON-представление плана (исключая поле reasoning)
+- Используется для структурирования сложных исследовательских задач
 
-**Usage:**
-Use at the beginning of research to break down complex requests.
+**Использование:**
+Используется в начале исследования для разбиения сложных запросов.
 
-**Configuration:**
-No specific configuration required.
+**Конфигурация:**
+Специальная конфигурация не требуется.
 
 ### AdaptPlanTool
 
-**Type:** System Tool
-**Source:** [sgr_agent_core/tools/adapt_plan_tool.py](https://github.com/vamplabAI/sgr-agent-core/blob/main/sgr_agent_core/tools/adapt_plan_tool.py)
+**Тип:** Системный тул
+**Исходный код:** [sgr_agent_core/tools/adapt_plan_tool.py](https://github.com/vamplabAI/sgr-agent-core/blob/main/sgr_agent_core/tools/adapt_plan_tool.py)
 
-Adapts a research plan based on new findings.
+Адаптирует исследовательский план на основе новых находок.
 
-**Parameters:**
+**Параметры:**
 
-- `reasoning` (str): Why plan needs adaptation based on new data
-- `original_goal` (str): Original research goal
-- `new_goal` (str): Updated research goal
-- `plan_changes` (list\[str\], 1-3 items): Specific changes made to plan
-- `next_steps` (list\[str\], 2-4 items): Updated remaining steps
+- `reasoning` (str): Почему план нуждается в адаптации на основе новых данных
+- `original_goal` (str): Изначальная исследовательская цель
+- `new_goal` (str): Обновлённая исследовательская цель
+- `plan_changes` (list\[str\], 1-3 элемента): Конкретные изменения, внесённые в план
+- `next_steps` (list\[str\], 2-4 элемента): Обновлённые оставшиеся шаги
 
-**Behavior:**
+**Поведение:**
 
-- Returns JSON representation of adapted plan (excluding reasoning field)
-- Allows dynamic plan adjustment during research
+- Возвращает JSON-представление адаптированного плана (исключая поле reasoning)
+- Позволяет динамически корректировать план в процессе исследования
 
-**Usage:**
-Use when initial plan needs modification based on discovered information.
+**Использование:**
+Используется, когда первоначальный план нуждается в модификации на основе обнаруженной информации.
 
-**Configuration:**
-No specific configuration required.
+**Конфигурация:**
+Специальная конфигурация не требуется.
 
-## Auxiliary Tools
+## Вспомогательные тулы
 
 ### WebSearchTool
 
-**Type:** Auxiliary Tool
-**Source:** [sgr_agent_core/tools/web_search_tool.py](https://github.com/vamplabAI/sgr-agent-core/blob/main/sgr_agent_core/tools/web_search_tool.py)
+**Тип:** Вспомогательный тул
+**Исходный код:** [sgr_agent_core/tools/web_search_tool.py](https://github.com/vamplabAI/sgr-agent-core/blob/main/sgr_agent_core/tools/web_search_tool.py)
 
-Searches the web for real-time information using Tavily Search API.
+Выполняет поиск в интернете для получения актуальной информации с использованием Tavily Search API.
 
-**Parameters:**
+**Параметры:**
 
-- `reasoning` (str): Why this search is needed and what to expect
-- `query` (str): Search query in same language as user request
-- `max_results` (int, default=5, range 1-10): Maximum number of results to retrieve
+- `reasoning` (str): Почему нужен этот поиск и что ожидается найти
+- `query` (str): Поисковый запрос на том же языке, что и запрос пользователя
+- `max_results` (int, по умолчанию=5, диапазон 1-10): Максимальное количество результатов
 
-**Behavior:**
+**Поведение:**
 
-- Executes search via TavilySearchService
-- Adds found sources to `context.sources` dictionary
-- Creates SearchResult and appends to `context.searches`
-- Increments `context.searches_used`
-- Returns formatted string with search query and results (titles, links, snippets)
+- Выполняет поиск через TavilySearchService
+- Добавляет найденные источники в словарь `context.sources`
+- Создаёт SearchResult и добавляет в `context.searches`
+- Увеличивает `context.searches_used`
+- Возвращает форматированную строку с поисковым запросом и результатами (заголовки, ссылки, сниппеты)
 
-**Usage:**
-Use for finding up-to-date information, verifying facts, researching current events, technology updates, or any topic requiring recent information.
+**Использование:**
+Используется для поиска актуальной информации, проверки фактов, исследования текущих событий, технологических обновлений или любой темы, требующей свежей информации.
 
-**Best Practices:**
+**Лучшие практики:**
 
-- Use specific terms and context in queries
-- For acronyms, add context: "SGR Schema-Guided Reasoning"
-- Use quotes for exact phrases: "Structured Output OpenAI"
-- Search queries in SAME LANGUAGE as user request
-- For date/number questions, include specific year/context in query
-- Search snippets often contain direct answers - check them carefully
+- Используйте конкретные термины и контекст в запросах
+- Для аббревиатур добавляйте контекст: "SGR Schema-Guided Reasoning"
+- Используйте кавычки для точных фраз: "Structured Output OpenAI"
+- Поисковые запросы на ТОМ ЖЕ ЯЗЫКЕ, что и запрос пользователя
+- Для вопросов о датах/числах включайте конкретный год/контекст в запрос
+- Сниппеты поиска часто содержат прямые ответы — проверяйте их внимательно
 
-**Configuration:**
+**Конфигурация:**
 
 ```yaml
 search:
-  tavily_api_key: "your-tavily-api-key"  # Required: Tavily API key
-  tavily_api_base_url: "https://api.tavily.com"  # Tavily API URL
-  max_searches: 4  # Maximum number of search operations
-  max_results: 10  # Maximum results in search query (overrides tool's max_results if lower)
+  tavily_api_key: "your-tavily-api-key"  # Обязательно: API-ключ Tavily
+  tavily_api_base_url: "https://api.tavily.com"  # URL API Tavily
+  max_searches: 4  # Максимальное количество поисковых операций
+  max_results: 10  # Максимум результатов в поисковом запросе (переопределяет max_results тула, если меньше)
 ```
 
-After reaching `max_searches`, the tool is automatically removed from available tools.
+После достижения `max_searches` тул автоматически удаляется из доступных тулов.
 
-**Example:**
+**Пример:**
 
 ```yaml
 agents:
@@ -326,57 +326,57 @@ agents:
 
 ### ExtractPageContentTool
 
-**Type:** Auxiliary Tool
-**Source:** [sgr_agent_core/tools/extract_page_content_tool.py](https://github.com/vamplabAI/sgr-agent-core/blob/main/sgr_agent_core/tools/extract_page_content_tool.py)
+**Тип:** Вспомогательный тул
+**Исходный код:** [sgr_agent_core/tools/extract_page_content_tool.py](https://github.com/vamplabAI/sgr-agent-core/blob/main/sgr_agent_core/tools/extract_page_content_tool.py)
 
-Extracts full detailed content from specific web pages using Tavily Extract API.
+Извлекает полное детальное содержимое с конкретных веб-страниц с использованием Tavily Extract API.
 
-**Parameters:**
+**Параметры:**
 
-- `reasoning` (str): Why extract these specific pages
-- `urls` (list\[str\], 1-5 items): List of URLs to extract full content from
+- `reasoning` (str): Почему нужно извлечь эти конкретные страницы
+- `urls` (list\[str\], 1-5 элементов): Список URL для извлечения полного содержимого
 
-**Behavior:**
+**Поведение:**
 
-- Extracts full content from specified URLs via TavilySearchService
-- Updates existing sources in `context.sources` with full content
-- For new URLs, adds them with sequential numbering
-- Returns formatted string with extracted content preview (limited by `content_limit`)
+- Извлекает полное содержимое с указанных URL через TavilySearchService
+- Обновляет существующие источники в `context.sources` полным содержимым
+- Для новых URL добавляет их с последовательной нумерацией
+- Возвращает форматированную строку с превью извлечённого содержимого (ограничено `content_limit`)
 
-**Usage:**
-Call after WebSearchTool to get detailed information from promising URLs found in search results.
+**Использование:**
+Вызывается после WebSearchTool для получения детальной информации с перспективных URL, найденных в результатах поиска.
 
-**Important Warnings:**
+**Важные предупреждения:**
 
-- Extracted pages may show data from DIFFERENT years/time periods than asked
-- ALWAYS verify that extracted content matches the question's temporal context
-- If extracted content contradicts search snippet, prefer snippet for factual questions
-- For date/number questions, cross-check extracted values with search snippets
+- Извлечённые страницы могут показывать данные за ДРУГИЕ годы/периоды времени, чем запрошено
+- ВСЕГДА проверяйте, что извлечённое содержимое соответствует временному контексту вопроса
+- Если извлечённое содержимое противоречит поисковому сниппету, предпочитайте сниппет для фактических вопросов
+- Для вопросов о датах/числах перепроверяйте извлечённые значения с поисковыми сниппетами
 
-**Configuration:**
+**Конфигурация:**
 
 ```yaml
 search:
-  tavily_api_key: "your-tavily-api-key"  # Required: Tavily API key
-  tavily_api_base_url: "https://api.tavily.com"  # Tavily API URL
-  content_limit: 1500  # Content character limit per source (truncates extracted content)
+  tavily_api_key: "your-tavily-api-key"  # Обязательно: API-ключ Tavily
+  tavily_api_base_url: "https://api.tavily.com"  # URL API Tavily
+  content_limit: 1500  # Лимит символов содержимого на источник (обрезает извлечённое содержимое)
 ```
 
-**Example:**
+**Пример:**
 
 ```yaml
 agents:
   research_agent:
     search:
-      content_limit: 2000  # Increase content limit for more detailed extraction
+      content_limit: 2000  # Увеличить лимит содержимого для более детального извлечения
     tools:
       - "WebSearchTool"
       - "ExtractPageContentTool"
 ```
 
-## Tool Configuration in Agents
+## Конфигурация тулов в агентах
 
-Tools are configured per agent in the `agents.yaml` file or agent definitions:
+Тулы настраиваются для каждого агента в файле `agents.yaml` или определениях агентов:
 
 ```yaml
 agents:
@@ -399,23 +399,23 @@ agents:
       content_limit: 1500
 ```
 
-### Tool Availability Control
+### Управление доступностью тулов
 
-Agents automatically filter available tools based on execution limits:
+Агенты автоматически фильтруют доступные тулы на основе лимитов выполнения:
 
-- After `max_iterations`: Only `CreateReportTool` and `FinalAnswerTool` are available
-- After `max_clarifications`: `ClarificationTool` is removed
-- After `max_searches`: `WebSearchTool` is removed
+- После `max_iterations`: Доступны только `CreateReportTool` и `FinalAnswerTool`
+- После `max_clarifications`: `ClarificationTool` удаляется
+- После `max_searches`: `WebSearchTool` удаляется
 
-This ensures agents complete tasks within configured limits.
+Это гарантирует, что агенты завершают задачи в рамках настроенных лимитов.
 
-## MCP Tools
+## MCP-тулы
 
-Tools can also be created from MCP (Model Context Protocol) servers. These tools inherit from `MCPBaseTool` and are automatically generated from MCP server schemas.
+Тулы также могут создаваться из MCP (Model Context Protocol) серверов. Эти тулы наследуются от `MCPBaseTool` и автоматически генерируются из схем MCP-сервера.
 
-**Source:** [sgr_agent_core/base_tool.py](https://github.com/vamplabAI/sgr-agent-core/blob/main/sgr_agent_core/base_tool.py) (MCPBaseTool class)
+**Исходный код:** [sgr_agent_core/base_tool.py](https://github.com/vamplabAI/sgr-agent-core/blob/main/sgr_agent_core/base_tool.py) (класс MCPBaseTool)
 
-**Configuration:**
+**Конфигурация:**
 
 ```yaml
 mcp:
@@ -428,33 +428,33 @@ mcp:
         Authorization: "Bearer your-token"
 ```
 
-**Behavior:**
+**Поведение:**
 
-- MCP tools are automatically converted to BaseTool instances
-- Tool schemas are generated from MCP server input schemas
-- Execution calls MCP server with tool payload
-- Response is limited by `execution.mcp_context_limit`
+- MCP-тулы автоматически преобразуются в экземпляры BaseTool
+- Схемы тулов генерируются из входных схем MCP-сервера
+- Выполнение вызывает MCP-сервер с полезной нагрузкой тула
+- Ответ ограничен `execution.mcp_context_limit`
 
-**Configuration:**
+**Конфигурация:**
 
 ```yaml
 execution:
-  mcp_context_limit: 15000  # Maximum context length from MCP server response
+  mcp_context_limit: 15000  # Максимальная длина контекста из ответа MCP-сервера
 ```
 
-## Tool Registry
+## Реестр тулов
 
-All tools are automatically registered in `ToolRegistry` when defined. Tools can be referenced by name in agent configurations.
+Все тулы автоматически регистрируются в `ToolRegistry` при определении. На тулы можно ссылаться по имени в конфигурациях агентов.
 
-**Source:** [sgr_agent_core/services/registry.py](https://github.com/vamplabAI/sgr-agent-core/blob/main/sgr_agent_core/services/registry.py)
+**Исходный код:** [sgr_agent_core/services/registry.py](https://github.com/vamplabAI/sgr-agent-core/blob/main/sgr_agent_core/services/registry.py)
 
-Tools are registered with their `tool_name` (auto-generated from class name if not specified). Custom tools must be imported before agent creation to be registered.
+Тулы регистрируются с их `tool_name` (автоматически генерируется из имени класса, если не указано). Пользовательские тулы должны быть импортированы до создания агента для регистрации.
 
-## Default Toolset
+## Набор тулов по умолчанию
 
-The default toolkit includes all standard tools:
+Набор тулов по умолчанию включает все стандартные тулы:
 
-**Source:** [sgr_deep_research/default_definitions.py](https://github.com/vamplabAI/sgr-agent-core/blob/main/sgr_deep_research/default_definitions.py)
+**Исходный код:** [sgr_deep_research/default_definitions.py](https://github.com/vamplabAI/sgr-agent-core/blob/main/sgr_deep_research/default_definitions.py)
 
 ```python
 DEFAULT_TOOLKIT = [
@@ -468,4 +468,4 @@ DEFAULT_TOOLKIT = [
 ]
 ```
 
-ReasoningTool is added separately for SGR-based agents that require explicit reasoning phases.
+ReasoningTool добавляется отдельно для SGR-агентов, которым требуются явные фазы рассуждения.
