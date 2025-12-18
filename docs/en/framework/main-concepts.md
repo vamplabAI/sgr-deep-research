@@ -10,7 +10,7 @@ This document describes the key entities of the SGR Deep Research Framework.
 
 **Structured Output (SO)** — an approach to obtaining structured data from LLM through explicit JSON schema definition. Instead of a free-form text response, the model returns data in a strictly defined format, ensuring reliable parsing and validation. In the framework, used via the `response_format` parameter.
 
-**Function Calling (FC)** — native mechanism for calling functions/tools. LLM receives descriptions of available functions and can explicitly request their invocation, returning structured arguments. Allows integration of external tools and APIs into the model dialogue.
+**Function Calling (FC)** — native mechanism for calling functions/tools. LLM receives descriptions of available functions and can explicitly request their invocation, returning structured arguments. Allows integration of external tools and APIs into the model dialogue. In most inference engines and LLM API providers, the backend used for generating JSON schemas is identical to Structured Output.
 
 **Reasoning** — the process of reasoning and analysis during which the agent evaluates the current situation, analyzes available information, plans next steps, and makes decisions about action selection. In the framework, reasoning can be explicit (through structured schema) or implicit (within LLM).
 

@@ -69,7 +69,7 @@ uv run python sgr_agent_core \
   --logging-file logging_config.yaml
 ```
 
-### Frontend Runяч
+### Frontend Run
 
 ```bash
 # 1. Navigate to frontend directory
