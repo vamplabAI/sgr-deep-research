@@ -40,27 +40,30 @@ class CreateReportTool(BaseTool):
     confidence: Literal["high", "medium", "low"] = Field(description="Confidence in findings")
 
     async def __call__(self, context: AgentContext, config: AgentConfig, **_) -> str:
-        # Save report
         reports_dir = config.execution.reports_dir
-        os.makedirs(reports_dir, exist_ok=True)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        safe_title = "".join(c for c in self.title if c.isalnum() or c in (" ", "-", "_"))[:50]
-        filename = f"{timestamp}_{safe_title}.md"
-        filepath = os.path.join(reports_dir, filename)
+        filepath = None
 
-        # Format a full report with sources
-        full_content = f"# {self.title}\n\n"
-        full_content += f"*Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*\n\n"
-        full_content += self.content + "\n\n"
+        # Only save report file if reports_dir is configured
+        if reports_dir:
+            os.makedirs(reports_dir, exist_ok=True)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            safe_title = "".join(c for c in self.title if c.isalnum() or c in (" ", "-", "_"))[:50]
+            filename = f"{timestamp}_{safe_title}.md"
+            filepath = os.path.join(reports_dir, filename)
 
-        # Add a sources reference section
-        if context.sources:
-            full_content += "---\n\n"
-            full_content += "## Sources\n\n"
-            full_content += "\n".join([str(source) for source in context.sources.values()])
+            # Format a full report with sources
+            full_content = f"# {self.title}\n\n"
+            full_content += f"*Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*\n\n"
+            full_content += self.content + "\n\n"
 
-        with open(filepath, "w", encoding="utf-8") as f:
-            f.write(full_content)
+            # Add a sources reference section
+            if context.sources:
+                full_content += "---\n\n"
+                full_content += "## Sources\n\n"
+                full_content += "\n".join([str(source) for source in context.sources.values()])
+
+            with open(filepath, "w", encoding="utf-8") as f:
+                f.write(full_content)
 
         report = {
             "title": self.title,
@@ -71,6 +74,7 @@ class CreateReportTool(BaseTool):
             "filepath": filepath,
             "timestamp": datetime.now().isoformat(),
         }
+        log_filepath = filepath if filepath else "disabled"
         logger.info(
             "📝 CREATE REPORT FULL DEBUG:\n"
             f"   🌍 Language Reference: '{self.user_request_language_reference}'\n"
@@ -79,6 +83,6 @@ class CreateReportTool(BaseTool):
             f"   📈 Confidence: {self.confidence}\n"
             f"   📄 Content Preview: '{self.content[:200]}...'\n"
             f"   📊 Words: {report['word_count']}, Sources: {report['sources_count']}\n"
-            f"   💾 Saved: {filepath}\n"
+            f"   💾 Saved: {log_filepath}\n"
         )
         return json.dumps(report, indent=2, ensure_ascii=False)
