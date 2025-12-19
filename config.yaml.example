@@ -3,11 +3,11 @@
 
 # LLM Configuration
 llm:
-  api_key: "your-openai-api-key-here"  # Your OpenAI API key
-  base_url: "https://api.openai.com/v1"  # API base URL
-  model: "gpt-4o-mini"  # Model name
+  api_key: "your-litellm-api-key-here"  # Your litellm API key
+  base_url: "https://litellm.com/v1"  # API base URL
+  model: "qwen3-30b-a3b-instruct-2507"  # Model name
   max_tokens: 8000  # Max output tokens
-  temperature: 0.4  # Temperature (0.0-1.0)
+  temperature: 0.2 # Temperature (0.0-1.0)
   # proxy: "socks5://127.0.0.1:1081"  # Optional proxy (socks5:// or http://)
 
 # Search Configuration (Tavily)
@@ -41,17 +41,23 @@ execution:
   # Note: If both file and string are provided, string takes precedence
 
 # MCP (Model Context Protocol) Configuration
-mcp:
-  mcpServers:
-    deepwiki:
-      url: "https://mcp.deepwiki.com/mcp"
+#mcp:
+#  mcpServers:
+#    deepwiki:
+#      url: "https://mcp.deepwiki.com/mcp"
+#
+#    # Add more MCP servers here:
+#    # your_server:
+#    #   url: "https://your-mcp-server.com/mcp"
+#    #   headers:
+#    #     Authorization: "Bearer your-token"
 
-    # Add more MCP servers here:
-    # your_server:
-    #   url: "https://your-mcp-server.com/mcp"
-    #   headers:
-    #     Authorization: "Bearer your-token"
-
+# Confluence Configuration (Optional - for internal knowledge base search)
+# confluence:
+#   base_url: "https://your-confluence-instance.com"  # Your Confluence base URL
+#   username: "your-username"                          # Confluence username
+#   password: "your-password-or-api-token"             # Confluence password or API token
+#   timeout: 30.0                                      # Request timeout in seconds
 
 # Note: The 'agents' field is optional and can be loaded from either:
 # - This config.yaml file

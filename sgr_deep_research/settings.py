@@ -11,12 +11,12 @@ logger = logging.getLogger(__name__)
 
 
 class ServerConfig(BaseSettings):
-    model_config = SettingsConfigDict(cli_parse_args=True, cli_kebab_case=True)
+    model_config = SettingsConfigDict(cli_parse_args=True, cli_kebab_case=True, env_prefix="")
     logging_file: str = Field(default="logging_config.yaml", description="Logging configuration file path")
     config_file: str = Field(default="config.yaml", description="sgr core configuration file path")
     agents_file: str = Field(default="agents.yaml", description="Agents definitions file path")
     host: str = Field(default="0.0.0.0", description="Host to listen on")
-    port: int = Field(default=8010, gt=0, le=65535, description="Port to listen on")
+    api_port: int = Field(default=8020, gt=0, le=65535, description="Port to listen on", alias="port")
 
 
 def setup_logging() -> None:

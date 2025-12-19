@@ -1,45 +1,31 @@
 services:
-  backend:
+  api:
     build:
       context: ./api_service
       dockerfile: Dockerfile
-    container_name: sgr-deep-research-backend
+    container_name: sgr-confluence-agent-api
     restart: unless-stopped
     ports:
-      - "${BACKEND_PORT:-8010}:8010"
+      - "${API_PORT:-8020}:8020"
     volumes:
+      - ../sgr_agent_core:/app/sgr_agent_core:ro
       - ../sgr_deep_research:/app/sgr_deep_research:ro
       - ../config.yaml:/app/config.yaml:ro
       - ../agents.yaml:/app/agents.yaml:ro
       - ../logging_config.yaml:/app/logging_config.yaml:ro
       - ../logs:/app/logs
       - ../reports:/app/reports
+    environment:
+      - API_PORT=8020
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8010/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8020/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
     networks:
-      - sgr-network
-
-  frontend:
-    build:
-      context: ../sgr-deep-research-frontend
-      dockerfile: Dockerfile
-      args:
-        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:8010}
-        - VITE_APP_ENV=${VITE_APP_ENV:-production}
-    container_name: sgr-deep-research-frontend
-    restart: unless-stopped
-    ports:
-      - "${FRONTEND_PORT:-5173}:80"
-    depends_on:
-      backend:
-        condition: service_healthy
-    networks:
-      - sgr-network
+      - sgr-confluence-network
 
 networks:
-  sgr-network:
+  sgr-confluence-network:
     driver: bridge

@@ -16,7 +16,7 @@ def main():
     config.agents.update(get_default_agents_definitions())
     config.definitions_from_yaml(args.agents_file)
 
-    uvicorn.run(app, host=args.host, port=args.port, log_level="info")
+    uvicorn.run(app, host=args.host, port=args.api_port, log_level="info")
 
 
 if __name__ == "__main__":

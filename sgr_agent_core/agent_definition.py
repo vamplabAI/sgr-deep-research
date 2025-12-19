@@ -32,6 +32,15 @@ class SearchConfig(BaseModel):
     content_limit: int = Field(default=3500, gt=0, description="Content character limit per source")
 
 
+class ConfluenceConfig(BaseModel):
+    """Confluence API configuration for internal documentation search."""
+
+    base_url: str = Field(description="Confluence base URL (e.g., https://your-confluence.com)")
+    username: str = Field(description="Confluence username for authentication")
+    password: str = Field(description="Confluence password or API token")
+    timeout: float = Field(default=30.0, gt=0, description="Request timeout in seconds")
+
+
 class PromptsConfig(BaseModel):
     system_prompt_file: FilePath | None = Field(
         default=os.path.join(os.path.dirname(__file__), "prompts/system_prompt.txt"),
@@ -113,6 +122,7 @@ class AgentConfig(BaseModel):
     execution: ExecutionConfig = Field(default_factory=ExecutionConfig, description="Execution settings")
     prompts: PromptsConfig = Field(default_factory=PromptsConfig, description="Prompts settings")
     mcp: MCPConfig = Field(default_factory=MCPConfig, description="MCP settings")
+    confluence: ConfluenceConfig | None = Field(default=None, description="Confluence settings")
 
 
 class AgentDefinition(AgentConfig):
@@ -129,6 +139,11 @@ class AgentDefinition(AgentConfig):
     # ToDo: not sure how to type this properly and avoid circular imports
     base_class: type[Any] | ImportString | str = Field(description="Agent class name")
     tools: list[type[Any] | str] = Field(default_factory=list, description="List of tool names to include")
+    
+    # OpenWebUI metadata fields
+    display_name: str | None = Field(default=None, description="Display name for UI (e.g., OpenWebUI)")
+    description: str | None = Field(default=None, description="Agent description for UI")
+    tags: list[str] = Field(default_factory=list, description="Tags for categorization in UI")
 
     @field_validator("base_class", mode="before")
     def base_class_import_points_to_file(cls, v: Any) -> Any:
@@ -168,6 +183,12 @@ class AgentDefinition(AgentConfig):
             data["execution"] = GlobalConfig().execution.model_copy(update=execution_conf).model_dump()
         if not isinstance(mcp_conf := data.get("mcp"), BaseModel):
             data["mcp"] = GlobalConfig().mcp.model_copy(update=mcp_conf).model_dump(warnings=False)
+        if not isinstance(confluence_conf := data.get("confluence"), BaseModel):
+            data["confluence"] = (
+                GlobalConfig().confluence.model_copy(update=confluence_conf).model_dump()
+                if GlobalConfig().confluence
+                else confluence_conf
+            )
         return data
 
     @model_validator(mode="after")
