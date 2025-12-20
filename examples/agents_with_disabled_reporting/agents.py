@@ -1,7 +1,8 @@
 """Agents with disabled CreateReportTool.
 
-These agents are based on existing research agents but exclude CreateReportTool
-from their toolkit, allowing them to work without generating report files.
+These agents are based on existing research agents but exclude
+CreateReportTool from their toolkit, allowing them to work without
+generating report files.
 """
 
 from typing import Type

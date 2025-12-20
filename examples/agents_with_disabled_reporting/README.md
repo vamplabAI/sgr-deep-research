@@ -55,15 +55,17 @@ GlobalConfig.load_from_yaml(str(config_path))
 # Get agent definition
 agent_def = GlobalConfig().agents["sgr_agent_no_reporting"]
 
+
 # Create and run agent
 async def main():
     agent = await AgentFactory.create(agent_def, task="Research AI trends in 2024")
-    
+
     async for chunk in agent.stream():
         print(chunk, end="", flush=True)
-    
+
     result = await agent.execute()
     print(f"\n\nFinal result: {result}")
+
 
 asyncio.run(main())
 ```
