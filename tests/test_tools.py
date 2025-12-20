@@ -7,8 +7,6 @@ This module contains simple tests for all tools:
 
 from unittest.mock import patch
 
-import pytest
-
 from sgr_agent_core.tools import (
     AdaptPlanTool,
     ClarificationTool,
