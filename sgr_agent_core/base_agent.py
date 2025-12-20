@@ -179,10 +179,12 @@ class BaseAgent(AgentRegistryMixin):
     async def _prepare_context(self) -> list[dict]:
         """Prepare conversation context with system prompt."""
         user_context = self.extract_user_content_from_messages(self.conversation)
-        logger = logging.getLogger(__name__)
-        logger.setLevel(logging.INFO)
-        logger.debug(self.conversation)
-        return [
+
+        conversation_without_user_context = (
+            self.conversation[: -len(user_context)] if user_context else self.conversation
+        )
+
+        final_context = [
             {"role": "system", "content": PromptLoader.get_system_prompt(self.toolkit, self.config.prompts)},
             # Experiments with prompt
             {
@@ -196,8 +198,10 @@ class BaseAgent(AgentRegistryMixin):
                 ),
             },
             *user_context,
-            *self.conversation,
+            *conversation_without_user_context,
         ]
+
+        return final_context
 
     async def _prepare_tools(self) -> list[ChatCompletionFunctionToolParam]:
         """Prepare available tools for the current agent state and progress.
