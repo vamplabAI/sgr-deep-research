@@ -313,3 +313,273 @@ class TestBaseAgentPrepareContext:
         context = await agent._prepare_context()
 
         assert len(context) == 5  # system + initial_user_request + 3 messages
+
+    @pytest.mark.asyncio
+    async def test_prepare_context_with_image_content(self):
+        """Test context preparation with image content in
+        ChatCompletionMessageParam format."""
+        agent = create_test_agent(BaseAgent, task="Test")
+        # Simulate multimodal message with image
+        agent.conversation = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "What's in this image?"},
+                    {"type": "image_url", "image_url": {"url": "https://example.com/image.jpg"}},
+                ],
+            }
+        ]
+
+        context = await agent._prepare_context()
+
+        # Should have: system + initial_user_request + user_context (with image) + conversation
+        assert len(context) >= 3
+        # Find the user message with image content
+        user_messages_with_images = [
+            msg for msg in context if msg.get("role") == "user" and isinstance(msg.get("content"), list)
+        ]
+        assert len(user_messages_with_images) > 0
+        # Verify image content is preserved
+        image_message = user_messages_with_images[0]
+        assert isinstance(image_message["content"], list)
+        assert any(part.get("type") == "image_url" for part in image_message["content"])
+
+    @pytest.mark.asyncio
+    async def test_prepare_context_no_duplicate_user_context(self):
+        """Test that user_context is not duplicated when extracted from
+        conversation.
+
+        This test verifies that when user_context is extracted from conversation,
+        it's not added twice (once as user_context and once as part of conversation).
+
+        The issue: _prepare_context extracts user_context from conversation,
+        then adds both user_context AND the entire conversation, causing duplication.
+        """
+        agent = create_test_agent(BaseAgent, task="Test")
+        # Create conversation with user messages at the end
+        user_msg_1 = {"role": "user", "content": "message 1"}
+        user_msg_2 = {"role": "user", "content": "message 2"}
+        agent.conversation = [
+            {"role": "assistant", "content": "response 1"},
+            user_msg_1,
+            user_msg_2,
+        ]
+
+        context = await agent._prepare_context()
+
+        # Extract user messages from context (excluding initial_user_request at index 1)
+        user_messages_in_context = [msg for msg in context if msg.get("role") == "user"]
+        # Skip initial_user_request (it's at index 1)
+        actual_user_messages = user_messages_in_context[1:]
+
+        # Count occurrences of each user message content
+        content_counts = {}
+        for msg in actual_user_messages:
+            content = msg.get("content")
+            content_counts[content] = content_counts.get(content, 0) + 1
+
+        # Should have exactly 2 unique user messages, each appearing once
+        # If duplication exists, we'll see message 1 and message 2 appearing twice
+        expected_unique_contents = {"message 1", "message 2"}
+        actual_unique_contents = set(content_counts.keys())
+
+        # Check that we have the right messages
+        assert (
+            actual_unique_contents == expected_unique_contents
+        ), f"Expected contents {expected_unique_contents}, got {actual_unique_contents}"
+
+        # Check that each message appears only once (no duplication)
+        for content, count in content_counts.items():
+            assert count == 1, f"Message '{content}' appears {count} times, expected 1. This indicates duplication!"
+
+    @pytest.mark.asyncio
+    async def test_prepare_context_preserves_image_format(self):
+        """Test that image format is preserved when preparing context for
+        OpenAI client."""
+        agent = create_test_agent(BaseAgent, task="Test")
+        image_url = "https://example.com/test-image.jpg"
+        agent.conversation = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "Analyze this image"},
+                    {"type": "image_url", "image_url": {"url": image_url}},
+                ],
+            }
+        ]
+
+        context = await agent._prepare_context()
+
+        # Find message with image
+        image_messages = [
+            msg
+            for msg in context
+            if isinstance(msg.get("content"), list)
+            and any(part.get("type") == "image_url" for part in msg.get("content", []))
+        ]
+
+        assert len(image_messages) > 0, "Image message should be present in context"
+        image_message = image_messages[0]
+        image_parts = [part for part in image_message["content"] if part.get("type") == "image_url"]
+        assert len(image_parts) > 0, "Image part should be present"
+        assert image_parts[0]["image_url"]["url"] == image_url, "Image URL should be preserved"
+
+
+class TestBaseAgentImageSupport:
+    """Tests for image support functionality with
+    ChatCompletionMessageParam."""
+
+    @pytest.mark.asyncio
+    async def test_provide_clarification_with_image(self):
+        """Test providing clarification with image content."""
+        agent = create_test_agent(BaseAgent, task="Test")
+        clarifications = [
+            {"type": "text", "text": "Here's more info"},
+            {"type": "image_url", "image_url": {"url": "https://example.com/clarification.jpg"}},
+        ]
+
+        await agent.provide_clarification(clarifications)
+
+        assert len(agent.conversation) == 1
+        assert agent.conversation[0]["role"] == "user"
+        content = agent.conversation[0]["content"]
+        assert isinstance(content, list)
+        # Should have text part wrapped in template + image part
+        assert any(part.get("type") == "text" for part in content)
+        assert any(part.get("type") == "image_url" for part in content)
+
+    @pytest.mark.asyncio
+    async def test_provide_clarification_image_only(self):
+        """Test providing clarification with image only (no text)."""
+        agent = create_test_agent(BaseAgent, task="Test")
+        clarifications = [{"type": "image_url", "image_url": {"url": "https://example.com/image.jpg"}}]
+
+        await agent.provide_clarification(clarifications)
+
+        assert len(agent.conversation) == 1
+        content = agent.conversation[0]["content"]
+        assert isinstance(content, list)
+        # Image-only clarification should not wrap in template
+        assert any(part.get("type") == "image_url" for part in content)
+        # Should not have text parts (unless template adds them)
+        text_parts = [part for part in content if part.get("type") == "text"]
+        # If there are text parts, they should be from template only
+        if text_parts:
+            assert all("clarification" in text_parts[0].get("text", "").lower() for _ in text_parts)
+
+    @pytest.mark.asyncio
+    async def test_extract_user_content_from_messages_with_images(self):
+        """Test extracting user content from messages that contain images."""
+        agent = create_test_agent(BaseAgent, task="Test")
+        messages = [
+            {"role": "assistant", "content": "Previous response"},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "What's this?"},
+                    {"type": "image_url", "image_url": {"url": "https://example.com/img.jpg"}},
+                ],
+            },
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "And this?"},
+                    {"type": "image_url", "image_url": {"url": "https://example.com/img2.jpg"}},
+                ],
+            },
+        ]
+
+        result = agent.extract_user_content_from_messages(messages)
+
+        # Should extract last 2 consecutive user messages
+        assert len(result) == 2
+        assert all(msg.get("role") == "user" for msg in result)
+        # Verify images are preserved
+        for msg in result:
+            content = msg.get("content")
+            assert isinstance(content, list)
+            assert any(part.get("type") == "image_url" for part in content)
+
+    @pytest.mark.asyncio
+    async def test_extract_user_content_from_messages_mixed_content(self):
+        """Test extracting user content with mixed text and image messages."""
+        agent = create_test_agent(BaseAgent, task="Test")
+        messages = [
+            {"role": "user", "content": "Text only message"},
+            {"role": "assistant", "content": "Response"},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "Text with image"},
+                    {"type": "image_url", "image_url": {"url": "https://example.com/img.jpg"}},
+                ],
+            },
+        ]
+
+        result = agent.extract_user_content_from_messages(messages)
+
+        # Should only extract the last user message (with image)
+        assert len(result) == 1
+        assert isinstance(result[0].get("content"), list)
+        assert any(part.get("type") == "image_url" for part in result[0]["content"])
+
+    @pytest.mark.asyncio
+    async def test_prepare_context_includes_images_for_openai_client(self):
+        """Test that _prepare_context correctly formats messages with images
+        for OpenAI client.
+
+        This test verifies that images are properly formatted as
+        ChatCompletionMessageParam and will be correctly passed to
+        OpenAI client's chat.completions.stream().
+        """
+        from unittest.mock import AsyncMock, MagicMock
+
+        agent = create_test_agent(BaseAgent, task="Test")
+        # Add multimodal message to conversation
+        agent.conversation = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "Task description"},
+                    {"type": "image_url", "image_url": {"url": "https://example.com/task-image.jpg"}},
+                ],
+            }
+        ]
+
+        # Mock OpenAI client to capture messages
+        mock_stream = AsyncMock()
+        mock_stream_context = MagicMock()
+        mock_stream_context.__aenter__ = AsyncMock(return_value=mock_stream)
+        mock_stream_context.__aexit__ = AsyncMock(return_value=None)
+
+        captured_messages = []
+
+        async def capture_messages(*args, **kwargs):
+            if "messages" in kwargs:
+                captured_messages.extend(kwargs["messages"])
+            return mock_stream_context
+
+        agent.openai_client.chat.completions.stream = AsyncMock(side_effect=capture_messages)
+
+        # Prepare context (this is what gets passed to OpenAI)
+        context = await agent._prepare_context()
+
+        # Verify context contains image message in correct format
+        image_messages = [
+            msg
+            for msg in context
+            if isinstance(msg.get("content"), list)
+            and any(part.get("type") == "image_url" for part in msg.get("content", []))
+        ]
+
+        assert len(image_messages) > 0, "Context should contain messages with images"
+        # Verify format is compatible with ChatCompletionMessageParam
+        image_message = image_messages[0]
+        assert "role" in image_message
+        assert "content" in image_message
+        assert isinstance(image_message["content"], list)
+        # Verify image part structure
+        image_part = next((part for part in image_message["content"] if part.get("type") == "image_url"), None)
+        assert image_part is not None, "Image part should be present"
+        assert "image_url" in image_part
+        assert "url" in image_part["image_url"]
