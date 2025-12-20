@@ -1,0 +1,72 @@
+# SGR Agent Core - Configuration for agents without CreateReportTool
+# Copy this file and fill in your API keys
+
+# LLM Configuration
+llm:
+  api_key: "your-openai-api-key-here"  # Your OpenAI API key
+  base_url: "https://api.openai.com/v1"  # API base URL
+  model: "gpt-4o-mini"  # Model name
+  max_tokens: 8000  # Max output tokens
+  temperature: 0.4  # Temperature (0.0-1.0)
+  # proxy: "socks5://127.0.0.1:1081"  # Optional proxy (socks5:// or http://)
+
+# Search Configuration (Tavily)
+search:
+  tavily_api_key: "your-tavily-api-key-here"  # Tavily API key (get at tavily.com)
+  tavily_api_base_url: "https://api.tavily.com"  # Tavily API URL
+  max_searches: 4  # Max search operations
+  max_results: 10  # Max results in search query
+  content_limit: 1500  # Content char limit per source
+
+# Execution Settings
+execution:
+  max_clarifications: 3  # Max clarification requests
+  max_iterations: 10  # Max agent iterations
+  mcp_context_limit: 15000  # Max context length from MCP server response
+  logs_dir: "logs"  # Directory for saving agent execution logs
+  # reports_dir is not used since CreateReportTool is disabled
+
+# MCP (Model Context Protocol) Configuration
+mcp:
+  mcpServers:
+    deepwiki:
+      url: "https://mcp.deepwiki.com/mcp"
+
+# Agent Definitions (without CreateReportTool)
+agents:
+  # SGR Agent without reporting
+  sgr_agent_no_reporting:
+    base_class: "examples.agents_with_disabled_reporting.agents.ResearchSGRAgentNoReporting"
+    llm:
+      model: "gpt-4o-mini"
+      temperature: 0.4
+    tools:
+      - "WebSearchTool"
+      - "ExtractPageContentTool"
+      - "FinalAnswerTool"
+      - "ClarificationTool"
+
+  # Tool Calling Agent without reporting
+  tool_calling_agent_no_reporting:
+    base_class: "examples.agents_with_disabled_reporting.agents.ResearchToolCallingAgentNoReporting"
+    llm:
+      model: "gpt-4o-mini"
+      temperature: 0.4
+    tools:
+      - "WebSearchTool"
+      - "ExtractPageContentTool"
+      - "FinalAnswerTool"
+      - "ClarificationTool"
+
+  # SGR Tool Calling Agent without reporting
+  sgr_tool_calling_agent_no_reporting:
+    base_class: "examples.agents_with_disabled_reporting.agents.ResearchSGRToolCallingAgentNoReporting"
+    llm:
+      model: "gpt-4o-mini"
+      temperature: 0.4
+    tools:
+      - "WebSearchTool"
+      - "ExtractPageContentTool"
+      - "FinalAnswerTool"
+      - "ClarificationTool"
+      - "ReasoningTool"
