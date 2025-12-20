@@ -104,8 +104,7 @@ class ExecutionConfig(BaseModel, extra="allow"):
     mcp_context_limit: int = Field(default=15000, gt=0, description="Maximum context length from MCP server response")
 
     logs_dir: str | None = Field(
-        default="logs",
-        description="Directory for saving bot logs. Set to None or empty string to disable logging."
+        default="logs", description="Directory for saving bot logs. Set to None or empty string to disable logging."
     )
     reports_dir: str = Field(default="reports", description="Directory for saving reports")
 

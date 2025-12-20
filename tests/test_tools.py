@@ -5,8 +5,9 @@ This module contains simple tests for all tools:
 - Config reading (if needed)
 """
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 from sgr_agent_core.tools import (
     AdaptPlanTool,
@@ -156,10 +157,10 @@ class TestCreateReportToolFileWriting:
 
     @pytest.mark.asyncio
     async def test_create_report_creates_file_when_reports_dir_is_set(self, tmp_path):
-        """Test that CreateReportTool creates report file when reports_dir is specified."""
+        """Test that CreateReportTool creates report file when reports_dir is
+        specified."""
         import json
         import os
-        from unittest.mock import Mock
 
         from sgr_agent_core.agent_definition import AgentConfig, ExecutionConfig, LLMConfig, PromptsConfig
         from sgr_agent_core.models import AgentContext

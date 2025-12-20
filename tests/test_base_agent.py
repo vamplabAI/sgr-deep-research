@@ -319,7 +319,8 @@ class TestBaseAgentSaveLog:
     """Tests for agent log saving functionality."""
 
     def test_save_agent_log_skipped_when_logs_dir_is_none(self, tmp_path):
-        """Test that _save_agent_log does not create files when logs_dir is None."""
+        """Test that _save_agent_log does not create files when logs_dir is
+        None."""
         from unittest.mock import patch
 
         from sgr_agent_core.agent_definition import ExecutionConfig
@@ -347,7 +348,8 @@ class TestBaseAgentSaveLog:
         assert list(tmp_path.iterdir()) == []
 
     def test_save_agent_log_skipped_when_logs_dir_is_empty_string(self, tmp_path):
-        """Test that _save_agent_log does not create files when logs_dir is empty string."""
+        """Test that _save_agent_log does not create files when logs_dir is
+        empty string."""
         from unittest.mock import patch
 
         from sgr_agent_core.agent_definition import ExecutionConfig
@@ -375,7 +377,8 @@ class TestBaseAgentSaveLog:
         assert list(tmp_path.iterdir()) == []
 
     def test_save_agent_log_creates_file_when_logs_dir_is_set(self, tmp_path):
-        """Test that _save_agent_log creates log file when logs_dir is specified."""
+        """Test that _save_agent_log creates log file when logs_dir is
+        specified."""
         import os
         from unittest.mock import patch
 
