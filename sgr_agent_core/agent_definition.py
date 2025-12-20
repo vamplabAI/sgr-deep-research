@@ -107,10 +107,7 @@ class ExecutionConfig(BaseModel, extra="allow"):
         default="logs",
         description="Directory for saving bot logs. Set to None or empty string to disable logging."
     )
-    reports_dir: str | None = Field(
-        default="reports",
-        description="Directory for saving reports. Set to None or empty string to disable report file creation.",
-    )
+    reports_dir: str = Field(default="reports", description="Directory for saving reports")
 
 
 class AgentConfig(BaseModel):
