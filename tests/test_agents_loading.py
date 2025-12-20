@@ -1,5 +1,4 @@
-"""
-Tests for agents loading from config.yaml and agents.yaml files.
+"""Tests for agents loading from config.yaml and agents.yaml files.
 
 This module tests the loading order and override behavior:
 1. If agents.yaml exists, load agents from it
@@ -69,14 +68,14 @@ class TestAgentsLoadingFromAgentsYaml:
         # Load config: simulate __main__.py logic
         config_data_loaded = yaml.safe_load(Path(config_yaml).read_text(encoding="utf-8"))
         main_config_agents = config_data_loaded.pop("agents", {})
-        
+
         GlobalConfig._instance = None
         GlobalConfig._initialized = False
         config = GlobalConfig(**config_data_loaded)
-        
+
         # Load agents.yaml
         config.definitions_from_yaml(str(agents_yaml))
-        
+
         # Apply agents from config.yaml (empty in this case)
         if main_config_agents:
             config._definitions_from_dict({"agents": main_config_agents})
@@ -86,7 +85,8 @@ class TestAgentsLoadingFromAgentsYaml:
         assert config.agents["test_agent_from_agents_yaml"].name == "test_agent_from_agents_yaml"
 
     def test_load_agents_from_agents_yaml_with_config_override(self, temp_dir, reset_global_config):
-        """Test that agents.yaml is loaded first, then config.yaml overrides."""
+        """Test that agents.yaml is loaded first, then config.yaml
+        overrides."""
         # Create agents.yaml with initial agent
         agents_yaml = temp_dir / "agents.yaml"
         agents_data = {
@@ -117,15 +117,15 @@ class TestAgentsLoadingFromAgentsYaml:
         # Load base config without agents
         config_data = yaml.safe_load(Path(config_yaml).read_text(encoding="utf-8"))
         main_config_agents = config_data.pop("agents", {})
-        
+
         # Create config with base settings
         GlobalConfig._instance = None
         GlobalConfig._initialized = False
         config = GlobalConfig(**config_data)
-        
+
         # Load agents.yaml first
         config.definitions_from_yaml(str(agents_yaml))
-        
+
         # Then apply agents from config.yaml for override
         if main_config_agents:
             config._definitions_from_dict({"agents": main_config_agents})
@@ -140,7 +140,8 @@ class TestAgentsLoadingFromConfigYaml:
     """Test loading agents from config.yaml file."""
 
     def test_load_agents_from_config_yaml_only(self, temp_dir, reset_global_config):
-        """Test that agents are loaded from config.yaml when agents.yaml doesn't exist."""
+        """Test that agents are loaded from config.yaml when agents.yaml
+        doesn't exist."""
         # Create config.yaml with agents section
         config_yaml = temp_dir / "config.yaml"
         config_data = {
@@ -158,11 +159,11 @@ class TestAgentsLoadingFromConfigYaml:
         # Load config: simulate __main__.py logic (no agents.yaml)
         config_data_loaded = yaml.safe_load(Path(config_yaml).read_text(encoding="utf-8"))
         main_config_agents = config_data_loaded.pop("agents", {})
-        
+
         GlobalConfig._instance = None
         GlobalConfig._initialized = False
         config = GlobalConfig(**config_data_loaded)
-        
+
         # No agents.yaml, so apply agents from config.yaml
         if main_config_agents:
             config._definitions_from_dict({"agents": main_config_agents})
@@ -176,7 +177,8 @@ class TestAgentsLoadingOrder:
     """Test the correct loading order: agents.yaml first, then config.yaml override."""
 
     def test_agents_yaml_first_then_config_override(self, temp_dir, reset_global_config):
-        """Test that agents.yaml is loaded first, then config.yaml overrides settings."""
+        """Test that agents.yaml is loaded first, then config.yaml overrides
+        settings."""
         # Create agents.yaml with agent having temperature 0.5
         agents_yaml = temp_dir / "agents.yaml"
         agents_data = {
@@ -209,15 +211,15 @@ class TestAgentsLoadingOrder:
         # Load base config without agents
         config_data = yaml.safe_load(Path(config_yaml).read_text(encoding="utf-8"))
         main_config_agents = config_data.pop("agents", {})
-        
+
         # Create config with base settings
         GlobalConfig._instance = None
         GlobalConfig._initialized = False
         config = GlobalConfig(**config_data)
-        
+
         # Load agents.yaml first
         config.definitions_from_yaml(str(agents_yaml))
-        
+
         # Then apply agents from config.yaml for override
         if main_config_agents:
             config._definitions_from_dict({"agents": main_config_agents})
@@ -258,14 +260,14 @@ class TestAgentsLoadingOrder:
         # Load both: simulate __main__.py logic
         config_data_loaded = yaml.safe_load(Path(config_yaml).read_text(encoding="utf-8"))
         main_config_agents = config_data_loaded.pop("agents", {})
-        
+
         GlobalConfig._instance = None
         GlobalConfig._initialized = False
         config = GlobalConfig(**config_data_loaded)
-        
+
         # Load agents.yaml first
         config.definitions_from_yaml(str(agents_yaml))
-        
+
         # Then apply agents from config.yaml
         if main_config_agents:
             config._definitions_from_dict({"agents": main_config_agents})
@@ -288,8 +290,8 @@ class TestAgentsLoadingOrder:
 
         # Load config: simulate __main__.py logic
         config_data_loaded = yaml.safe_load(Path(config_yaml).read_text(encoding="utf-8"))
-        main_config_agents = config_data_loaded.pop("agents", {})
-        
+        config_data_loaded.pop("agents", {})  # Remove agents section if present
+
         GlobalConfig._instance = None
         GlobalConfig._initialized = False
         config = GlobalConfig(**config_data_loaded)
@@ -308,15 +310,14 @@ class TestAgentsLoadingOrder:
         # Load config: simulate __main__.py logic
         config_data_loaded = yaml.safe_load(Path(config_yaml).read_text(encoding="utf-8"))
         main_config_agents = config_data_loaded.pop("agents", {})
-        
+
         GlobalConfig._instance = None
         GlobalConfig._initialized = False
         config = GlobalConfig(**config_data_loaded)
-        
+
         # Apply agents from config.yaml (empty in this case)
         if main_config_agents:
             config._definitions_from_dict({"agents": main_config_agents})
 
         # Agents dict should be empty or contain defaults
         assert isinstance(config.agents, dict)
-
