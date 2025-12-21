@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field, FilePath, ImportString, computed_field, f
 logger = logging.getLogger(__name__)
 
 
-class LLMConfig(BaseModel):
+class LLMConfig(BaseModel, extra="allow"):
     api_key: str | None = Field(default=None, description="API key")
     base_url: str = Field(default="https://api.openai.com/v1", description="Base URL")
     model: str = Field(default="gpt-4o-mini", description="Model to use")
@@ -22,8 +22,11 @@ class LLMConfig(BaseModel):
         default=None, description="Proxy URL (e.g., socks5://127.0.0.1:1081 or http://127.0.0.1:8080)"
     )
 
+    def to_openai_client_kwargs(self) -> dict[str, Any]:
+        return self.model_dump(exclude={"api_key", "base_url", "proxy"})
 
-class SearchConfig(BaseModel):
+
+class SearchConfig(BaseModel, extra="allow"):
     tavily_api_key: str | None = Field(default=None, description="Tavily API key")
     tavily_api_base_url: str = Field(default="https://api.tavily.com", description="Tavily API base URL")
 
@@ -32,7 +35,7 @@ class SearchConfig(BaseModel):
     content_limit: int = Field(default=3500, gt=0, description="Content character limit per source")
 
 
-class PromptsConfig(BaseModel):
+class PromptsConfig(BaseModel, extra="allow"):
     system_prompt_file: FilePath | None = Field(
         default=os.path.join(os.path.dirname(__file__), "prompts/system_prompt.txt"),
         description="Path to system prompt file",
