@@ -7,6 +7,8 @@ This module contains simple tests for all tools:
 
 from unittest.mock import patch
 
+import pytest
+
 from sgr_agent_core.tools import (
     AdaptPlanTool,
     ClarificationTool,
@@ -148,3 +150,56 @@ class TestToolsConfigReading:
         )
         # Tool should be initialized without errors
         assert tool.title == "Test Report"
+
+
+class TestCreateReportToolFileWriting:
+    """Tests for CreateReportTool file writing behavior."""
+
+    @pytest.mark.asyncio
+    async def test_create_report_creates_file_when_reports_dir_is_set(self, tmp_path):
+        """Test that CreateReportTool creates report file when reports_dir is
+        specified."""
+        import json
+        import os
+
+        from sgr_agent_core.agent_definition import AgentConfig, ExecutionConfig, LLMConfig, PromptsConfig
+        from sgr_agent_core.models import AgentContext
+
+        reports_dir = str(tmp_path / "reports")
+
+        tool = CreateReportTool(
+            reasoning="Test",
+            title="Test Report",
+            user_request_language_reference="Test request",
+            content="Test content with citation [1].",
+            confidence="high",
+        )
+
+        context = AgentContext()
+        config = AgentConfig(
+            llm=LLMConfig(api_key="test"),
+            prompts=PromptsConfig(
+                system_prompt_str="Test",
+                initial_user_request_str="Test",
+                clarification_response_str="Test",
+            ),
+            execution=ExecutionConfig(
+                max_iterations=10,
+                max_clarifications=3,
+                reports_dir=reports_dir,
+            ),
+        )
+
+        result = await tool(context, config)
+        result_data = json.loads(result)
+
+        # Should return result with filepath
+        assert result_data["title"] == "Test Report"
+        assert result_data["filepath"] is not None
+        assert reports_dir in result_data["filepath"]
+
+        # Verify report file was created
+        assert os.path.exists(reports_dir)
+        report_files = list(os.listdir(reports_dir))
+        assert len(report_files) == 1
+        assert report_files[0].endswith(".md")
