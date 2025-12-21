@@ -17,8 +17,9 @@ from sgr_agent_core.agent_config import GlobalConfig
 from sgr_deep_research.__main__ import load_config
 
 # Verify we're importing the real function
-assert load_config.__module__ == "sgr_deep_research.__main__", \
-    "Must import load_config from sgr_deep_research.__main__, not a mock!"
+assert (
+    load_config.__module__ == "sgr_deep_research.__main__"
+), "Must import load_config from sgr_deep_research.__main__, not a mock!"
 
 
 @pytest.fixture
@@ -31,7 +32,7 @@ def temp_dir():
 @pytest.fixture
 def reset_global_config():
     """Reset GlobalConfig singleton before and after each test.
-    
+
     This ensures each test starts with a clean GlobalConfig state.
     IMPORTANT: All tests in this file must use this fixture!
     """
@@ -232,9 +233,10 @@ class TestAgentsLoadingOrder:
 
     def test_agents_yaml_missing_agents_key(self, temp_dir, reset_global_config):
         """Test that missing 'agents' key in agents.yaml raises ValueError.
-        
-        This test will FAIL if error handling (try/except) is commented out
-        in __main__.py, because it checks that ValueError is properly raised.
+
+        This test will FAIL if error handling (try/except) is commented
+        out in __main__.py, because it checks that ValueError is
+        properly raised.
         """
         # Create agents.yaml without 'agents' key
         agents_yaml = temp_dir / "agents.yaml"
@@ -253,9 +255,9 @@ class TestAgentsLoadingOrder:
 
     def test_agents_yaml_error_logging(self, temp_dir, reset_global_config):
         """Test that ValueError from agents.yaml is logged.
-        
-        This test will FAIL if error handling (try/except with logger.error) 
-        is commented out in __main__.py.
+
+        This test will FAIL if error handling (try/except with
+        logger.error) is commented out in __main__.py.
         """
         # Create agents.yaml without 'agents' key
         agents_yaml = temp_dir / "agents.yaml"
@@ -272,20 +274,23 @@ class TestAgentsLoadingOrder:
             # Use actual load_config() from __main__.py
             with pytest.raises(ValueError, match="must contain 'agents' key"):
                 load_config(str(config_yaml), str(agents_yaml))
-            
+
             # Check that logger.error was called (only if try/except is uncommented)
             # If try/except is commented out, this assertion will FAIL
-            mock_logger.error.assert_called_once(), \
-                "ERROR: logger.error was not called! This means try/except block is commented out in __main__.py"
+            (
+                mock_logger.error.assert_called_once(),
+                "ERROR: logger.error was not called! This means try/except block is commented out in __main__.py",
+            )
             error_message = mock_logger.error.call_args[0][0]
-            assert "Invalid agents file format" in error_message or "must contain 'agents' key" in str(error_message), \
-                f"Expected error message about invalid format, got: {error_message}"
+            assert "Invalid agents file format" in error_message or "must contain 'agents' key" in str(
+                error_message
+            ), f"Expected error message about invalid format, got: {error_message}"
 
     def test_agents_yaml_yaml_error_logging(self, temp_dir, reset_global_config):
         """Test that yaml.YAMLError from agents.yaml is logged.
-        
-        This test will FAIL if error handling (try/except with logger.error) 
-        is commented out in __main__.py.
+
+        This test will FAIL if error handling (try/except with
+        logger.error) is commented out in __main__.py.
         """
         # Create invalid YAML file
         agents_yaml = temp_dir / "agents.yaml"
@@ -301,14 +306,17 @@ class TestAgentsLoadingOrder:
             # Use actual load_config() from __main__.py
             with pytest.raises(yaml.YAMLError):
                 load_config(str(config_yaml), str(agents_yaml))
-            
+
             # Check that logger.error was called (only if try/except is uncommented)
             # If try/except is commented out, this assertion will FAIL
-            mock_logger.error.assert_called_once(), \
-                "ERROR: logger.error was not called! This means try/except block is commented out in __main__.py"
+            (
+                mock_logger.error.assert_called_once(),
+                "ERROR: logger.error was not called! This means try/except block is commented out in __main__.py",
+            )
             error_message = mock_logger.error.call_args[0][0]
-            assert "YAML parsing error" in error_message, \
-                f"Expected 'YAML parsing error' in log message, got: {error_message}"
+            assert (
+                "YAML parsing error" in error_message
+            ), f"Expected 'YAML parsing error' in log message, got: {error_message}"
 
     def test_config_yaml_without_agents_section(self, temp_dir, reset_global_config):
         """Test that config.yaml can be loaded without agents section."""
@@ -344,9 +352,9 @@ class TestAgentsLoadingOrder:
 
     def test_default_agents_added_after_config_yaml(self, temp_dir, reset_global_config):
         """Test that default agents are added AFTER config.yaml agents.
-        
-        This test will fail if the order in load_config() is changed.
-        If you swap lines 32 and 33 in __main__.py, this test will fail.
+
+        This test will fail if the order in load_config() is changed. If
+        you swap lines 32 and 33 in __main__.py, this test will fail.
         """
         # Create config.yaml with an agent that has the same name as a default agent
         config_yaml = temp_dir / "config.yaml"
@@ -373,14 +381,16 @@ class TestAgentsLoadingOrder:
         # Default temperature is 0.4, config.yaml has 0.9
         # Since defaults.update() is called AFTER config.yaml, it should override
         # So temperature should be 0.4 (from defaults), not 0.9 (from config.yaml)
-        assert config.agents["sgr_agent"].llm.temperature == 0.4, \
-            "Default agents should override config.yaml agents with same name"
+        assert (
+            config.agents["sgr_agent"].llm.temperature == 0.4
+        ), "Default agents should override config.yaml agents with same name"
 
     def test_agents_yaml_overrides_both_config_and_defaults(self, temp_dir, reset_global_config):
         """Test that agents.yaml overrides both config.yaml and default agents.
-        
-        This test will fail if agents.yaml is loaded before defaults or config.yaml.
-        If you move line 38 in __main__.py before line 33, this test will fail.
+
+        This test will fail if agents.yaml is loaded before defaults or
+        config.yaml. If you move line 38 in __main__.py before line 33,
+        this test will fail.
         """
         # Create config.yaml with agent
         config_yaml = temp_dir / "config.yaml"
@@ -424,16 +434,19 @@ class TestAgentsLoadingOrder:
 
         # agents.yaml should override both config.yaml and defaults
         assert config.agents["test_agent"].llm.temperature == 0.8  # From agents.yaml
-        assert config.agents["sgr_agent"].llm.temperature == 0.9  # From agents.yaml (overrides both config.yaml 0.6 and default 0.4)
+        assert (
+            config.agents["sgr_agent"].llm.temperature == 0.9
+        )  # From agents.yaml (overrides both config.yaml 0.6 and default 0.4)
 
     def test_load_config_order_matters(self, temp_dir, reset_global_config):
-        """Test that changing the order of operations in load_config() breaks tests.
-        
+        """Test that changing the order of operations in load_config() breaks
+        tests.
+
         This test specifically checks that:
         1. config.yaml is loaded first (line 32 in __main__.py)
         2. default agents are added second (line 33 in __main__.py, overrides config.yaml)
         3. agents.yaml is loaded last (line 38 in __main__.py, overrides everything)
-        
+
         If you change the order of these operations, this test will fail.
         """
         # Create config.yaml with custom agent
@@ -474,10 +487,10 @@ class TestAgentsLoadingOrder:
 
     def test_changing_load_config_order_breaks_tests(self, temp_dir, reset_global_config):
         """CRITICAL TEST: This test will FAIL if you change the order in load_config().
-        
+
         Try swapping lines 32 and 33 in __main__.py - this test should fail.
         Try moving line 38 before line 33 - this test should fail.
-        
+
         This test verifies the exact order:
         1. GlobalConfig.from_yaml() - loads config.yaml and its agents
         2. config.agents.update(get_default_agents_definitions()) - adds defaults (overrides config.yaml)

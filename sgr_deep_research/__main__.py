@@ -1,15 +1,15 @@
 """Main entry point for SGR Agent Core API server."""
 
 import logging
-import yaml
 from pathlib import Path
 
 import uvicorn
+import yaml
+
+from sgr_agent_core.agent_config import GlobalConfig
 from sgr_deep_research.app import app
 from sgr_deep_research.default_definitions import get_default_agents_definitions
 from sgr_deep_research.settings import ServerConfig
-
-from sgr_agent_core.agent_config import GlobalConfig
 
 logger = logging.getLogger(__name__)
 
