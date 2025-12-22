@@ -46,12 +46,10 @@ class ToolCallingAgent(BaseAgent):
 
     async def _select_action_phase(self, reasoning=None) -> BaseTool:
         async with self.openai_client.chat.completions.stream(
-            model=self.config.llm.model,
             messages=await self._prepare_context(),
-            max_tokens=self.config.llm.max_tokens,
-            temperature=self.config.llm.temperature,
             tools=await self._prepare_tools(),
             tool_choice=self.tool_choice,
+            **self.config.llm.to_openai_client_kwargs(),
         ) as stream:
             async for event in stream:
                 if event.type == "chunk":
