@@ -101,10 +101,6 @@ The agents in this directory are identical to their standard counterparts except
 2. **No report files** - Agents will not generate report files in the `reports_dir`
 3. **FinalAnswerTool only** - When `max_iterations` is reached, only `FinalAnswerTool` is available (standard agents also have `CreateReportTool`)
 
-## Example Script
-
-See `example.py` for a complete working example.
-
 ## Notes
 
 - These agents still use all other tools (WebSearchTool, ExtractPageContentTool, FinalAnswerTool, etc.)
