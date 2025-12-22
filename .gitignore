@@ -1,8 +1,8 @@
 # SGR Research Agent - .gitignore
 
 # БЕЗОПАСНОСТЬ - API КЛЮЧИ И КОНФИДЕНЦИАЛЬНЫЕ ДАННЫЕ
-config.yaml
-agents.yaml
+/config.yaml
+/agents.yaml
 *.env
 .env*
 .vite/
