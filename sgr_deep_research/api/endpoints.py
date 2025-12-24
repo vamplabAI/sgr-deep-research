@@ -65,7 +65,7 @@ async def get_available_models():
             "id": agent_def.name,
             "object": "model",
             "created": 1234567890,
-            "owned_by": "sgr-deep-research",
+            "owned_by": "sgr-agent-core",
         }
         for agent_def in AgentFactory.get_definitions_list()
     ]

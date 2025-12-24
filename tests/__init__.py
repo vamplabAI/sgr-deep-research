@@ -1,1 +1,1 @@
-"""Tests package for sgr-deep-research."""
+"""Tests package for sgr-agent-core."""

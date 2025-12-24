@@ -3,7 +3,7 @@ services:
     build:
       context: ./api_service
       dockerfile: Dockerfile
-    container_name: sgr-deep-research-backend
+    container_name: sgr-agent-core-backend
     restart: unless-stopped
     ports:
       - "${BACKEND_PORT:-8010}:8010"
