@@ -3,7 +3,7 @@ requires = ["setuptools>=64.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "sgr-deep-research"
+name = "sgr-agent-core"
 dynamic = ["version"]
 description = "SGR Agent Core - Schema-Guided Reasoning for building agent"
 readme = "README.md"
@@ -56,9 +56,16 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/vakovalskii/sgr-deep-research"
-Repository = "https://github.com/vakovalskii/sgr-deep-research"
-Issues = "https://github.com/vakovalskii/sgr-deep-research/issues"
+Homepage = "https://github.com/vamplabAI/sgr-agent-core"
+Repository = "https://github.com/vamplabAI/sgr-agent-core"
+Issues = "https://github.com/vamplabAI/sgr-agent-core/issues"
+Documentation = "https://vamplabai.github.io/sgr-agent-core/"
+"Team: SGR Concept Creator - @abdullin" = "https://t.me/llm_under_hood"
+"Team: Project Coordinator - @VaKovaLskii" = "https://t.me/neuraldeep"
+"Team: Lead Core Developer - @virrius" = "https://t.me/virrius_tech"
+"Team: API Development - Pavel Zloi" = "https://t.me/evilfreelancer"
+"Team: Hybrid FC Research - @Shadekss" = "https://t.me/Shadekss"
+"Team: DevOps & Deployment - @mixaill76" = "https://t.me/mixaill76"
 
 [project.scripts]
 sgr = "sgr_agent_core.__main__:main"
