@@ -70,7 +70,7 @@ Documentation = "https://vamplabai.github.io/sgr-agent-core/"
 [project.scripts]
 sgr = "sgr_agent_core.__main__:main"
 
-[dependency-groups]
+[project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
@@ -118,3 +118,9 @@ line-ending = "lf"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["sgr_agent_core"]
+
+[tool.coverage.report]
+show_missing = true
