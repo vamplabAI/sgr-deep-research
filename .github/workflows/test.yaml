@@ -29,6 +29,6 @@ jobs:
 
       - name: Run test cases
         run: coverage run -m pytest
-    
+
       - name: Create report
         run: coverage report
