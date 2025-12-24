@@ -140,6 +140,11 @@ class BaseAgent(AgentRegistryMixin):
         from sgr_agent_core.agent_config import GlobalConfig
 
         logs_dir = GlobalConfig().execution.logs_dir
+        # Skip saving if logs_dir is None or empty string
+        if not logs_dir:
+            self.logger.debug("Skipping agent log save: logs_dir is not configured")
+            return
+
         os.makedirs(logs_dir, exist_ok=True)
         filepath = os.path.join(logs_dir, f"{datetime.now().strftime('%Y%m%d-%H%M%S')}-{self.id}-log.json")
         agent_log = {
