@@ -4,9 +4,11 @@ This module contains tests for AgentFactory and dynamic agent
 instantiation.
 """
 
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
+import httpx
 import pytest
+from openai import AsyncOpenAI
 
 from sgr_agent_core.agent_definition import (
     AgentDefinition,
@@ -336,6 +338,134 @@ class TestAgentFactoryClientCreation:
         assert client is not None
         assert client.api_key == "test-key"
         assert client._client is not None
+
+    @pytest.mark.asyncio
+    async def test_stream_request_with_extra_parameters(self):
+        """Test that additional parameters from LLMConfig (extra='allow') are
+        passed to stream requests."""
+        from sgr_agent_core.agents.tool_calling_agent import ToolCallingAgent
+        from sgr_agent_core.tools import ReasoningTool
+
+        # Create LLMConfig with additional parameters for API requests
+        llm_config = LLMConfig(
+            api_key="test-key",
+            base_url="https://api.openai.com/v1",
+            model="gpt-4o-mini",
+            top_p=0.9,  # Additional parameter for API requests
+            top_k=40,  # Additional parameter for API requests
+        )
+
+        # Create real AsyncOpenAI client with mocked HTTP client
+        # This allows us to test real OpenAI SDK behavior without making actual HTTP requests
+        mock_http_client = AsyncMock(spec=httpx.AsyncClient)
+        real_client = AsyncOpenAI(
+            api_key="test-key",
+            base_url="https://api.openai.com/v1",
+            http_client=mock_http_client,
+        )
+
+        # Create mock stream response
+        async def async_iter(self):
+            return
+            yield
+
+        mock_stream = AsyncMock()
+        mock_stream.__aiter__ = async_iter
+        mock_stream.get_final_completion = AsyncMock(
+            return_value=Mock(
+                choices=[
+                    Mock(
+                        message=Mock(
+                            tool_calls=[
+                                Mock(
+                                    function=Mock(
+                                        parsed_arguments=ReasoningTool(
+                                            reasoning_steps=["Step 1", "Step 2"],
+                                            current_situation="Test",
+                                            plan_status="Test",
+                                            enough_data=True,
+                                            remaining_steps=["Next step"],
+                                            task_completed=True,
+                                        )
+                                    )
+                                )
+                            ]
+                        )
+                    )
+                ]
+            )
+        )
+
+        mock_stream_context = AsyncMock()
+        mock_stream_context.__aenter__ = AsyncMock(return_value=mock_stream)
+        mock_stream_context.__aexit__ = AsyncMock(return_value=None)
+
+        # Patch chat.completions.stream to capture arguments while using real client
+        with patch.object(
+            real_client.chat.completions, "stream", return_value=mock_stream_context
+        ) as mock_stream_method:
+            # Create agent with real client
+            agent = ToolCallingAgent(
+                task="Test task",
+                openai_client=real_client,
+                agent_config=AgentDefinition(
+                    name="test_agent",
+                    base_class=ToolCallingAgent,
+                    tools=[ReasoningTool],
+                    llm=llm_config,
+                ),
+                toolkit=[ReasoningTool],
+            )
+
+            await agent._select_action_phase()
+
+            # Verify additional parameters from extra="allow" are passed to stream request
+            call_kwargs = mock_stream_method.call_args.kwargs
+            assert call_kwargs["top_p"] == 0.9
+            assert call_kwargs["top_k"] == 40
+            assert call_kwargs["model"] == "gpt-4o-mini"
+
+    @pytest.mark.asyncio
+    async def test_stream_request_with_invalid_parameter_raises_error(self):
+        """Test that invalid/unsupported parameters raise TypeError when passed
+        to stream requests."""
+        from sgr_agent_core.agents.tool_calling_agent import ToolCallingAgent
+        from sgr_agent_core.tools import ReasoningTool
+
+        # Create LLMConfig with invalid parameter (not supported by OpenAI API)
+        llm_config = LLMConfig(
+            api_key="test-key",
+            base_url="https://api.openai.com/v1",
+            model="gpt-4o-mini",
+            my_custom_parameter="invalid_value",  # Invalid parameter
+        )
+
+        # Create real AsyncOpenAI client with mocked HTTP client
+        # This allows us to test real OpenAI SDK validation without making actual HTTP requests
+        mock_http_client = AsyncMock(spec=httpx.AsyncClient)
+        real_client = AsyncOpenAI(
+            api_key="test-key",
+            base_url="https://api.openai.com/v1",
+            http_client=mock_http_client,
+        )
+
+        # Create agent with invalid parameter
+        agent = ToolCallingAgent(
+            task="Test task",
+            openai_client=real_client,
+            agent_config=AgentDefinition(
+                name="test_agent",
+                base_class=ToolCallingAgent,
+                tools=[ReasoningTool],
+                llm=llm_config,
+            ),
+            toolkit=[ReasoningTool],
+        )
+
+        # Verify that invalid parameter raises TypeError from real OpenAI client
+        # OpenAI SDK validates parameters before making HTTP requests
+        with pytest.raises(TypeError, match="got an unexpected keyword argument 'my_custom_parameter'"):
+            await agent._select_action_phase()
 
 
 class TestAgentFactoryRegistryIntegration:
