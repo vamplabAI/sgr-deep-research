@@ -13,9 +13,9 @@ ______________________________________________________________________
 
 > **Get started quickly with our documentation:**
 
-- **[Project Wiki](https://github.com/vamplabAI/sgr-deep-research/wiki)** - Complete project documentation
-- **[Quick Start Guide](https://github.com/vamplabAI/sgr-deep-research/wiki/SGR-Quick-Start)** - Get up and running in minutes
-- **[API Documentation](https://github.com/vamplabAI/sgr-deep-research/wiki/SGR-Description-API)** - REST API reference with examples
+- **[Project Wiki](https://github.com/vamplabAI/sgr-agent-core/wiki)** - Complete project documentation
+- **[Quick Start Guide](https://github.com/vamplabAI/sgr-agent-core/wiki/SGR-Quick-Start)** - Get up and running in minutes
+- **[API Documentation](https://github.com/vamplabAI/sgr-agent-core/wiki/SGR-Description-API)** - REST API reference with examples
 
 ______________________________________________________________________
 
@@ -57,4 +57,4 @@ Learn more about the company: [redmadrobot.ai](https://redmadrobot.ai/) ↗️
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=vamplabAI/sgr-deep-research&type=Date)](https://star-history.com/#vamplabAI/sgr-deep-research&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=vamplabAI/sgr-agent-core&type=Date)](https://star-history.com/#vamplabAI/sgr-agent-core&Date)
