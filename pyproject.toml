@@ -56,9 +56,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/vakovalskii/sgr-agent-core"
-Repository = "https://github.com/vakovalskii/sgr-agent-core"
-Issues = "https://github.com/vakovalskii/sgr-agent-core/issues"
+Homepage = "https://github.com/vamplabAI/sgr-agent-core"
+Repository = "https://github.com/vamplabAI/sgr-agent-core"
+Issues = "https://github.com/vamplabAI/sgr-agent-core/issues"
 Documentation = "https://vamplabai.github.io/sgr-agent-core/"
 "Team: SGR Concept Creator - @abdullin" = "https://t.me/llm_under_hood"
 "Team: Project Coordinator - @VaKovaLskii" = "https://t.me/neuraldeep"
