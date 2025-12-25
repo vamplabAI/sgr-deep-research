@@ -2,7 +2,7 @@
 
 ## Description
 
-![SGR Concept Architecture](docs/sgr_concept.png)
+![SGR Concept Architecture](https://github.com/vamplabAI/sgr-agent-core/raw/main/docs/sgr_concept.png)
 Open-source agentic framework for building intelligent research agents using Schema-Guided Reasoning. The project provides a core library with a extendable BaseAgent interface implementing a two-phase architecture and multiple ready-to-use research agent implementations built on top of it.
 
 The library includes extensible tools for search, reasoning, and clarification, real-time streaming responses, OpenAI-compatible REST API. Works with any OpenAI-compatible LLM, including local models for fully private research.
@@ -13,15 +13,15 @@ ______________________________________________________________________
 
 > **Get started quickly with our documentation:**
 
-- **[Project Wiki](https://github.com/vamplabAI/sgr-deep-research/wiki)** - Complete project documentation
-- **[Quick Start Guide](https://github.com/vamplabAI/sgr-deep-research/wiki/SGR-Quick-Start)** - Get up and running in minutes
-- **[API Documentation](https://github.com/vamplabAI/sgr-deep-research/wiki/SGR-Description-API)** - REST API reference with examples
+- **[Project Wiki](https://github.com/vamplabAI/sgr-agent-core/wiki)** - Complete project documentation
+- **[Quick Start Guide](https://github.com/vamplabAI/sgr-agent-core/wiki/SGR-Quick-Start)** - Get up and running in minutes
+- **[API Documentation](https://github.com/vamplabAI/sgr-agent-core/wiki/SGR-Description-API)** - REST API reference with examples
 
 ______________________________________________________________________
 
 ## Benchmarking
 
-![SimpleQA Benchmark Comparison](docs/simpleqa_benchmark_comparison.png)
+![SimpleQA Benchmark Comparison](https://github.com/vamplabAI/sgr-agent-core/raw/main/docs/simpleqa_benchmark_comparison.png)
 
 **Performance Metrics on gpt-4.1-mini:**
 
@@ -30,7 +30,7 @@ ______________________________________________________________________
 - **Incorrect:** 554 answers
 - **Not Attempted:** 48 answers
 
-More detailed benchmark results are available [here](benchmark/simpleqa_benchmark_results.md).
+More detailed benchmark results are available [here](https://github.com/vamplabAI/sgr-agent-core/raw/main/benchmark/simpleqa_benchmark_results.md).
 
 ______________________________________________________________________
 
@@ -57,4 +57,4 @@ Learn more about the company: [redmadrobot.ai](https://redmadrobot.ai/) ↗️
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=vamplabAI/sgr-deep-research&type=Date)](https://star-history.com/#vamplabAI/sgr-deep-research&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=vamplabAI/sgr-agent-core&type=Date)](https://star-history.com/#vamplabAI/sgr-agent-core&Date)
