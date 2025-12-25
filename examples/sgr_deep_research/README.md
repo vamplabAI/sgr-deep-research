@@ -41,17 +41,16 @@ cp config.yaml my_config.yaml
 
 ### Running the API Server
 
-To run the SGR Agent Core API server with research agents from this configuration:
+To run the SGR Agent Core API server with research agents from this configuration, use the `sgr` utility:
 
 ```bash
-sgr --config-file sgr_deep_research/config.yaml
+sgr --config-file examples/sgr_deep_research/config.yaml
 ```
 
-Or using Python directly:
-
-```bash
-python -m sgr_agent_core.server --config-file sgr_deep_research/config.yaml
-```
+> **Note:** You can also run the server directly with Python:
+> ```bash
+> python -m sgr_agent_core.server --config-file examples/sgr_deep_research/config.yaml
+> ```
 
 ### Using Python API
 
@@ -61,7 +60,7 @@ from pathlib import Path
 
 from sgr_agent_core.agent_config import GlobalConfig
 from sgr_agent_core.agent_factory import AgentFactory
-from sgr_deep_research.definitions import get_research_agents_definitions
+from examples.sgr_deep_research.definitions import get_research_agents_definitions
 
 # Load configuration
 config_path = Path(__file__).parent / "config.yaml"

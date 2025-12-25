@@ -8,7 +8,7 @@ from pathlib import Path
 
 import sgr_agent_core.tools as tools
 from sgr_agent_core.agent_definition import AgentDefinition, PromptsConfig
-from sgr_deep_research.agents import (
+from examples.sgr_deep_research.agents import (
     ResearchSGRAgent,
     ResearchSGRToolCallingAgent,
     ResearchToolCallingAgent,

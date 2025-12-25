@@ -528,12 +528,12 @@ class TestAgentsLoadingOrder:
             "llm": {"api_key": "test-key", "model": "gpt-4o-mini"},
             "agents": {
                 "sgr_agent": {
-                    "base_class": "sgr_deep_research.agents.ResearchSGRAgent",
+                    "base_class": "examples.sgr_deep_research.agents.ResearchSGRAgent",
                     "llm": {"api_key": "test-key", "model": "gpt-4o-mini", "temperature": 0.9},
                     "tools": ["FinalAnswerTool"],
                 },
                 "tool_calling_agent": {
-                    "base_class": "sgr_deep_research.agents.ResearchToolCallingAgent",
+                    "base_class": "examples.sgr_deep_research.agents.ResearchToolCallingAgent",
                     "llm": {"api_key": "test-key", "model": "gpt-4o-mini", "temperature": 0.7},
                     "tools": ["FinalAnswerTool"],
                 },
@@ -552,6 +552,6 @@ class TestAgentsLoadingOrder:
         assert config.agents["sgr_agent"].llm.temperature == 0.9
         assert config.agents["tool_calling_agent"].llm.temperature == 0.7
         
-        # Verify base_class is from config (sgr_deep_research), not core
+        # Verify base_class is from config (examples.sgr_deep_research), not core
         base_class_name = config.agents["sgr_agent"].base_class.__name__
         assert base_class_name == "ResearchSGRAgent", f"Expected ResearchSGRAgent, got {base_class_name}"

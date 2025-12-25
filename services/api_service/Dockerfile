@@ -35,4 +35,4 @@ COPY --from=builder --chown=appuser:appgroup /opt/venv /opt/venv
 WORKDIR /app
 USER appuser:appgroup
 
-ENTRYPOINT ["python3", "-u", "sgr_deep_research"]
+ENTRYPOINT ["sgr"]
