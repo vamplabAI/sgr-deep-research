@@ -11,6 +11,7 @@ SGR Deep Research contains research agent definitions and configuration files fo
 - **SGR Tool Calling Agent** - Hybrid SGR + function calling agent
 
 All agents include:
+
 - Web search capabilities (Tavily)
 - Content extraction from web pages
 - Report generation
@@ -48,6 +49,7 @@ sgr --config-file examples/sgr_deep_research/config.yaml
 ```
 
 > **Note:** You can also run the server directly with Python:
+>
 > ```bash
 > python -m sgr_agent_core.server --config-file examples/sgr_deep_research/config.yaml
 > ```
@@ -72,6 +74,7 @@ config.agents.update(get_research_agents_definitions())
 # Get agent definition
 agent_def = config.agents["sgr_agent"]
 
+
 # Create and run agent
 async def main():
     agent = await AgentFactory.create(agent_def, task="Research AI trends in 2024")
@@ -81,6 +84,7 @@ async def main():
 
     result = await agent.execute()
     print(f"\n\nFinal result: {result}")
+
 
 asyncio.run(main())
 ```
@@ -113,18 +117,21 @@ for chunk in response:
 ### sgr_agent
 
 Schema-Guided Reasoning agent that uses structured reasoning phases:
+
 - Reasoning phase: Analyzes task and generates plan
 - Action phase: Executes tools based on reasoning
 
 ### tool_calling_agent
 
 Function calling agent that uses OpenAI's function calling:
+
 - Direct tool selection via function calls
 - Faster execution for simple tasks
 
 ### sgr_tool_calling_agent
 
 Hybrid agent combining SGR reasoning with function calling:
+
 - Reasoning phase for complex planning
 - Function calling for tool execution
 - Best balance of structure and flexibility
@@ -142,6 +149,7 @@ agents:
 ```
 
 Instead of the full path:
+
 ```yaml
 agents:
   sgr_agent:

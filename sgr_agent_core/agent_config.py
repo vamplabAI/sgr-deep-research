@@ -55,11 +55,11 @@ class GlobalConfig(BaseSettings, AgentConfig, Definitions):
     @classmethod
     def _resolve_relative_import(cls, base_class_path: str, config_path: Path | None) -> str:
         """Resolve relative import path to absolute module path.
-        
+
         Args:
             base_class_path: Import path (may be relative or absolute)
             config_path: Path to config.yaml file
-            
+
         Returns:
             Absolute module path
         """
@@ -67,11 +67,11 @@ class GlobalConfig(BaseSettings, AgentConfig, Definitions):
         known_roots = ["sgr_agent_core", "examples"]
         if any(base_class_path.startswith(root) for root in known_roots):
             return base_class_path
-        
+
         # If no config path, can't resolve relative imports
         if config_path is None:
             return base_class_path
-        
+
         # Convert config file path to module path
         # e.g., examples/sgr_deep_research/config.yaml -> examples.sgr_deep_research
         config_dir = config_path.parent
@@ -83,12 +83,12 @@ class GlobalConfig(BaseSettings, AgentConfig, Definitions):
                 if (project_root / "pyproject.toml").exists() or (project_root / "setup.py").exists():
                     break
                 project_root = project_root.parent
-            
+
             # Get relative path from project root
             rel_path = config_dir.relative_to(project_root)
             # Convert to module path
             module_base = str(rel_path).replace("/", ".").replace("\\", ".")
-            
+
             # Handle relative imports starting with .
             if base_class_path.startswith("."):
                 # Remove leading dots and add to module base
@@ -115,6 +115,7 @@ class GlobalConfig(BaseSettings, AgentConfig, Definitions):
 
         # Get core agent class names that might be overridden
         from sgr_agent_core.services.registry import AgentRegistry
+
         core_agent_names = {name for name in AgentRegistry._items.keys()}
 
         # Check for agents that will be overridden
@@ -123,7 +124,7 @@ class GlobalConfig(BaseSettings, AgentConfig, Definitions):
 
         if overridden:
             logger.info(f"Loaded agents will override existing agent definitions: {', '.join(sorted(overridden))}")
-        
+
         if core_overridden:
             logger.info(
                 f"Loaded agents will override core agent class names: {', '.join(sorted(core_overridden))}. "

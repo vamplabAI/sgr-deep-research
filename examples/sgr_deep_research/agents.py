@@ -1,7 +1,8 @@
 """Research agents for deep research tasks.
 
 This module provides research agent implementations that are configured
-for deep research tasks with web search, content extraction, and reporting capabilities.
+for deep research tasks with web search, content extraction, and
+reporting capabilities.
 """
 
 from typing import Type
@@ -13,7 +14,6 @@ from sgr_agent_core.agent_definition import AgentConfig
 from sgr_agent_core.agents.sgr_agent import SGRAgent
 from sgr_agent_core.agents.sgr_tool_calling_agent import SGRToolCallingAgent
 from sgr_agent_core.agents.tool_calling_agent import ToolCallingAgent
-from sgr_agent_core.models import AgentStatesEnum
 from sgr_agent_core.tools import (
     BaseTool,
     ClarificationTool,

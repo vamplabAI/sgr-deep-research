@@ -21,14 +21,14 @@ class ServerConfig(BaseSettings):
 
 def setup_logging(logging_file: str | None = None) -> None:
     """Setup logging configuration from YAML file.
-    
+
     Args:
         logging_file: Path to logging configuration file. If None, uses default or environment variable.
     """
     if logging_file is None:
         # Try to get from environment variable first, then use default
         logging_file = os.getenv("LOGGING_FILE", "logging_config.yaml")
-    
+
     logging_config_path = Path(logging_file)
     if not logging_config_path.exists():
         raise FileNotFoundError(f"Logging config file not found: {logging_config_path}")
@@ -38,4 +38,3 @@ def setup_logging(logging_file: str | None = None) -> None:
         os.makedirs("logs", exist_ok=True)
 
     logging.config.dictConfig(logging_config)
-

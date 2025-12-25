@@ -352,7 +352,8 @@ class TestAgentsLoadingOrder:
     def test_config_yaml_agents_loaded_correctly(self, temp_dir, reset_global_config):
         """Test that agents from config.yaml are loaded correctly.
 
-        Core should load agents only from config files, without hard dependencies.
+        Core should load agents only from config files, without hard
+        dependencies.
         """
         # Create config.yaml with an agent
         config_yaml = temp_dir / "config.yaml"
@@ -517,10 +518,12 @@ class TestAgentsLoadingOrder:
         )
 
     def test_config_agents_replace_core_class_names(self, temp_dir, reset_global_config):
-        """Test that agents from config with names matching core class names replace existing definitions.
-        
-        If an agent in config has the same name as a core agent class (e.g., 'sgr_agent'),
-        it should replace any existing definition with that name.
+        """Test that agents from config with names matching core class names
+        replace existing definitions.
+
+        If an agent in config has the same name as a core agent class
+        (e.g., 'sgr_agent'), it should replace any existing definition
+        with that name.
         """
         # Create config.yaml with agent that has same name as core class
         config_yaml = temp_dir / "config.yaml"
@@ -547,11 +550,11 @@ class TestAgentsLoadingOrder:
         # Verify that config agents replaced any existing definitions
         assert "sgr_agent" in config.agents
         assert "tool_calling_agent" in config.agents
-        
+
         # Verify they use the classes from config, not core defaults
         assert config.agents["sgr_agent"].llm.temperature == 0.9
         assert config.agents["tool_calling_agent"].llm.temperature == 0.7
-        
+
         # Verify base_class is from config (examples.sgr_deep_research), not core
         base_class_name = config.agents["sgr_agent"].base_class.__name__
         assert base_class_name == "ResearchSGRAgent", f"Expected ResearchSGRAgent, got {base_class_name}"
