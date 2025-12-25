@@ -36,7 +36,7 @@ mcp:
 agents:
   # SGR Agent for research
   sgr_agent:
-    base_class: "examples.sgr_deep_research.agents.ResearchSGRAgent"
+    base_class: "agents.ResearchSGRAgent"
     llm:
       model: "gpt-4o-mini"
       temperature: 0.4
@@ -51,7 +51,7 @@ agents:
 
   # Tool Calling Agent for research
   tool_calling_agent:
-    base_class: "examples.sgr_deep_research.agents.ResearchToolCallingAgent"
+    base_class: "agents.ResearchToolCallingAgent"
     llm:
       model: "gpt-4o-mini"
       temperature: 0.4
@@ -66,7 +66,7 @@ agents:
 
   # SGR Tool Calling Agent for research
   sgr_tool_calling_agent:
-    base_class: "examples.sgr_deep_research.agents.ResearchSGRToolCallingAgent"
+    base_class: "agents.ResearchSGRToolCallingAgent"
     llm:
       model: "gpt-4o-mini"
       temperature: 0.4

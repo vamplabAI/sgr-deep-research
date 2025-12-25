@@ -60,7 +60,7 @@ from pathlib import Path
 
 from sgr_agent_core.agent_config import GlobalConfig
 from sgr_agent_core.agent_factory import AgentFactory
-from examples.sgr_deep_research.definitions import get_research_agents_definitions
+from definitions import get_research_agents_definitions
 
 # Load configuration
 config_path = Path(__file__).parent / "config.yaml"
@@ -128,6 +128,27 @@ Hybrid agent combining SGR reasoning with function calling:
 - Reasoning phase for complex planning
 - Function calling for tool execution
 - Best balance of structure and flexibility
+
+## Agent Configuration
+
+### Relative Imports
+
+The `base_class` field in agent definitions supports relative imports. When the config file is located in the same directory or subdirectory as your agent classes, you can use relative paths:
+
+```yaml
+agents:
+  sgr_agent:
+    base_class: "agents.ResearchSGRAgent"  # Relative to config.yaml location
+```
+
+Instead of the full path:
+```yaml
+agents:
+  sgr_agent:
+    base_class: "examples.sgr_deep_research.agents.ResearchSGRAgent"  # Absolute path
+```
+
+The system automatically resolves relative imports based on the location of the config.yaml file.
 
 ## Configuration Options
 
