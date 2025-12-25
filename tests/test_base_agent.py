@@ -584,6 +584,7 @@ class TestBaseAgentImageSupport:
         assert "image_url" in image_part
         assert "url" in image_part["image_url"]
 
+
 class TestBaseAgentSaveLog:
     """Tests for agent log saving functionality."""
 
