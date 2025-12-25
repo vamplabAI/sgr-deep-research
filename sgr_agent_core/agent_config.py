@@ -57,11 +57,24 @@ class GlobalConfig(BaseSettings, AgentConfig, Definitions):
 
         custom_agents = Definitions(**agents_data).agents
 
+        # Get core agent class names that might be overridden
+        from sgr_agent_core.services.registry import AgentRegistry
+        core_agent_names = {name for name in AgentRegistry._items.keys()}
+
         # Check for agents that will be overridden
         overridden = set(cls._instance.agents.keys()) & set(custom_agents.keys())
-        if overridden:
-            logger.warning(f"Loaded agents will override existing agents: " f"{', '.join(sorted(overridden))}")
+        core_overridden = set(custom_agents.keys()) & core_agent_names
 
+        if overridden:
+            logger.info(f"Loaded agents will override existing agent definitions: {', '.join(sorted(overridden))}")
+        
+        if core_overridden:
+            logger.info(
+                f"Loaded agents will override core agent class names: {', '.join(sorted(core_overridden))}. "
+                f"These definitions from config will be used instead of core class defaults."
+            )
+
+        # Explicitly replace agents with matching names (config agents take precedence)
         cls._instance.agents.update(custom_agents)
         return cls._instance
 

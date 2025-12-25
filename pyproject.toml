@@ -61,7 +61,7 @@ Documentation = "https://vamplabai.github.io/sgr-agent-core/"
 "DevOps & Deployment - @mixaill76" = "https://t.me/mixaill76"
 
 [project.scripts]
-sgr = "sgr_agent_core.__main__:main"
+sgr = "sgr_agent_core.server.__main__:main"
 
 [project.optional-dependencies]
 dev = [
