@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 class GlobalConfig(BaseSettings, AgentConfig, Definitions):
     _instance: ClassVar[Self | None] = None
     _initialized: ClassVar[bool] = False
+    _config_path: ClassVar[Path | None] = None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -37,6 +38,7 @@ class GlobalConfig(BaseSettings, AgentConfig, Definitions):
         yaml_path = Path(yaml_path)
         if not yaml_path.exists():
             raise FileNotFoundError(f"Configuration file not found: {yaml_path}")
+        cls._config_path = yaml_path.resolve()
         config_data = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
         main_config_agents = config_data.pop("agents", {})
         if cls._instance is None:
@@ -47,21 +49,89 @@ class GlobalConfig(BaseSettings, AgentConfig, Definitions):
             cls._initialized = False
             cls._instance = cls(**config_data, agents=cls._instance.agents)
         # agents should be initialized last to allow merging
-        cls._definitions_from_dict({"agents": main_config_agents})
+        cls._definitions_from_dict({"agents": main_config_agents}, config_path=cls._config_path)
         return cls._instance
 
     @classmethod
-    def _definitions_from_dict(cls, agents_data: dict) -> Self:
+    def _resolve_relative_import(cls, base_class_path: str, config_path: Path | None) -> str:
+        """Resolve relative import path to absolute module path.
+
+        Args:
+            base_class_path: Import path (may be relative or absolute)
+            config_path: Path to config.yaml file
+
+        Returns:
+            Absolute module path
+        """
+        # If it's already an absolute path (starts with known root modules), return as is
+        known_roots = ["sgr_agent_core", "examples"]
+        if any(base_class_path.startswith(root) for root in known_roots):
+            return base_class_path
+
+        # If no config path, can't resolve relative imports
+        if config_path is None:
+            return base_class_path
+
+        # Convert config file path to module path
+        # e.g., examples/sgr_deep_research/config.yaml -> examples.sgr_deep_research
+        config_dir = config_path.parent
+        # Get relative path from project root (assuming we're in project root)
+        try:
+            # Try to find project root by looking for common markers
+            project_root = config_dir
+            while project_root.parent != project_root:
+                if (project_root / "pyproject.toml").exists() or (project_root / "setup.py").exists():
+                    break
+                project_root = project_root.parent
+
+            # Get relative path from project root
+            rel_path = config_dir.relative_to(project_root)
+            # Convert to module path
+            module_base = str(rel_path).replace("/", ".").replace("\\", ".")
+
+            # Handle relative imports starting with .
+            if base_class_path.startswith("."):
+                # Remove leading dots and add to module base
+                relative_parts = base_class_path.lstrip(".").split(".")
+                return f"{module_base}.{'.'.join(relative_parts)}"
+            else:
+                # Direct relative import
+                return f"{module_base}.{base_class_path}"
+        except (ValueError, AttributeError):
+            # If we can't resolve, return as is
+            return base_class_path
+
+    @classmethod
+    def _definitions_from_dict(cls, agents_data: dict, config_path: Path | None = None) -> Self:
+        # Resolve relative imports in base_class before creating AgentDefinition
         for agent_name, agent_config in agents_data.get("agents", {}).items():
             agent_config["name"] = agent_name
+            if "base_class" in agent_config and isinstance(agent_config["base_class"], str):
+                agent_config["base_class"] = cls._resolve_relative_import(
+                    agent_config["base_class"], config_path or cls._config_path
+                )
 
         custom_agents = Definitions(**agents_data).agents
 
+        # Get core agent class names that might be overridden
+        from sgr_agent_core.services.registry import AgentRegistry
+
+        core_agent_names = {name for name in AgentRegistry._items.keys()}
+
         # Check for agents that will be overridden
         overridden = set(cls._instance.agents.keys()) & set(custom_agents.keys())
-        if overridden:
-            logger.warning(f"Loaded agents will override existing agents: " f"{', '.join(sorted(overridden))}")
+        core_overridden = set(custom_agents.keys()) & core_agent_names
 
+        if overridden:
+            logger.info(f"Loaded agents will override existing agent definitions: {', '.join(sorted(overridden))}")
+
+        if core_overridden:
+            logger.info(
+                f"Loaded agents will override core agent class names: {', '.join(sorted(core_overridden))}. "
+                f"These definitions from config will be used instead of core class defaults."
+            )
+
+        # Explicitly replace agents with matching names (config agents take precedence)
         cls._instance.agents.update(custom_agents)
         return cls._instance
 
@@ -88,4 +158,4 @@ class GlobalConfig(BaseSettings, AgentConfig, Definitions):
         if not yaml_data.get("agents"):
             raise ValueError(f"Agents definitions file must contain 'agents' key: {agents_yaml_path}")
 
-        return cls._definitions_from_dict(yaml_data)
+        return cls._definitions_from_dict(yaml_data, config_path=agents_yaml_path.resolve())

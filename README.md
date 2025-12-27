@@ -9,6 +9,45 @@ The library includes extensible tools for search, reasoning, and clarification, 
 
 ______________________________________________________________________
 
+## Quick Start
+
+### Installation
+
+```bash
+pip install sgr-agent-core
+```
+
+### Running Research Agents
+
+The project includes example research agent configurations in the `examples/` directory. To get started with deep research agents:
+
+1. Copy and configure the config file:
+
+```bash
+cp examples/sgr_deep_research/config.yaml my_config.yaml
+# Edit my_config.yaml and set your API keys:
+# - llm.api_key: Your OpenAI API key
+# - search.tavily_api_key: Your Tavily API key (optional)
+```
+
+2. Run the API server using the `sgr` utility:
+
+```bash
+sgr --config-file examples/sgr_deep_research/config.yaml
+```
+
+The server will start on `http://localhost:8010` with OpenAI-compatible API endpoints.
+
+> **Note:** You can also run the server directly with Python:
+>
+> ```bash
+> python -m sgr_agent_core.server --config-file examples/sgr_deep_research/config.yaml
+> ```
+
+For more examples and detailed usage instructions, see the [examples/](examples/) directory.
+
+______________________________________________________________________
+
 ## Documentation
 
 > **Get started quickly with our documentation:**

@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
 from sgr_agent_core import AgentFactory, AgentStatesEnum, BaseAgent
-from sgr_deep_research.api.models import (
+from sgr_agent_core.server.models import (
     AgentListItem,
     AgentListResponse,
     AgentStateResponse,

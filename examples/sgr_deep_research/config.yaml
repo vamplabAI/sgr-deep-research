@@ -1,4 +1,4 @@
-# SGR Agent Core - Configuration for agents without CreateReportTool
+# SGR Deep Research - Configuration for research agents
 # Copy this file and fill in your API keys
 
 # LLM Configuration
@@ -24,7 +24,7 @@ execution:
   max_iterations: 10  # Max agent iterations
   mcp_context_limit: 15000  # Max context length from MCP server response
   logs_dir: "logs"  # Directory for saving agent execution logs
-  # reports_dir is not used since CreateReportTool is disabled
+  reports_dir: "reports"  # Directory for saving research reports
 
 # MCP (Model Context Protocol) Configuration
 mcp:
@@ -32,41 +32,50 @@ mcp:
     deepwiki:
       url: "https://mcp.deepwiki.com/mcp"
 
-# Agent Definitions (without CreateReportTool)
+# Agent Definitions
 agents:
-  # SGR Agent without reporting
-  sgr_agent_no_reporting:
-    base_class: "agents.ResearchSGRAgentNoReporting"
+  # SGR Agent for research
+  sgr_agent:
+    base_class: "agents.ResearchSGRAgent"
     llm:
       model: "gpt-4o-mini"
       temperature: 0.4
     tools:
       - "WebSearchTool"
       - "ExtractPageContentTool"
+      - "CreateReportTool"
       - "FinalAnswerTool"
       - "ClarificationTool"
+      - "GeneratePlanTool"
+      - "AdaptPlanTool"
 
-  # Tool Calling Agent without reporting
-  tool_calling_agent_no_reporting:
-    base_class: "agents.ResearchToolCallingAgentNoReporting"
+  # Tool Calling Agent for research
+  tool_calling_agent:
+    base_class: "agents.ResearchToolCallingAgent"
     llm:
       model: "gpt-4o-mini"
       temperature: 0.4
     tools:
       - "WebSearchTool"
       - "ExtractPageContentTool"
+      - "CreateReportTool"
       - "FinalAnswerTool"
       - "ClarificationTool"
+      - "GeneratePlanTool"
+      - "AdaptPlanTool"
 
-  # SGR Tool Calling Agent without reporting
-  sgr_tool_calling_agent_no_reporting:
-    base_class: "agents.ResearchSGRToolCallingAgentNoReporting"
+  # SGR Tool Calling Agent for research
+  sgr_tool_calling_agent:
+    base_class: "agents.ResearchSGRToolCallingAgent"
     llm:
       model: "gpt-4o-mini"
       temperature: 0.4
     tools:
       - "WebSearchTool"
       - "ExtractPageContentTool"
+      - "CreateReportTool"
       - "FinalAnswerTool"
       - "ClarificationTool"
       - "ReasoningTool"
+      - "GeneratePlanTool"
+      - "AdaptPlanTool"
