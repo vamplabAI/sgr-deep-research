@@ -19,7 +19,32 @@ while agent.state not in FINISH_STATES:
 ```
 
 
-`base_agent` provides a minimal interface for modifying agent behavior and working with context.
+`BaseAgent` provides a minimal interface for modifying agent behavior and working with context.
+
+### Core Agent Attributes
+
+```py
+class BaseAgent:
+    # Identification
+    id: str                                    # Unique agent identifier
+    name: str                                  # Agent class name
+    task: str                                  # Task to execute
+
+    # Configuration and clients
+    config: AgentConfig                        # Agent configuration
+    openai_client: AsyncOpenAI                 # Client for LLM API interaction
+
+    # Context and state
+    _context: AgentContext                    # Agent execution context
+    conversation: list[dict]                  # Conversation history with LLM
+
+    # Tools and streaming
+    toolkit: list[Type[BaseTool]]             # Set of available tools
+    streaming_generator: OpenAIStreamingGenerator  # Streaming generator
+```
+
+### Methods to Override
+
 When creating custom solutions, pay attention first and foremost to these methods:
 ```py
 
