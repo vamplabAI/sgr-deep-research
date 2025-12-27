@@ -27,6 +27,7 @@ plugins:
             Integration & Examples: Интеграция и примеры
             Description API: Описание API
             Summary Table: Сводная таблица
+            SGR vs Function Calling: SGR vs Function Calling
 
 theme:
   name: material
@@ -67,13 +68,13 @@ nav:
         - Tools: framework/tools.md
     - QnA: framework/qna.md
   - SGR API service:
-    - Quick Start: SGR-Quick-Start.md
-    - Workflow: SGR-Agent's-Workflow.md
-    - Demonstration: SGR-Demonstration.md
-    - Integration & Examples: SGR-Integration-&-Examples.md
-    - Description API: SGR-Description-API.md
-    - Summary Table: SGR-Summary-table.md
-    - SGR vs Function Calling: SGR-vs-Function-Calling_-When-to-Use-Each-Approach.md
+    - Quick Start: sgr-api/SGR-Quick-Start.md
+    - Workflow: sgr-api/SGR-Agent's-Workflow.md
+    - Demonstration: sgr-api/SGR-Demonstration.md
+    - Integration & Examples: sgr-api/SGR-Integration-&-Examples.md
+    - Description API: sgr-api/SGR-Description-API.md
+    - Summary Table: sgr-api/SGR-Summary-table.md
+    - SGR vs Function Calling: sgr-api/SGR-vs-Function-Calling_-When-to-Use-Each-Approach.md
 
 markdown_extensions:
   - admonition

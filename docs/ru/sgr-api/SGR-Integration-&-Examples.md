@@ -1,27 +1,27 @@
-## 🚀 <strong>Python OpenAI Client Examples</strong> - Complete integration guide with streaming & clarifications</summary>
+## 🚀 <strong>Примеры Python OpenAI Client</strong> - Полное руководство по интеграции с потоковой передачей и уточнениями</summary>
 
-Simple Python examples for using OpenAI client with SGR Agent Core system.
+Простые примеры Python для использования клиента OpenAI с системой SGR Agent Core.
 
-### Prerequisites
+### Требования
 
 ```bash
 pip install openai
 ```
 
-### Example 1: Basic Research Request
+### Пример 1: Базовый исследовательский запрос
 
-Simple research query without clarifications.
+Простой исследовательский запрос без уточнений.
 
 ```python
 from openai import OpenAI
 
-# Initialize client
+# Инициализация клиента
 client = OpenAI(
     base_url="http://localhost:8010/v1",
-    api_key="dummy",  # Not required for local server
+    api_key="dummy",  # Не требуется для локального сервера
 )
 
-# Make research request
+# Выполнить исследовательский запрос
 response = client.chat.completions.create(
     model="sgr-agent",
     messages=[{"role": "user", "content": "Research BMW X6 2025 prices in Russia"}],
@@ -29,15 +29,15 @@ response = client.chat.completions.create(
     temperature=0.4,
 )
 
-# Print streaming response
+# Вывести потоковый ответ
 for chunk in response:
     if chunk.choices[0].delta.content:
         print(chunk.choices[0].delta.content, end="")
 ```
 
-### Example 2: Research with Clarification Support
+### Пример 2: Исследование с поддержкой уточнений
 
-Handle agent clarification requests and continue conversation.
+Обработка запросов агента на уточнение и продолжение разговора.
 
 ```python
 import json
@@ -45,8 +45,8 @@ from openai import OpenAI
 
 client = OpenAI(base_url="http://localhost:8010/v1", api_key="dummy")
 
-# Step 1: Initial research request
-print("Starting research...")
+# Шаг 1: Начальный исследовательский запрос
+print("Начало исследования...")
 response = client.chat.completions.create(
     model="sgr-agent",
     messages=[{"role": "user", "content": "Research AI market trends"}],
@@ -57,65 +57,65 @@ response = client.chat.completions.create(
 agent_id = None
 clarification_questions = []
 
-# Process streaming response
+# Обработка потокового ответа
 for chunk in response:
-    # Extract agent ID from model field
+    # Извлечь ID агента из поля model
     if chunk.model and chunk.model.startswith("sgr_agent_"):
         agent_id = chunk.model
-        print(f"\nAgent ID: {agent_id}")
+        print(f"\nID агента: {agent_id}")
 
-    # Check for clarification requests
+    # Проверить запросы на уточнение
     if chunk.choices[0].delta.tool_calls:
         for tool_call in chunk.choices[0].delta.tool_calls:
             if tool_call.function and tool_call.function.name == "clarification":
                 args = json.loads(tool_call.function.arguments)
                 clarification_questions = args.get("questions", [])
 
-    # Print content
+    # Вывести содержимое
     if chunk.choices[0].delta.content:
         print(chunk.choices[0].delta.content, end="")
 
-# Step 2: Handle clarification if needed
+# Шаг 2: Обработать уточнение, если необходимо
 if clarification_questions and agent_id:
-    print(f"\n\nClarification needed:")
+    print(f"\n\nТребуется уточнение:")
     for i, question in enumerate(clarification_questions, 1):
         print(f"{i}. {question}")
 
-    # Provide clarification
+    # Предоставить уточнение
     clarification = "Focus on LLM market trends for 2024-2025, global perspective"
-    print(f"\nProviding clarification: {clarification}")
+    print(f"\nПредоставление уточнения: {clarification}")
 
-    # Continue with agent ID
+    # Продолжить с ID агента
     response = client.chat.completions.create(
-        model=agent_id,  # Use agent ID as model
+        model=agent_id,  # Использовать ID агента как модель
         messages=[{"role": "user", "content": clarification}],
         stream=True,
         temperature=0,
     )
 
-    # Print final response
+    # Вывести финальный ответ
     for chunk in response:
         if chunk.choices[0].delta.content:
             print(chunk.choices[0].delta.content, end="")
 
-print("\n\nResearch completed!")
+print("\n\nИсследование завершено!")
 ```
 
-#### Usage Notes
+#### Примечания по использованию
 
-- Replace `localhost:8010` with your server URL
-- The `api_key` can be any string for local server
-- Agent ID is returned in the `model` field during streaming
-- Clarification questions are sent via `tool_calls` with function name `clarification`
-- Use the agent ID as model name to continue conversation
+- Замените `localhost:8010` на URL вашего сервера
+- `api_key` может быть любой строкой для локального сервера
+- ID агента возвращается в поле `model` во время потоковой передачи
+- Вопросы уточнения отправляются через `tool_calls` с именем функции `clarification`
+- Используйте ID агента как имя модели для продолжения разговора
 
 ______________________________________________________________________
 
-## <summary>⚡ <strong>cURL API Examples</strong> - Direct HTTP requests with agent interruption & clarification flow</summary>
+## <summary>⚡ <strong>Примеры cURL API</strong> - Прямые HTTP запросы с прерыванием агента и потоком уточнений</summary>
 
-The system provides a fully OpenAI-compatible API with advanced agent interruption and clarification capabilities.
+Система предоставляет полностью совместимый с OpenAI API с расширенными возможностями прерывания агента и уточнений.
 
-### Basic Research Request
+### Базовый исследовательский запрос
 
 ```bash
 curl -X POST "http://localhost:8010/v1/chat/completions" \
@@ -129,11 +129,11 @@ curl -X POST "http://localhost:8010/v1/chat/completions" \
   }'
 ```
 
-### Agent Interruption & Clarification Flow
+### Поток прерывания агента и уточнений
 
-When the agent needs clarification, it returns a unique agent ID in the streaming response model field. You can then continue the conversation using this agent ID.
+Когда агенту требуется уточнение, он возвращает уникальный ID агента в поле model потокового ответа. Затем вы можете продолжить разговор, используя этот ID агента.
 
-#### Step 1: Initial Request
+#### Шаг 1: Начальный запрос
 
 ```bash
 curl -X POST "http://localhost:8010/v1/chat/completions" \
@@ -147,9 +147,9 @@ curl -X POST "http://localhost:8010/v1/chat/completions" \
   }'
 ```
 
-#### Step 2: Agent Requests Clarification
+#### Шаг 2: Агент запрашивает уточнение
 
-The streaming response includes the agent ID in the model field:
+Потоковый ответ включает ID агента в поле model:
 
 ```json
 {
@@ -167,7 +167,7 @@ The streaming response includes the agent ID in the model field:
 }
 ```
 
-#### Step 3: Continue with Agent ID
+#### Шаг 3: Продолжить с ID агента
 
 ```bash
 curl -X POST "http://localhost:8010/v1/chat/completions" \
@@ -181,16 +181,16 @@ curl -X POST "http://localhost:8010/v1/chat/completions" \
   }'
 ```
 
-### Agent Management
+### Управление агентами
 
 ```bash
-# Get all active agents
+# Получить всех активных агентов
 curl http://localhost:8010/agents
 
-# Get specific agent state
+# Получить состояние конкретного агента
 curl http://localhost:8010/agents/{agent_id}/state
 
-# Direct clarification endpoint
+# Прямой endpoint уточнения
 curl -X POST "http://localhost:8010/agents/{agent_id}/provide_clarification" \
   -H "Content-Type: application/json" \
   -d '{
