@@ -1,16 +1,10 @@
 """OpenAI-compatible models for API endpoints."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Literal
+from typing import Any, Dict, List, Literal, Union
 
+from openai.types.chat import ChatCompletionMessageParam
 from pydantic import BaseModel, Field
-
-
-class ChatMessage(BaseModel):
-    """Chat message."""
-
-    role: Literal["system", "user", "assistant", "tool"] = Field(default="user", description="Sender role")
-    content: str = Field(description="Message content")
 
 
 class ChatCompletionRequest(BaseModel):
@@ -23,7 +17,7 @@ class ChatCompletionRequest(BaseModel):
             "sgr_tool_calling_agent",
         ],
     )
-    messages: List[ChatMessage] = Field(description="List of messages")
+    messages: List[ChatCompletionMessageParam] = Field(description="List of messages")
     stream: bool = Field(default=True, description="Enable streaming mode")
     max_tokens: int | None = Field(default=1500, description="Maximum number of tokens")
     temperature: float | None = Field(default=0, description="Generation temperature")
@@ -33,7 +27,7 @@ class ChatCompletionChoice(BaseModel):
     """Choice in chat completion response."""
 
     index: int = Field(description="Choice index")
-    message: ChatMessage = Field(description="Response message")
+    message: ChatCompletionMessageParam = Field(description="Response message")
     finish_reason: str | None = Field(description="Finish reason")
 
 
@@ -56,6 +50,7 @@ class HealthResponse(BaseModel):
 class AgentStateResponse(BaseModel):
     agent_id: str = Field(description="Agent ID")
     task: str = Field(description="Agent task")
+    user_context: list[ChatCompletionMessageParam] | None = Field(default=None, description="User Context with task")
     state: str = Field(description="Current agent state")
     iteration: int = Field(description="Current iteration number")
     searches_used: int = Field(description="Number of searches performed")
@@ -80,4 +75,6 @@ class AgentListResponse(BaseModel):
 class ClarificationRequest(BaseModel):
     """Simple request for providing clarifications to an agent."""
 
-    clarifications: str = Field(description="Clarification text to provide to the agent")
+    clarifications: Union[str, List[Dict[str, Any]]] = Field(
+        description="Clarification content: text string or OpenAI content parts (text/image_url)"
+    )

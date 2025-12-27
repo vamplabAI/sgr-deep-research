@@ -14,42 +14,9 @@ from sgr_deep_research.api.models import (
     ChatCompletionChoice,
     ChatCompletionRequest,
     ChatCompletionResponse,
-    ChatMessage,
     ClarificationRequest,
     HealthResponse,
 )
-
-
-class TestChatMessage:
-    """Tests for ChatMessage model."""
-
-    def test_chat_message_creation(self):
-        """Test creating a chat message with valid data."""
-        message = ChatMessage(role="user", content="Hello, world!")
-        assert message.role == "user"
-        assert message.content == "Hello, world!"
-
-    def test_chat_message_default_role(self):
-        """Test that default role is 'user'."""
-        message = ChatMessage(content="Test message")
-        assert message.role == "user"
-
-    def test_chat_message_all_roles(self):
-        """Test all valid message roles."""
-        roles = ["system", "user", "assistant", "tool"]
-        for role in roles:
-            message = ChatMessage(role=role, content="Test")
-            assert message.role == role
-
-    def test_chat_message_invalid_role(self):
-        """Test that invalid role raises validation error."""
-        with pytest.raises(ValidationError):
-            ChatMessage(role="invalid_role", content="Test")
-
-    def test_chat_message_required_content(self):
-        """Test that content is required."""
-        with pytest.raises(ValidationError):
-            ChatMessage(role="user")
 
 
 class TestChatCompletionRequest:
@@ -57,14 +24,14 @@ class TestChatCompletionRequest:
 
     def test_chat_completion_request_creation(self):
         """Test creating a chat completion request."""
-        messages = [ChatMessage(role="user", content="Hello")]
+        messages = [{"role": "user", "content": "Hello"}]
         request = ChatCompletionRequest(messages=messages)
         assert len(request.messages) == 1
-        assert request.messages[0].content == "Hello"
+        assert request.messages[0]["content"] == "Hello"
 
     def test_chat_completion_request_defaults(self):
         """Test default values for chat completion request."""
-        messages = [ChatMessage(role="user", content="Test")]
+        messages = [{"role": "user", "content": "Test"}]
         request = ChatCompletionRequest(messages=messages)
         assert request.model == "sgr_tool_calling_agent"
         assert request.stream is True
@@ -73,7 +40,7 @@ class TestChatCompletionRequest:
 
     def test_chat_completion_request_custom_values(self):
         """Test custom values for chat completion request."""
-        messages = [ChatMessage(role="user", content="Test")]
+        messages = [{"role": "user", "content": "Test"}]
         request = ChatCompletionRequest(
             model="custom_model",
             messages=messages,
@@ -94,9 +61,9 @@ class TestChatCompletionRequest:
     def test_chat_completion_request_multiple_messages(self):
         """Test request with multiple messages."""
         messages = [
-            ChatMessage(role="system", content="You are a helpful assistant"),
-            ChatMessage(role="user", content="Hello"),
-            ChatMessage(role="assistant", content="Hi there!"),
+            {"role": "system", "content": "You are a helpful assistant"},
+            {"role": "user", "content": "Hello"},
+            {"role": "assistant", "content": "Hi there!"},
         ]
         request = ChatCompletionRequest(messages=messages)
         assert len(request.messages) == 3
@@ -109,7 +76,7 @@ class TestChatCompletionResponse:
         """Test creating a chat completion response."""
         choice = ChatCompletionChoice(
             index=0,
-            message=ChatMessage(role="assistant", content="Response"),
+            message={"role": "assistant", "content": "Response"},
             finish_reason="stop",
         )
         response = ChatCompletionResponse(
@@ -128,7 +95,7 @@ class TestChatCompletionResponse:
         """Test response with usage information."""
         choice = ChatCompletionChoice(
             index=0,
-            message=ChatMessage(role="assistant", content="Response"),
+            message={"role": "assistant", "content": "Response"},
             finish_reason="stop",
         )
         usage = {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30}
@@ -144,15 +111,15 @@ class TestChatCompletionResponse:
 
     def test_chat_completion_choice_structure(self):
         """Test ChatCompletionChoice structure."""
-        message = ChatMessage(role="assistant", content="Test response")
+        message = {"role": "assistant", "content": "Test response"}
         choice = ChatCompletionChoice(
             index=0,
             message=message,
             finish_reason="stop",
         )
         assert choice.index == 0
-        assert choice.message.role == "assistant"
-        assert choice.message.content == "Test response"
+        assert choice.message["role"] == "assistant"
+        assert choice.message["content"] == "Test response"
         assert choice.finish_reason == "stop"
 
 
