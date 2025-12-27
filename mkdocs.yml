@@ -19,9 +19,9 @@ plugins:
             Home: Главная
             Main Concepts: Основные концепции
             User Guide: Руководство пользователя
-            Create first agent: Создание первого агента
-            Configuration: Конфигурация
             Quick Start: Быстрый старт
+            Configuration: Конфигурация
+            Build your agent: Собери своего агента
             Workflow: Рабочий процесс
             Demonstration: Демонстрация
             Integration & Examples: Интеграция и примеры
@@ -61,8 +61,9 @@ nav:
   - Agent Core Framework:
     - Main Concepts: framework/main-concepts.md
     - User Guide:
-        - Create first agent: framework/first-steps.md
+        - Quick Start: framework/first-steps.md
         - Configuration: framework/configuration.md
+        - Build your agent: framework/agents.md
         - Tools: framework/tools.md
     - QnA: framework/qna.md
   - SGR API service:
